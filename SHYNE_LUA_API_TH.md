@@ -144,11 +144,27 @@ particle.spawn("minecraft:bubble", minecraft.player.position(), {
 input.bind("twirl", {
   title = "Twirl",
   key = input.key.r,
-  on_press = function() model.animation.get("twirl"):restart() end
+  type = "keyboard", -- ใช้ "mouse" คู่กับ input.mouse.left ได้
+  modifiers = { "shift" },
+  repeat = false,
+  on_press = function() model.animation.get("twirl"):restart() end,
+  on_hold = function(id) avatar.state.set("holding_" .. id, true) end,
+  on_release = function(id) avatar.state.set("holding_" .. id, false) end
 })
+
+-- จัดการ binding ระหว่างเกม
+local down = input.is_down("twirl")
+local saved_key = input.get_key("twirl") -- เช่น "key.keyboard.r"
+input.set_key("twirl", "key.keyboard.t")
+local conflicts = input.conflicts("twirl")
+input.unbind("twirl")
 ```
 
-Input ของ Avatar เป็น local-only และสร้างได้สูงสุด 32 bindings ต่อแพ็ก Particle จำกัด 256 ครั้งต่อ tick เพื่อป้องกันแพ็กทำให้ client ค้าง Texture ที่ลงท้าย `_e` หรือ `_emissive` จะเรนเดอร์ full-bright อัตโนมัติ
+Input ของ Avatar เป็น local-only และสร้างได้สูงสุด 32 bindings ต่อแพ็ก รองรับ keyboard, mouse, modifier, on_press, on_release, on_hold และ repeat ระบบใช้ stable id รูปแบบ `avatar_id.binding_id` จำปุ่มใน `config/shyne-creator/avatar-keybinds.json` และปล่อย binding อัตโนมัติเมื่อสลับ/รีโหลดอวตาร ปุ่มจะไม่ทำงานขณะเปิด Chat/เมนูหรือเมื่อหน้าต่างเกมเสีย focus ผู้เล่นเปลี่ยนปุ่ม ตรวจปุ่มซ้ำ ยกเลิกปุ่ม และคืนค่าเดิมได้ที่ Shyne Settings → Avatar Controls
+
+ถ้า binding ใดลงทะเบียนไม่ได้ ระบบจะปิดเฉพาะ binding นั้นและบันทึก diagnostics โดยไม่ทำให้ทั้งอวตารโหลดล้มเหลว การ activate ใช้สองขั้นตอน: runtime ใหม่ถือ lease ชั่วคราวก่อน หาก script พังจะ rollback lease ใหม่และเก็บอวตารเดิมไว้
+
+Particle จำกัด 256 ครั้งต่อ tick เพื่อป้องกันแพ็กทำให้ client ค้าง Texture ที่ลงท้าย `_e` หรือ `_emissive` จะเรนเดอร์ full-bright อัตโนมัติ
 
 ## Animation blending และ Render ต่อชิ้นส่วน
 

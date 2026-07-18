@@ -208,6 +208,7 @@ public class ShyneSettingsScreen extends Screen {
             case INTERFACE, ADVANCED -> List.of();
             case AVATAR -> List.of(
                 new ScreenAction("screen.shyne_core.avatars", "screen.shyne_core.avatars.tooltip", () -> openScreen(new AvatarManagerScreen(this)), () -> true),
+                new ScreenAction("screen.shyne_core.inputs.title", "screen.shyne_core.inputs.tooltip", () -> openScreen(new AvatarInputSettingsScreen(this)), () -> true),
                 new ScreenAction("screen.shyne_core.avatars.outfit", "screen.shyne_core.avatars.outfit.tooltip", () -> openScreen(new AvatarOutfitScreen(this)), () -> AvatarRuntime.active() != null),
                 new ScreenAction("screen.shyne_core.avatars.actions", "screen.shyne_core.avatars.actions.tooltip", () -> openScreen(new ShynePaletteScreen(this)), () -> AvatarRuntime.active() != null && !AvatarRuntime.active().actions().isEmpty()),
                 new ScreenAction("screen.shyne_core.avatars.folder", "screen.shyne_core.avatars.folder.tooltip", this::openAvatarFolder, () -> true)

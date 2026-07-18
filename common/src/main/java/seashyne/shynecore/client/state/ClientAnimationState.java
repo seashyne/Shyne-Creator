@@ -23,6 +23,12 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Client-side mirror of server-authoritative Shyne state.
+ *
+ * <p>Network handlers replace concurrent snapshots while render hooks perform
+ * lock-free reads. Local previews use the same maps as multiplayer state.</p>
+ */
 public final class ClientAnimationState {
     private static final Gson GSON = new Gson();
     private static final Type MODEL_SYNC_TYPE = new TypeToken<ShyneNetwork.ModelSyncPayload>(){}.getType();

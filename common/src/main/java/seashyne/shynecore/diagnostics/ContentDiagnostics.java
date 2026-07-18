@@ -14,6 +14,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Thread-safe collector for creator-facing content errors and recovery hints.
+ *
+ * <p>Updates are written as JSON for tooling and text for people, leaving useful
+ * diagnostics on disk even if loading stops early.</p>
+ */
 public final class ContentDiagnostics {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 

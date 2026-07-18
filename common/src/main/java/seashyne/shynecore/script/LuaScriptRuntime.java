@@ -18,6 +18,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
+/**
+ * Executes one server-side content-pack script inside a restricted LuaJ VM.
+ *
+ * <p>Lua never receives Minecraft or Java objects directly. Scripts emit small
+ * action messages that the loader adapter later applies on the server thread.</p>
+ */
 public class LuaScriptRuntime {
     private static final int LOAD_INSTRUCTION_LIMIT = 1_000_000;
     private static final int HOOK_INSTRUCTION_LIMIT = 250_000;

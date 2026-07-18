@@ -15,6 +15,12 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.*;
 
+/**
+ * Performs the non-mutating preflight check used before an Avatar is activated.
+ *
+ * <p>Local and cloud Avatars pass through the same structural checks. Public
+ * packages additionally use tighter file-count and expanded-size limits.</p>
+ */
 public final class AvatarValidator {
     private static final long MAX_LUA_BYTES = 2L * 1024L * 1024L;
     private static final long MAX_TEXTURE_BYTES = 8L * 1024L * 1024L;

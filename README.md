@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.7.24-alpha-performance-26.2`
+- Shyne Creator: `2.7.25-alpha-dynamic-input-26.2`
 - Minecraft: `26.2`
 - Java: `25`
 - Fabric Loader: `0.19.3+`

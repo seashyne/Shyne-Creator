@@ -9,6 +9,7 @@ import org.luaj.vm2.lib.VarArgFunction;
 import org.luaj.vm2.lib.ZeroArgFunction;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.state.ClientAnimationState;
+import seashyne.shynecore.client.input.DynamicAvatarInputRegistry;
 import seashyne.shynecore.script.LuaSandbox;
 import seashyne.shynecore.voice.ShyneMicrophoneState;
 import net.minecraft.client.Minecraft;
@@ -27,7 +28,7 @@ public final class ClientLuaAvatarRuntime {
     private Globals globals;
     private LuaSandbox.Budget instructionBudget;
     private final Map<String, LuaValue> modules = new HashMap<>();
-    private static final Map<String, net.minecraft.client.KeyMapping> REGISTERED_INPUTS = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Object inputOwner = new Object();
     private final Map<String, InputBinding> inputBindings = new LinkedHashMap<>();
     private long lastShyneCommandNanos;
     private int particlesThisTick;
@@ -411,19 +412,74 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
         });
         globals.set("_shyne_input_bind", new VarArgFunction() {
             @Override public Varargs invoke(Varargs args) {
-                if (inputBindings.size() >= 32) throw new org.luaj.vm2.LuaError("avatar input limit is 32 bindings");
-                String id = args.arg(1).optjstring("").toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_.-]", "_");
-                if (id.isBlank()) throw new org.luaj.vm2.LuaError("input id is required");
-                String label = args.arg(2).optjstring(id);
-                int defaultKey = args.arg(3).optint(org.lwjgl.glfw.GLFW.GLFW_KEY_UNKNOWN);
-                String registryKey = state.avatarId() + "." + id;
-                net.minecraft.client.KeyMapping mapping = REGISTERED_INPUTS.computeIfAbsent(registryKey, ignored ->
-                    seashyne.shynecore.client.ui.ShyneKeybinds.registerDynamic(
-                        new net.minecraft.client.KeyMapping("key.shyne_avatar." + registryKey, defaultKey, net.minecraft.client.KeyMapping.Category.MISC)
-                    )
-                );
-                inputBindings.put(id, new InputBinding(mapping, args.arg(4), args.arg(5), mapping.isDown()));
-                return LuaValue.valueOf(id);
+                if (inputBindings.size() >= DynamicAvatarInputRegistry.MAX_BINDINGS_PER_AVATAR) {
+                    ShyneCore.LOGGER.warn("[AvatarInput] {} reached the {} binding limit", state.avatarId(), DynamicAvatarInputRegistry.MAX_BINDINGS_PER_AVATAR);
+                    return LuaValue.FALSE;
+                }
+                String id = DynamicAvatarInputRegistry.sanitize(args.arg(1).optjstring(""));
+                if (id.isBlank()) return LuaValue.FALSE;
+                try {
+                    InputBinding previous = inputBindings.remove(id);
+                    if (previous != null) previous.handle().close();
+                    var handle = DynamicAvatarInputRegistry.register(
+                        inputOwner, state.avatarId(), id, args.arg(2).optjstring(id),
+                        DynamicAvatarInputRegistry.inputType(args.arg(4).optjstring("keyboard")),
+                        args.arg(3).optint(org.lwjgl.glfw.GLFW.GLFW_KEY_UNKNOWN), args.arg(5).optint(0)
+                    );
+                    inputBindings.put(id, new InputBinding(handle, args.arg(6), args.arg(7), args.arg(8),
+                        args.arg(9).optboolean(false), Math.max(1, args.arg(10).optint(10)),
+                        Math.max(1, args.arg(11).optint(2)), handle.isDown(), 0));
+                    return LuaValue.valueOf(id);
+                } catch (Exception error) {
+                    // A bad or late binding must not reject the complete Avatar activation.
+                    ShyneCore.LOGGER.warn("[AvatarInput] Could not bind {}.{}: {}", state.avatarId(), id, error.getMessage());
+                    return LuaValue.FALSE;
+                }
+            }
+        });
+        globals.set("_shyne_input_unbind", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                InputBinding binding = inputBindings.remove(DynamicAvatarInputRegistry.sanitize(arg.optjstring("")));
+                if (binding == null) return LuaValue.FALSE;
+                binding.handle().close();
+                return LuaValue.TRUE;
+            }
+        });
+        globals.set("_shyne_input_is_down", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                InputBinding binding = inputBindings.get(DynamicAvatarInputRegistry.sanitize(arg.optjstring("")));
+                return LuaValue.valueOf(binding != null && binding.handle().isDown());
+            }
+        });
+        globals.set("_shyne_input_get_key", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                InputBinding binding = inputBindings.get(DynamicAvatarInputRegistry.sanitize(arg.optjstring("")));
+                if (binding == null) return LuaValue.NIL;
+                return DynamicAvatarInputRegistry.snapshots().stream()
+                    .filter(value -> value.stableId().equals(binding.handle().stableId())).findFirst()
+                    .<LuaValue>map(value -> LuaValue.valueOf(value.keyName())).orElse(LuaValue.NIL);
+            }
+        });
+        globals.set("_shyne_input_set_key", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                InputBinding binding = inputBindings.get(DynamicAvatarInputRegistry.sanitize(args.arg(1).optjstring("")));
+                if (binding == null) return LuaValue.FALSE;
+                try {
+                    return LuaValue.valueOf(DynamicAvatarInputRegistry.setKey(binding.handle().stableId(),
+                        com.mojang.blaze3d.platform.InputConstants.getKey(args.arg(2).checkjstring())));
+                } catch (Exception error) {
+                    return LuaValue.FALSE;
+                }
+            }
+        });
+        globals.set("_shyne_input_conflicts", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                InputBinding binding = inputBindings.get(DynamicAvatarInputRegistry.sanitize(arg.optjstring("")));
+                LuaTable result = new LuaTable();
+                if (binding == null) return result;
+                List<String> conflicts = binding.handle().conflicts();
+                for (int i = 0; i < conflicts.size(); i++) result.set(i + 1, LuaValue.valueOf(conflicts.get(i)));
+                return result;
             }
         });
         globals.set("_shyne_diagnostics", new ZeroArgFunction() {
@@ -434,6 +490,8 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                 result.set("parts_controlled", LuaValue.valueOf(state.parts().size()));
                 result.set("animation_layers", LuaValue.valueOf(state.animationLayers().size()));
                 result.set("input_bindings", LuaValue.valueOf(inputBindings.size()));
+                result.set("input_conflicts", LuaValue.valueOf(inputBindings.values().stream().mapToInt(value -> value.handle().conflicts().size()).sum()));
+                result.set("input_errors", LuaValue.valueOf(DynamicAvatarInputRegistry.diagnostics().size()));
                 result.set("modules_loaded", LuaValue.valueOf(modules.size()));
                 result.set("particles_this_tick", LuaValue.valueOf(particlesThisTick));
                 if (model != null) {
@@ -443,7 +501,7 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                     result.set("textures", LuaValue.valueOf(model.textures().size()));
                 }
                 LuaTable features = new LuaTable();
-                for (String feature : List.of("multi_animation", "animation_fade", "animation_mask", "additive_animation", "shortest_rotation", "part_color", "part_opacity", "part_translucency", "part_emissive", "camera_transform", "nameplate", "sound", "particle", "input", "online_sync")) features.set(feature, LuaValue.TRUE);
+                for (String feature : List.of("multi_animation", "animation_fade", "animation_mask", "additive_animation", "shortest_rotation", "part_color", "part_opacity", "part_translucency", "part_emissive", "camera_transform", "nameplate", "sound", "particle", "input", "input_mouse", "input_modifiers", "input_repeat", "online_sync")) features.set(feature, LuaValue.TRUE);
                 result.set("features", features);
                 return result;
             }
@@ -550,6 +608,7 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
     }
     public void dispose() {
         callEvent("AVATAR_UNLOAD", eventPayload("avatar_unload"));
+        for (InputBinding binding : inputBindings.values()) binding.handle().close();
         globals = null;
         instructionBudget = null;
         modules.clear();
@@ -559,7 +618,8 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
     private void pollInputBindings() {
         for (var entry : inputBindings.entrySet()) {
             InputBinding binding = entry.getValue();
-            boolean down = binding.mapping().isDown();
+            boolean down = binding.handle().isDown();
+            int heldTicks = down ? binding.heldTicks() + 1 : 0;
             if (down != binding.wasDown()) {
                 LuaValue callback = down ? binding.onPress() : binding.onRelease();
                 if (callback.isfunction()) {
@@ -570,12 +630,30 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                         ShyneCore.LOGGER.error("[AvatarLua] input {} failed: {}", entry.getKey(), error.getMessage(), error);
                     }
                 }
-                entry.setValue(new InputBinding(binding.mapping(), binding.onPress(), binding.onRelease(), down));
             }
+            if (down && binding.onHold().isfunction()) invokeInputCallback(entry.getKey(), binding.onHold());
+            if (down && binding.repeat() && heldTicks >= binding.repeatDelay()
+                && (heldTicks - binding.repeatDelay()) % binding.repeatInterval() == 0) {
+                invokeInputCallback(entry.getKey(), binding.onPress());
+            }
+            entry.setValue(new InputBinding(binding.handle(), binding.onPress(), binding.onRelease(), binding.onHold(),
+                binding.repeat(), binding.repeatDelay(), binding.repeatInterval(), down, heldTicks));
         }
     }
 
-    private record InputBinding(net.minecraft.client.KeyMapping mapping, LuaValue onPress, LuaValue onRelease, boolean wasDown) {}
+    private void invokeInputCallback(String id, LuaValue callback) {
+        if (!callback.isfunction()) return;
+        try {
+            instructionBudget.reset(EVENT_INSTRUCTION_LIMIT);
+            callback.call(LuaValue.valueOf(id));
+        } catch (Exception error) {
+            ShyneCore.LOGGER.error("[AvatarLua] input {} failed: {}", id, error.getMessage(), error);
+        }
+    }
+
+    private record InputBinding(DynamicAvatarInputRegistry.Handle handle, LuaValue onPress, LuaValue onRelease,
+                                LuaValue onHold, boolean repeat, int repeatDelay, int repeatInterval,
+                                boolean wasDown, int heldTicks) {}
 
     private void callEvent(String key, LuaValue... args) {
         if (globals == null) return;

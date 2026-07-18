@@ -183,11 +183,29 @@ input = { key = {
   y = 89, z = 90, escape = 256, enter = 257, tab = 258,
   backspace = 259, insert = 260, delete = 261, right = 262, left = 263,
   down = 264, up = 265, page_up = 266, page_down = 267, home = 268, ending = 269
-} }
+}, mouse = { left = 0, right = 1, middle = 2, button_4 = 3, button_5 = 4 },
+modifier = { shift = 1, control = 2, ctrl = 2, alt = 4, super = 8 } }
+local function input_modifier_mask(value)
+  if type(value) == "number" then return value end
+  if type(value) == "string" then return input.modifier[string.lower(value)] or 0 end
+  local mask = 0
+  if type(value) == "table" then
+    for _, name in ipairs(value) do mask = mask + (input.modifier[string.lower(tostring(name))] or 0) end
+  end
+  return mask
+end
 function input.bind(id, options)
   options = options or {}
-  return _shyne_input_bind(id, options.title or id, options.key or input.key.unknown, options.on_press, options.on_release)
+  return _shyne_input_bind(id, options.title or id, options.key or input.key.unknown,
+    options.type or "keyboard", input_modifier_mask(options.modifiers), options.on_press,
+    options.on_release, options.on_hold, options["repeat"] == true,
+    options.repeat_delay or 10, options.repeat_interval or 2)
 end
+function input.unbind(id) return _shyne_input_unbind(id) end
+function input.is_down(id) return _shyne_input_is_down(id) end
+function input.get_key(id) return _shyne_input_get_key(id) end
+function input.set_key(id, key_name) return _shyne_input_set_key(id, key_name) end
+function input.conflicts(id) return _shyne_input_conflicts(id) end
 
 events = { _handlers = {} }
 local function event_name(name) return string.lower(tostring(name or "")) end

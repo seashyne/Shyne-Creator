@@ -11,6 +11,12 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Discovers declarative skill definitions from external {@code shyne-mods} packs.
+ *
+ * <p>Each scan rebuilds the registry from disk so removed or invalid definitions
+ * cannot remain active from an older scan.</p>
+ */
 public class SkillRegistry {
     public interface Listener { void onSkillRegistrySync(Collection<SkillDefinition> skills); }
 

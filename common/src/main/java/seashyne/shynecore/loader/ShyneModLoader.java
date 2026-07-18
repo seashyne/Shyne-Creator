@@ -13,7 +13,12 @@ import java.io.Reader;
 import java.nio.file.*;
 import java.util.*;
 
-/** Loads Lua-only content packs from shyne-mods/. */
+/**
+ * Loads Lua-only content packs from the external {@code shyne-mods/} directory.
+ *
+ * <p>No user Avatar or model is bundled into the mod JAR. Every pack resolves its
+ * manifest, entry script and declared files inside its own directory.</p>
+ */
 public final class ShyneModLoader {
     private static final Gson GSON = new Gson();
 

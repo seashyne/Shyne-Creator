@@ -8,6 +8,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
+/**
+ * Converts Blockbench {@code .bbmodel} JSON into Shyne's immutable runtime model.
+ *
+ * <p>File resolution stays here instead of in the renderer, giving validation,
+ * networking and both loaders one canonical view of model content.</p>
+ */
 public final class BbModelParser {
     private static final Gson GSON = new Gson();
     private static final List<String> FACE_KEYS = List.of("north", "south", "east", "west", "up", "down");

@@ -9,6 +9,12 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
 
+/**
+ * Mutable, thread-visible state for the currently active Avatar.
+ *
+ * <p>This object is shared by Lua callbacks, networking and rendering. Concurrent
+ * maps and dirty flags keep those paths safe without rebuilding every frame.</p>
+ */
 public final class AvatarState {
     private final String avatarId;
     private final String modelId;

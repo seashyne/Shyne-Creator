@@ -17,6 +17,12 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Owns persistent player progression and validates it against the active skill registry.
+ *
+ * <p>Mutations replace immutable profile records and notify listeners so saving
+ * and network synchronization observe the same state.</p>
+ */
 public class PlayerProfileRuntime {
     public interface Listener { void onProfileSync(Collection<PlayerProfile> profiles); }
 

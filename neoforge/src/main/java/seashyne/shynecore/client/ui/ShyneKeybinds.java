@@ -21,20 +21,6 @@ public final class ShyneKeybinds {
 
     private ShyneKeybinds() {}
 
-    public static synchronized KeyMapping registerDynamic(KeyMapping mapping) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.options == null) return mapping;
-        for (KeyMapping existing : minecraft.options.keyMappings) {
-            if (existing.getName().equals(mapping.getName())) return existing;
-        }
-        KeyMapping[] current = minecraft.options.keyMappings;
-        KeyMapping[] expanded = java.util.Arrays.copyOf(current, current.length + 1);
-        expanded[current.length] = mapping;
-        minecraft.options.keyMappings = expanded;
-        KeyMapping.resetMapping();
-        return mapping;
-    }
-
     public static void init(IEventBus modEventBus) {
         openSettings = new KeyMapping("key.shyne_core.open_settings", GLFW.GLFW_KEY_O, KeyMapping.Category.MISC);
         castLight = new KeyMapping("key.shyne_core.cast_light", GLFW.GLFW_KEY_Z, KeyMapping.Category.GAMEPLAY);

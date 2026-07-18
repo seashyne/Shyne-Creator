@@ -9,7 +9,12 @@ import org.luaj.vm2.compiler.LuaC;
 import org.luaj.vm2.lib.*;
 import org.luaj.vm2.lib.jse.JseMathLib;
 
-/** Creates Lua environments without filesystem, OS, network or Java reflection access. */
+/**
+ * Creates Lua environments without filesystem, OS, network or Java reflection access.
+ *
+ * <p>The instruction {@link Budget} is a second safety layer: removing dangerous
+ * libraries prevents capability abuse, while the budget stops infinite loops.</p>
+ */
 public final class LuaSandbox {
     private LuaSandbox() {}
 
