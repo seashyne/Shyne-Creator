@@ -1,0 +1,76 @@
+package seashyne.shynecore.client.avatar;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+final class AvatarLoaderTest {
+    @TempDir Path temp;
+
+    @Test
+    void nameOnlyManifestUsesStableStandardOneDefaults() throws Exception {
+        Path root = temp.resolve("Deep-ShyneCore");
+        Files.createDirectories(root);
+        Files.writeString(root.resolve("avatar.json"), "{\"name\":\"Deep\"}");
+        Files.writeString(root.resolve("script.lua"), "return true");
+        Files.writeString(root.resolve("model.bbmodel"), "{}");
+
+        AvatarManifest manifest = AvatarLoader.loadManifest(root);
+
+        assertAll(
+            () -> assertEquals(1, manifest.apiVersion()),
+            () -> assertEquals("deep-shynecore", manifest.id()),
+            () -> assertEquals("Deep", manifest.name()),
+            () -> assertEquals("1.0.0", manifest.version()),
+            () -> assertEquals("script.lua", manifest.main()),
+            () -> assertEquals("model.bbmodel", manifest.model()),
+            () -> assertTrue(manifest.replaceVanilla()),
+            () -> assertTrue(manifest.onlineSync()),
+            () -> assertTrue(manifest.firstPersonMasking()),
+            () -> assertTrue(manifest.localCamera()),
+            () -> assertEquals("manifest", manifest.textureSyncMode()),
+            () -> assertTrue(manifest.textures().isEmpty()),
+            () -> assertTrue(manifest.permissions().isEmpty())
+        );
+    }
+
+    @Test
+    void parsesKnownPublicPermissionsAndRejectsUnknownOnes() throws Exception {
+        Path root = temp.resolve("permission-avatar");
+        Files.createDirectories(root);
+        Files.writeString(root.resolve("script.lua"), "return true");
+        Files.writeString(root.resolve("model.bbmodel"), "{}");
+        Files.writeString(root.resolve("avatar.json"), """
+            {"name":"Permission Test","permissions":["particle","camera","command"]}
+            """);
+
+        AvatarManifest manifest = AvatarLoader.loadManifest(root);
+        assertEquals(
+            java.util.Set.of(AvatarPermission.PARTICLE, AvatarPermission.CAMERA, AvatarPermission.COMMAND),
+            manifest.permissions()
+        );
+
+        Files.writeString(root.resolve("avatar.json"), """
+            {"name":"Permission Test","permissions":["filesystem"]}
+            """);
+        IOException error = assertThrows(IOException.class, () -> AvatarLoader.loadManifest(root));
+        assertTrue(error.getMessage().contains("unsupported avatar permission"));
+    }
+
+    @Test
+    void explicitUnsupportedApiVersionStillFails() throws Exception {
+        Path root = temp.resolve("future-avatar");
+        Files.createDirectories(root);
+        Files.writeString(root.resolve("avatar.json"), "{\"name\":\"Future\",\"api_version\":99}");
+        Files.writeString(root.resolve("script.lua"), "return true");
+        Files.writeString(root.resolve("model.bbmodel"), "{}");
+
+        IOException error = assertThrows(IOException.class, () -> AvatarLoader.loadManifest(root));
+        assertTrue(error.getMessage().contains("unsupported avatar api_version 99"));
+    }
+}

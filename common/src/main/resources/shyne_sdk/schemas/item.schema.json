@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shynecore.dev/schemas/item.schema.json",
+  "title": "Shyne Creator custom item",
+  "type": "object",
+  "required": ["item_id", "display_name"],
+  "properties": {
+    "item_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$" },
+    "display_name": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "description": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" }, "maxItems": 16 }
+      ]
+    },
+    "model": { "type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$", "default": "shyne_creator:artifact" },
+    "rarity": { "type": "string", "enum": ["common", "uncommon", "rare", "epic"], "default": "common" },
+    "max_stack": { "type": "integer", "minimum": 1, "maximum": 64, "default": 1 },
+    "glint": { "type": "boolean", "default": false },
+    "use_skill": { "type": "string", "default": "" },
+    "weapon_id": { "type": "string", "default": "" },
+    "cooldown_ticks": { "type": "integer", "minimum": 0, "maximum": 72000, "default": 0 },
+    "consume_on_use": { "type": "boolean", "default": false },
+    "payload": { "type": "object", "default": {} }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,158 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.142'
+}
+
+version = rootProject.mod_version
+group = rootProject.mod_group
+
+base {
+    archivesName = 'shyne-creator-neoforge'
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.maxhenkel.de/repository/public' }
+}
+
+sourceSets {
+    main {
+        java.setSrcDirs(['src/main/java', '../common/src/main/java'])
+        resources.setSrcDirs(['src/main/resources', '../common/src/main/resources', 'src/generated/resources'])
+        resources.exclude '**/*.bbmodel', '**/.cache/**'
+    }
+    test {
+        java.setSrcDirs(['../common/src/test/java'])
+    }
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(Integer.parseInt(java_version))
+    withSourcesJar()
+}
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+    luaVerifier
+}
+
+dependencies {
+    jarJar(implementation("org.luaj:luaj-jse:${luaj_version}")) {
+        version {
+            strictly '[3.0.1,3.1)'
+            prefer '3.0.1'
+        }
+    }
+    compileOnly "de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}"
+    testImplementation 'com.google.code.gson:gson:2.10.1'
+    testImplementation "org.junit.jupiter:junit-jupiter:${junit_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+    luaVerifier "org.luaj:luaj-jse:${luaj_version}"
+}
+
+def generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    def replaceProperties = [
+        minecraft_version       : minecraft_version,
+        minecraft_version_range : minecraft_version_range,
+        neo_version             : neo_version,
+        mod_id                  : mod_id,
+        mod_name                : mod_name,
+        mod_license             : mod_license,
+        mod_version             : mod_version
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from 'src/main/templates'
+    into layout.buildDirectory.dir('generated/sources/modMetadata')
+}
+
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = Integer.parseInt(java_version)
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
+}
+
+tasks.register('luaContentCheck') {
+    group = 'verification'
+    description = 'Ensures the common JAR resources contain Lua-only framework content and no bundled avatars.'
+    doLast {
+        def resourceRoot = rootProject.file('common/src/main/resources')
+        def forbidden = fileTree(resourceRoot) {
+            include '**/*.mellow', '**/bridge_server.py', '**/__pycache__/**'
+        }.files
+        if (!forbidden.empty) {
+            throw new GradleException("Removed Mellow/Python runtime files found: ${forbidden}")
+        }
+        def bundledAvatars = fileTree(resourceRoot) {
+            include '**/*.bbmodel', 'shyne_runtime/avatars/**'
+        }.files
+        if (!bundledAvatars.empty) {
+            throw new GradleException("Avatar packs must remain external: ${bundledAvatars}")
+        }
+    }
+}
+
+tasks.register('luaSyntaxCheck', JavaExec) {
+    group = 'verification'
+    description = 'Parses every bundled common Lua file with LuaJ.'
+    classpath = configurations.luaVerifier
+    mainClass = 'luac'
+    doFirst {
+        def scripts = files(
+            fileTree(rootProject.file('common/src/main/resources/shyne_runtime')) { include '**/*.lua' },
+            fileTree(rootProject.file('tools/integration-avatar')) { include '**/*.lua' }
+        )
+        args = ['-p'] + scripts.files.sort { it.path }.collect { it.absolutePath }
+    }
+}
+
+tasks.named('check') {
+    dependsOn 'luaContentCheck', 'luaSyntaxCheck'
+}
+
+tasks.named('jar', Jar).configure {
+    from(rootProject.file('LICENSE')) {
+        rename { "${it}_shyne-creator-neoforge" }
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}

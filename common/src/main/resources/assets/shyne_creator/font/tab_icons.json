@@ -1,0 +1,11 @@
+{
+  "providers": [
+    {
+      "type": "bitmap",
+      "file": "shyne_creator:font/tab_icons.png",
+      "height": 8,
+      "ascent": 7,
+      "chars": ["\uE000\uE001\uE002\uE003\uE004\uE005"]
+    }
+  ]
+}

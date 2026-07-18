@@ -1,0 +1,87 @@
+plugins {
+    id 'base'
+}
+
+group = mod_group
+version = mod_version
+
+tasks.register('verifyLoaderParity') {
+    group = 'verification'
+    description = 'Checks that common code is loader-neutral and both loader adapters expose the same protocol/version.'
+    doLast {
+        def commonJava = fileTree('common/src/main/java') { include '**/*.java' }.files
+        def forbiddenImports = commonJava.findAll { file ->
+            def text = file.getText('UTF-8')
+            text.contains('net.fabricmc') || text.contains('net.neoforged')
+        }
+        if (!forbiddenImports.empty) {
+            throw new GradleException("Loader imports are not allowed in common: ${forbiddenImports}")
+        }
+
+        def relativeJavaPaths = { String root ->
+            def rootDir = file(root)
+            fileTree(rootDir) { include '**/*.java' }.files.collect {
+                rootDir.toPath().relativize(it.toPath()).toString().replace('\\', '/')
+            } as Set
+        }
+        def fabricAdapters = relativeJavaPaths('fabric/src/main/java')
+        def neoForgeAdapters = relativeJavaPaths('neoforge/src/main/java')
+        if (fabricAdapters != neoForgeAdapters) {
+            throw new GradleException(
+                "Loader adapter paths differ. Fabric-only=${fabricAdapters - neoForgeAdapters}, " +
+                "NeoForge-only=${neoForgeAdapters - fabricAdapters}"
+            )
+        }
+
+        def valueFrom = { File source, String pattern ->
+            def match = source.getText('UTF-8') =~ pattern
+            if (!match.find()) {
+                throw new GradleException("Could not read parity value from ${source}")
+            }
+            match.group(1)
+        }
+        def fabricCore = file('fabric/src/main/java/seashyne/shynecore/ShyneCore.java')
+        def neoForgeCore = file('neoforge/src/main/java/seashyne/shynecore/ShyneCore.java')
+        def fabricNetwork = file('fabric/src/main/java/seashyne/shynecore/network/ShyneNetwork.java')
+        def neoForgeNetwork = file('neoforge/src/main/java/seashyne/shynecore/network/ShyneNetwork.java')
+        def fabricVersion = valueFrom(fabricCore, /VERSION\s*=\s*"([^"]+)"/)
+        def neoForgeVersion = valueFrom(neoForgeCore, /VERSION\s*=\s*"([^"]+)"/)
+        def fabricProtocol = valueFrom(fabricNetwork, /PROTOCOL_VERSION\s*=\s*(\d+)/)
+        def neoForgeProtocol = valueFrom(neoForgeNetwork, /PROTOCOL_VERSION\s*=\s*(\d+)/)
+        if (fabricVersion != neoForgeVersion || fabricVersion != project.mod_version) {
+            throw new GradleException(
+                "Runtime versions differ: Fabric=${fabricVersion}, NeoForge=${neoForgeVersion}, Gradle=${project.mod_version}"
+            )
+        }
+        if (fabricProtocol != neoForgeProtocol) {
+            throw new GradleException(
+                "Network protocols differ: Fabric=${fabricProtocol}, NeoForge=${neoForgeProtocol}"
+            )
+        }
+    }
+}
+
+tasks.register('buildAll') {
+    group = 'build'
+    description = 'Builds and verifies the Fabric and NeoForge distributions.'
+    dependsOn 'verifyLoaderParity', ':fabric:build', ':neoforge:build'
+}
+
+tasks.register('collectReleaseJars', Copy) {
+    group = 'distribution'
+    description = 'Builds both loaders and copies their release JARs into build/releases.'
+    dependsOn buildAll
+    from(project(':fabric').layout.buildDirectory.dir('libs')) {
+        include '*.jar'
+        exclude '*-sources.jar'
+    }
+    from(project(':neoforge').layout.buildDirectory.dir('libs')) {
+        include '*.jar'
+        exclude '*-sources.jar'
+    }
+    into layout.buildDirectory.dir('releases')
+}
+
+tasks.named('build') {
+    dependsOn buildAll
+}

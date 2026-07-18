@@ -1,0 +1,17 @@
+{
+  "item_id": "aether_crystal",
+  "display_name": "Aether Crystal",
+  "description": [
+    "A crystal humming with skybound energy",
+    "Right-click to awaken its power"
+  ],
+  "model": "shyne_creator:artifact",
+  "rarity": "rare",
+  "max_stack": 1,
+  "glint": true,
+  "cooldown_ticks": 30,
+  "consume_on_use": false,
+  "payload": {
+    "school": "aether"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "meta": {"format_version": "4.10", "model_format": "free"},
+  "name": "Shyne Integration Model",
+  "resolution": {"width": 64, "height": 64},
+  "textures": [{"id": "0", "name": "visual.png", "relative_path": "visual.png", "width": 64, "height": 64, "uv_width": 64, "uv_height": 64}],
+  "elements": [
+    {"name":"BodyCube","uuid":"cube-body","type":"cube","from":[-4,0,-2],"to":[4,12,2],"origin":[0,6,0],"faces":{"north":{"uv":[0,0,8,12],"texture":0},"south":{"uv":[0,0,8,12],"texture":0},"east":{"uv":[0,0,4,12],"texture":0},"west":{"uv":[0,0,4,12],"texture":0},"up":{"uv":[0,0,8,4],"texture":0},"down":{"uv":[0,0,8,4],"texture":0}}},
+    {"name":"MarkerCube","uuid":"cube-marker","type":"cube","from":[-2,12,-2],"to":[2,16,2],"origin":[0,14,0],"faces":{"north":{"uv":[8,0,12,4],"texture":0},"south":{"uv":[8,0,12,4],"texture":0},"east":{"uv":[8,0,12,4],"texture":0},"west":{"uv":[8,0,12,4],"texture":0},"up":{"uv":[8,0,12,4],"texture":0},"down":{"uv":[8,0,12,4],"texture":0}}}
+  ],
+  "outliner": [{"name":"root","uuid":"bone-root","origin":[0,0,0],"children":["cube-body",{"name":"Marker","uuid":"bone-marker","origin":[0,12,0],"children":["cube-marker"]}]}],
+  "animations": [
+    {"name":"idle","length":2,"loop":"loop","animators":{"bone-root":{"name":"root","rotation":[{"time":0,"vector":[0,-3,0]},{"time":1,"vector":[0,3,0]},{"time":2,"vector":[0,-3,0]}]}}},
+    {"name":"pulse","length":1,"loop":"loop","animators":{"bone-marker":{"name":"Marker","scale":[{"time":0,"vector":[1,1,1]},{"time":0.5,"vector":[1.2,1.2,1.2]},{"time":1,"vector":[1,1,1]}]}}}
+  ]
+}

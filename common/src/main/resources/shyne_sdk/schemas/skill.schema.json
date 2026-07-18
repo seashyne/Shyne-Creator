@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "shyne core skill definition",
+  "type": "object",
+  "required": ["skill_id", "display_name", "cast_type"],
+  "properties": {
+    "skill_id": {"type": "string"},
+    "display_name": {"type": "string"},
+    "description": {"type": "string"},
+    "cast_type": {"enum": ["instant", "projectile", "channel", "summon", "aura", "utility"]},
+    "default_slot": {"enum": ["primary", "secondary", "utility", "ultimate", "passive_1", "passive_2"]},
+    "mana_cost": {"type": "number", "minimum": 0},
+    "cooldown_ticks": {"type": "integer", "minimum": 0},
+    "combo_window_ticks": {"type": "integer", "minimum": 0},
+    "model_id": {"type": "string"},
+    "animation": {"type": "string"},
+    "icon": {"type": "string"},
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "requirement": {
+      "type": "object",
+      "properties": {
+        "min_level": {"type": "integer", "minimum": 0},
+        "required_skills": {"type": "array", "items": {"type": "string"}},
+        "required_weapon_tag": {"type": "string"}
+      }
+    },
+    "payload": {"type": "object"}
+  }
+}

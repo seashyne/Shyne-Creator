@@ -1,0 +1,14 @@
+{
+  "api_version": 1,
+  "id": "shyne.integration_test",
+  "name": "Shyne Integration Test",
+  "version": "1.0.0",
+  "main": "main.lua",
+  "model": "model.bbmodel",
+  "replace_vanilla": true,
+  "online_sync": true,
+  "first_person_masking": true,
+  "local_camera": true,
+  "texture_sync_mode": "manifest",
+  "textures": ["visual.png"]
+}

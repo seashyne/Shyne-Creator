@@ -1,0 +1,13 @@
+.gradle/
+build/
+**/build/
+.idea/
+*.iml
+.vscode/
+run/
+**/run/
+repo/
+**/repo/
+*.stdout.log
+*.stderr.log
+luac.out

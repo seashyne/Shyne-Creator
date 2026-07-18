@@ -1,0 +1,8 @@
+{
+  "id": "shyne_item_demo",
+  "name": "Shyne Item Demo",
+  "version": "1.0.0",
+  "author": "Shyne Creator",
+  "script_engine": "lua",
+  "entry": "main.lua"
+}

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Shyne Avatar Manifest",
+  "type": "object",
+  "required": [
+    "name"
+  ],
+  "properties": {
+    "api_version": {
+      "type": "integer",
+      "const": 1,
+      "default": 1,
+      "description": "Optional explicit API standard. Missing values are locked to Standard 1."
+    },
+    "id": {
+      "type": "string",
+      "description": "Defaults to a normalized form of the Avatar folder name."
+    },
+    "name": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "main": {
+      "type": "string",
+      "default": "script.lua"
+    },
+    "model": {
+      "type": "string",
+      "default": "model.bbmodel"
+    },
+    "online_sync": {
+      "type": "boolean",
+      "default": true
+    },
+    "replace_vanilla": {
+      "type": "boolean",
+      "default": true
+    },
+    "description": {
+      "type": "string"
+    },
+    "first_person_masking": {
+      "type": "boolean",
+      "default": true
+    },
+    "local_camera": {
+      "type": "boolean",
+      "default": true
+    },
+    "texture_sync_mode": {
+      "type": "string",
+      "enum": [
+        "metadata",
+        "manifest",
+        "strict"
+      ],
+      "default": "manifest"
+    },
+    "textures": {
+      "type": "array",
+      "description": "Texture files used by model.bbmodel. Face-to-texture mapping remains inside the model.",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "synced_schema": {
+      "type": "string"
+    },
+    "permissions": {
+      "type": "array",
+      "description": "Public Avatar capabilities requested from the user. Undeclared capabilities are denied.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "particle",
+          "sound",
+          "camera",
+          "microphone",
+          "command"
+        ]
+      },
+      "uniqueItems": true,
+      "default": []
+    }
+  }
+}

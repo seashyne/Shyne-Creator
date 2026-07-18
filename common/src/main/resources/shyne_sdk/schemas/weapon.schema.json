@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "shyne core weapon definition",
+  "type": "object",
+  "required": ["weapon_id", "display_name", "item_id"],
+  "properties": {
+    "weapon_id": {"type": "string"},
+    "display_name": {"type": "string"},
+    "item_id": {"type": "string"},
+    "model_id": {"type": "string"},
+    "class_tag": {"type": "string"},
+    "granted_skills": {"type": "array", "items": {"type": "string"}},
+    "stat_modifiers": {"type": "object", "additionalProperties": {"type": "number"}},
+    "payload": {"type": "object"}
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "shyne core player profile snapshot",
+  "type": "object",
+  "required": ["player_id", "player_name", "level"],
+  "properties": {
+    "player_id": {"type": "string"},
+    "player_name": {"type": "string"},
+    "level": {"type": "integer", "minimum": 1},
+    "experience": {"type": "integer", "minimum": 0},
+    "skill_points": {"type": "integer", "minimum": 0},
+    "stat_points": {"type": "integer", "minimum": 0},
+    "player_class": {"type": "string"},
+    "unlocked_skills": {"type": "array", "items": {"type": "string"}},
+    "equipped_skills": {"type": "object", "additionalProperties": {"type": "string"}},
+    "attributes": {"type": "object", "additionalProperties": {"type": "integer"}},
+    "team_id": {"type": "string"}
+  }
+}
