@@ -11,6 +11,7 @@ import seashyne.shynecore.client.avatar.ShyneCloudClient;
 import seashyne.shynecore.client.config.ShyneClientSettings;
 import seashyne.shynecore.client.network.ShyneClientNetworking;
 import seashyne.shynecore.client.render.BbModelEntityRenderer;
+import seashyne.shynecore.client.render.AvatarRenderTasks;
 import seashyne.shynecore.client.ui.ShyneKeybinds;
 import seashyne.shynecore.client.ui.ShynePauseMenu;
 import seashyne.shynecore.client.ui.ShyneSettingsScreen;
@@ -23,6 +24,7 @@ public class ShyneCoreClient {
         ShyneClientNetworking.init();
         AvatarRuntime.init();
         BbModelEntityRenderer.init(modEventBus);
+        AvatarRenderTasks.init();
         ShyneKeybinds.init(modEventBus);
         ShynePauseMenu.init();
         container.registerExtensionPoint(IConfigScreenFactory.class, (mod, parent) -> new ShyneSettingsScreen(parent));

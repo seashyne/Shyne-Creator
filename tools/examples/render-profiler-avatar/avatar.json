@@ -1,0 +1,10 @@
+{
+  "api_version": 1,
+  "id": "shyne.render_profiler_example",
+  "name": "Render and Profiler Example",
+  "version": "1.0.0",
+  "main": "script.lua",
+  "model": "model.bbmodel",
+  "replace_vanilla": false,
+  "online_sync": false
+}

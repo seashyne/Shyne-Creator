@@ -26,6 +26,7 @@ import seashyne.shynecore.client.avatar.AvatarAnimationLayer;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
 import seashyne.shynecore.client.avatar.AvatarState;
 import seashyne.shynecore.client.config.ShyneClientSettings;
+import seashyne.shynecore.client.profiler.AvatarProfiler;
 import seashyne.shynecore.client.state.ClientAnimationState;
 import seashyne.shynecore.model.BbBoneDefinition;
 import seashyne.shynecore.model.BbBoneAnimation;
@@ -175,6 +176,7 @@ public final class BbModelEntityRenderer {
         float subsetScaleZ,
         boolean translucentPass
     ) {
+        long profileStarted = System.nanoTime();
         Matrix4f modelToWorld = new Matrix4f(pose.pose())
             .translate(0.0f, 1.5f, 0.0f)
             .scale(1.0f / 16.0f, -1.0f / 16.0f, 1.0f / 16.0f);
@@ -213,6 +215,10 @@ public final class BbModelEntityRenderer {
             boolean translucent = ((colorArgb >>> 24) & 255) < 255;
             if (translucent != translucentPass) continue;
             emitCube(vertices, transform, cube, targetTextureIndex, textureCount, textureWidth, textureHeight, emissive ? 0x00F000F0 : lightCoords, colorArgb);
+        }
+        AvatarState profiled = AvatarRuntime.active();
+        if (profiled != null && entityId.equals(profiled.boundEntityId())) {
+            AvatarProfiler.record(AvatarProfiler.Category.MODEL_RENDER, System.nanoTime() - profileStarted);
         }
     }
 

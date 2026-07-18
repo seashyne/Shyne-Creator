@@ -10,6 +10,7 @@ import seashyne.shynecore.attachment.AttachedModelState;
 import seashyne.shynecore.client.network.ShyneClientNetworking;
 import seashyne.shynecore.client.config.ShyneClientSettings;
 import seashyne.shynecore.client.render.BbModelTextures;
+import seashyne.shynecore.client.profiler.AvatarProfiler;
 import seashyne.shynecore.client.state.ClientAnimationState;
 import seashyne.shynecore.model.BbBoneDefinition;
 import seashyne.shynecore.model.BbModelDefinition;
@@ -218,6 +219,8 @@ public final class AvatarRuntime {
         activeModel = model;
         active = nextState;
         script = nextScript;
+        AvatarProfiler.activate(manifest.id(), root, model);
+        AvatarProfiler.record(AvatarProfiler.Category.LUA_LOAD, nextScript.loadElapsedNanos());
         snapshotAssetsSent = false;
         snapshotTicks = 0;
         ClientAnimationState.putLocalModel(modelId, model);
@@ -275,6 +278,7 @@ public final class AvatarRuntime {
         snapshotAssetsSent = false;
         forceModelSnapshotUntilMillis = 0L;
         snapshotTicks = 0;
+        AvatarProfiler.clear();
     }
 
     public static boolean selectOutfit(String outfitId, Minecraft client) {

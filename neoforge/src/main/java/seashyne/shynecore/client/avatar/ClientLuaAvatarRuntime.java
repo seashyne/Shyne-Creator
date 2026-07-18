@@ -10,6 +10,8 @@ import org.luaj.vm2.lib.ZeroArgFunction;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.state.ClientAnimationState;
 import seashyne.shynecore.client.input.DynamicAvatarInputRegistry;
+import seashyne.shynecore.client.profiler.AvatarProfiler;
+import seashyne.shynecore.client.render.AvatarRenderTaskRegistry;
 import seashyne.shynecore.script.LuaSandbox;
 import seashyne.shynecore.voice.ShyneMicrophoneState;
 import net.minecraft.client.Minecraft;
@@ -29,9 +31,12 @@ public final class ClientLuaAvatarRuntime {
     private LuaSandbox.Budget instructionBudget;
     private final Map<String, LuaValue> modules = new HashMap<>();
     private final Object inputOwner = new Object();
+    private final Object renderTaskOwner = new Object();
+    private final Set<String> renderTaskIds = new HashSet<>();
     private final Map<String, InputBinding> inputBindings = new LinkedHashMap<>();
     private long lastShyneCommandNanos;
     private int particlesThisTick;
+    private long loadElapsedNanos;
 
     public ClientLuaAvatarRuntime(AvatarState state, Path scriptPath) {
         this.state = state;
@@ -39,6 +44,7 @@ public final class ClientLuaAvatarRuntime {
     }
 
     public boolean load() {
+        long started = System.nanoTime();
         try {
             LuaSandbox.Environment environment = LuaSandbox.create();
             globals = environment.globals();
@@ -57,8 +63,12 @@ public final class ClientLuaAvatarRuntime {
         } catch (Exception e) {
             ShyneCore.LOGGER.error("[AvatarLua] Could not load {}: {}", scriptPath, e.getMessage(), e);
             return false;
+        } finally {
+            loadElapsedNanos = System.nanoTime() - started;
         }
     }
+
+    public long loadElapsedNanos() { return loadElapsedNanos; }
 
     private void installApi() {
         globals.set("_avatar_state_get", new OneArgFunction() {
@@ -494,6 +504,7 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                 result.set("input_errors", LuaValue.valueOf(DynamicAvatarInputRegistry.diagnostics().size()));
                 result.set("modules_loaded", LuaValue.valueOf(modules.size()));
                 result.set("particles_this_tick", LuaValue.valueOf(particlesThisTick));
+                result.set("render_tasks", LuaValue.valueOf(renderTaskIds.size()));
                 if (model != null) {
                     result.set("bones", LuaValue.valueOf(model.bones().size()));
                     result.set("cubes", LuaValue.valueOf(model.cubes().size()));
@@ -501,8 +512,63 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                     result.set("textures", LuaValue.valueOf(model.textures().size()));
                 }
                 LuaTable features = new LuaTable();
-                for (String feature : List.of("multi_animation", "animation_fade", "animation_mask", "additive_animation", "shortest_rotation", "part_color", "part_opacity", "part_translucency", "part_emissive", "camera_transform", "nameplate", "sound", "particle", "input", "input_mouse", "input_modifiers", "input_repeat", "online_sync")) features.set(feature, LuaValue.TRUE);
+                for (String feature : List.of("multi_animation", "animation_fade", "animation_mask", "additive_animation", "shortest_rotation", "part_color", "part_opacity", "part_translucency", "part_emissive", "camera_transform", "nameplate", "sound", "particle", "input", "input_mouse", "input_modifiers", "input_repeat", "render_text", "render_item", "render_block", "render_sprite", "render_line", "render_world", "profiler", "online_sync")) features.set(feature, LuaValue.TRUE);
                 result.set("features", features);
+                return result;
+            }
+        });
+        globals.set("_shyne_render_task", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                String id = DynamicAvatarInputRegistry.sanitize(args.arg(1).optjstring(""));
+                if (id.isBlank()) return LuaValue.FALSE;
+                if (!renderTaskIds.contains(id) && renderTaskIds.size() >= AvatarRenderTaskRegistry.MAX_TASKS_PER_AVATAR) return LuaValue.FALSE;
+                var spec = new AvatarRenderTaskRegistry.TaskSpec(
+                    args.arg(2).optjstring("text"), args.arg(3).optboolean(false),
+                    args.arg(4).optjstring(""), args.arg(5).optjstring(""),
+                    args.arg(6).optdouble(0), args.arg(7).optdouble(0), args.arg(8).optdouble(0),
+                    args.arg(9).optdouble(0), args.arg(10).optdouble(0), args.arg(11).optdouble(0),
+                    args.arg(12).optdouble(1), args.arg(13).optdouble(16), args.arg(14).optdouble(1),
+                    (int) args.arg(15).optlong(0xFFFFFFFFL), args.arg(16).optboolean(false), args.arg(17).optboolean(true)
+                );
+                boolean added = AvatarRenderTaskRegistry.upsert(renderTaskOwner, state.avatarId(), id, spec);
+                if (added) renderTaskIds.add(id);
+                return LuaValue.valueOf(added);
+            }
+        });
+        globals.set("_shyne_render_remove", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                String id = DynamicAvatarInputRegistry.sanitize(arg.optjstring(""));
+                renderTaskIds.remove(id);
+                return LuaValue.valueOf(AvatarRenderTaskRegistry.remove(renderTaskOwner, state.avatarId(), id));
+            }
+        });
+        globals.set("_shyne_render_clear", new ZeroArgFunction() {
+            @Override public LuaValue call() {
+                AvatarRenderTaskRegistry.clearOwner(renderTaskOwner);
+                renderTaskIds.clear();
+                return LuaValue.NIL;
+            }
+        });
+        globals.set("_shyne_profiler_snapshot", new ZeroArgFunction() {
+            @Override public LuaValue call() {
+                var profile = AvatarProfiler.snapshot(AvatarRenderTaskRegistry.snapshots().size(), AvatarRenderTaskRegistry.estimatedBytes());
+                LuaTable result = new LuaTable();
+                result.set("fps", LuaValue.valueOf(profile.fps()));
+                result.set("frame_ms", LuaValue.valueOf(profile.frameMs()));
+                result.set("avatar_frame_ms", LuaValue.valueOf(profile.avatarFrameMs()));
+                result.set("estimated_fps_loss", LuaValue.valueOf(profile.estimatedFpsLoss()));
+                result.set("heap_bytes", LuaValue.valueOf(profile.heapBytes()));
+                result.set("avatar_bytes", LuaValue.valueOf(profile.avatarBytes()));
+                result.set("task_count", LuaValue.valueOf(profile.taskCount()));
+                LuaTable metrics = new LuaTable();
+                profile.metrics().forEach((category, metric) -> {
+                    LuaTable value = new LuaTable();
+                    value.set("average_ms", LuaValue.valueOf(metric.averageMs()));
+                    value.set("maximum_ms", LuaValue.valueOf(metric.maximumMs()));
+                    value.set("last_ms", LuaValue.valueOf(metric.lastMs()));
+                    metrics.set(category.name().toLowerCase(Locale.ROOT), value);
+                });
+                result.set("metrics", metrics);
                 return result;
             }
         });
@@ -609,6 +675,8 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
     public void dispose() {
         callEvent("AVATAR_UNLOAD", eventPayload("avatar_unload"));
         for (InputBinding binding : inputBindings.values()) binding.handle().close();
+        AvatarRenderTaskRegistry.clearOwner(renderTaskOwner);
+        renderTaskIds.clear();
         globals = null;
         instructionBudget = null;
         modules.clear();
@@ -657,6 +725,7 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
 
     private void callEvent(String key, LuaValue... args) {
         if (globals == null) return;
+        long started = System.nanoTime();
         try {
             LuaValue events = globals.get("events");
             if (!events.istable()) {
@@ -676,6 +745,8 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
             }
         } catch (Exception e) {
             ShyneCore.LOGGER.error("[AvatarLua] event {} failed: {}", key, e.getMessage(), e);
+        } finally {
+            AvatarProfiler.recordLuaEvent(key, System.nanoTime() - started);
         }
     }
 

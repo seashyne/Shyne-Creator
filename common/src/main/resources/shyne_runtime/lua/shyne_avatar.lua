@@ -207,6 +207,33 @@ function input.get_key(id) return _shyne_input_get_key(id) end
 function input.set_key(id, key_name) return _shyne_input_set_key(id, key_name) end
 function input.conflicts(id) return _shyne_input_conflicts(id) end
 
+render = {}
+local function render_task(id, kind, options)
+  options = options or {}
+  local position = options.position or options.pos or options.from or {}
+  local destination = options.to or options.destination or {}
+  local ok = _shyne_render_task(id, kind, options.world == true,
+    options.text or options.content or "", options.texture or options.item or options.block or options.resource or "",
+    position.x or options.x or 0, position.y or options.y or 0, position.z or options.z or 0,
+    destination.x or options.x2 or 0, destination.y or options.y2 or 0, destination.z or options.z2 or 0,
+    options.width or 1, options.height or 16, options.scale or 1,
+    options.color or 0xFFFFFFFF, options.shadow == true, options.visible ~= false)
+  if ok then return id end
+  return false
+end
+function render.text(id, options) return render_task(id, "text", options) end
+function render.item(id, options) return render_task(id, "item", options) end
+function render.block(id, options) return render_task(id, "block", options) end
+function render.sprite(id, options) return render_task(id, "sprite", options) end
+function render.line(id, options) return render_task(id, "line", options) end
+function render.world(id, options)
+  options = options or {}
+  options.world = true
+  return render_task(id, options.type or options.kind or "text", options)
+end
+function render.remove(id) return _shyne_render_remove(id) end
+function render.clear() return _shyne_render_clear() end
+
 events = { _handlers = {} }
 local function event_name(name) return string.lower(tostring(name or "")) end
 function events.on(name, callback)
@@ -258,3 +285,5 @@ function emote.trigger(trigger) return _avatar_graph_trigger(trigger) end
 
 diagnostics = {}
 function diagnostics.snapshot() return _shyne_diagnostics() end
+profiler = {}
+function profiler.snapshot() return _shyne_profiler_snapshot() end

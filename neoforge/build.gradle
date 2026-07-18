@@ -133,7 +133,8 @@ tasks.register('luaSyntaxCheck', JavaExec) {
     doFirst {
         def scripts = files(
             fileTree(rootProject.file('common/src/main/resources/shyne_runtime')) { include '**/*.lua' },
-            fileTree(rootProject.file('tools/integration-avatar')) { include '**/*.lua' }
+            fileTree(rootProject.file('tools/integration-avatar')) { include '**/*.lua' },
+            fileTree(rootProject.file('tools/examples')) { include '**/*.lua' }
         )
         args = ['-p'] + scripts.files.sort { it.path }.collect { it.absolutePath }
     }

@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.7.25-alpha-dynamic-input-26.2`
+- Shyne Creator: `2.7.26-alpha-creator-runtime-26.2`
 - Minecraft: `26.2`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -13,6 +13,8 @@
 - Gradle: `9.5.1`
 
 Fabric และ NeoForge ใช้ `mod id`, Shyne API standard และ network protocol version เดียวกัน ส่วนไฟล์ที่ผูกกับ Loader จะถูกแยกออกจากระบบหลัก
+
+Creator quick start, Render Task API และ Profiler: [CREATOR_QUICKSTART_TH.md](CREATOR_QUICKSTART_TH.md)
 
 ## Structure
 

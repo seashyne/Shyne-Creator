@@ -205,7 +205,10 @@ public class ShyneSettingsScreen extends Screen {
 
     private List<ScreenAction> actionsFor(Category value) {
         return switch (value) {
-            case INTERFACE, ADVANCED -> List.of();
+            case INTERFACE -> List.of();
+            case ADVANCED -> List.of(
+                new ScreenAction("screen.shyne_core.profiler.title", "screen.shyne_core.profiler.tooltip", () -> openScreen(new AvatarProfilerScreen(this)), () -> true)
+            );
             case AVATAR -> List.of(
                 new ScreenAction("screen.shyne_core.avatars", "screen.shyne_core.avatars.tooltip", () -> openScreen(new AvatarManagerScreen(this)), () -> true),
                 new ScreenAction("screen.shyne_core.inputs.title", "screen.shyne_core.inputs.tooltip", () -> openScreen(new AvatarInputSettingsScreen(this)), () -> true),

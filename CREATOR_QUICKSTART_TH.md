@@ -1,0 +1,45 @@
+# เริ่มสร้าง Avatar บน Shyne
+
+Shyne Creator 2.7.26 มีเครื่องมือสร้างโครงโปรเจกต์ ตรวจไฟล์ และดูประสิทธิภาพในเกม โดย Avatar ยังคงเป็นไฟล์ภายนอกและไม่ถูกฝังในตัว Mod
+
+## 1. สร้างโปรเจกต์
+
+```powershell
+.\tools\creator\shyne-creator.ps1 new E:\Minecraft\avatars\my-avatar --id my.avatar --name "My Avatar"
+```
+
+เปิด `model.bbmodel` ด้วย Blockbench แล้วแก้ `script.lua` ได้ทันที Texture จะถูกค้นหาอัตโนมัติ ไม่บังคับชื่อไฟล์ ส่วน `avatar.json` ต้องมีเพียง `api_version`, `id`, `main` และ `model` สำหรับโปรเจกต์ปกติ
+
+## 2. ตรวจไฟล์ก่อนเข้าเกม
+
+```powershell
+.\tools\creator\shyne-creator.ps1 validate E:\Minecraft\avatars\my-avatar
+.\tools\creator\shyne-creator.ps1 inspect E:\Minecraft\avatars\my-avatar
+```
+
+ตัวตรวจจะเช็ก JSON, entry script, model, path traversal, path ชื่อซ้ำ, จำนวน cube/animation, ขนาดรวม และ texture ขนาดใหญ่
+
+## 3. Render Task
+
+```lua
+render.text("status", { text = "Ready", x = 12, y = 12, color = 0xFF55FFFF, shadow = true })
+render.item("held", { item = "minecraft:diamond", x = 12, y = 28 })
+render.block("block", { block = "minecraft:amethyst_block", x = 32, y = 28 })
+render.sprite("logo", { texture = "shyne_creator:textures/gui/shyne_creator_logo.png", x = 52, y = 12, width = 32, height = 32 })
+render.line("meter", { from = vector.new(12, 52, 0), to = vector.new(112, 52, 0), color = 0xFF55FFFF, width = 2 })
+
+-- งานที่ยึดตำแหน่งในโลกและถูก project มายังหน้าจอ
+render.world("marker", { type = "text", text = "Target", position = vector.new(100, 70, 100), color = 0xFFFFFF55, shadow = true })
+render.world("route", { type = "line", from = vector.new(100, 70, 100), to = vector.new(110, 70, 110), color = 0xFFFF55FF, width = 2 })
+
+render.remove("status")
+render.clear()
+```
+
+เรียก task ด้วย ID เดิมเพื่ออัปเดตโดยไม่สร้าง object ใหม่ จำกัด 256 tasks ต่อ Avatar และถูกล้างอัตโนมัติเมื่อเปลี่ยนหรือรีโหลด Avatar
+
+## 4. Profiler
+
+เปิด `Shyne Settings → Advanced → Avatar Profiler` เพื่อดู FPS, frame time, Lua load/tick/render/event, model render, render tasks, heap, ขนาดอวตาร และรายการสิ่งที่อาจทำให้ FPS ลด ควรพยายามให้ Avatar/frame ต่ำกว่า 4 ms และหลีกเลี่ยง task จำนวนมากที่อัปเดตทุก tick โดยไม่จำเป็น
+
+ตัวอย่างพร้อมใช้: `tools/examples/render-profiler-avatar`
