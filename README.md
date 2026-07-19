@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.7.31-alpha-custom-render-api-26.2`
+- Shyne Creator: `2.7.32-alpha-ui-stability-26.2`
 - Minecraft: `26.2`
 - Java: `25`
 - Fabric Loader: `0.19.3+`

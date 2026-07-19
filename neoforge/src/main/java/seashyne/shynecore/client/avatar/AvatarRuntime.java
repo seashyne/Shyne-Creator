@@ -22,13 +22,16 @@ import seashyne.shynecore.voice.ShyneMicrophoneState;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 public final class AvatarRuntime {
     private static AvatarState active;
     private static AvatarManifest activeManifest;
     private static BbModelDefinition activeModel;
     private static ClientLuaAvatarRuntime script;
-    private static List<AvatarCatalogEntry> catalog = List.of();
+    private static volatile List<AvatarCatalogEntry> catalog = List.of();
+    private static CompletableFuture<List<AvatarCatalogEntry>> catalogRefresh = CompletableFuture.completedFuture(List.of());
+    private static long lastCatalogRefreshMillis;
     private static boolean initialized;
     private static int snapshotTicks;
     private static boolean snapshotAssetsSent;
@@ -125,6 +128,32 @@ public final class AvatarRuntime {
 
     public static void refreshCatalog() {
         catalog = AvatarLoader.discoverCatalog();
+        lastCatalogRefreshMillis = System.currentTimeMillis();
+    }
+
+    /**
+     * Coalesces file-system scans so opening or rebuilding a screen never blocks
+     * the render thread on every click.
+     */
+    public static synchronized CompletableFuture<List<AvatarCatalogEntry>> refreshCatalogAsync() {
+        return refreshCatalogAsync(false);
+    }
+
+    public static synchronized CompletableFuture<List<AvatarCatalogEntry>> refreshCatalogAsync(boolean force) {
+        long now = System.currentTimeMillis();
+        if (!catalogRefresh.isDone()) return catalogRefresh;
+        if (!force && now - lastCatalogRefreshMillis < 1_500L) return CompletableFuture.completedFuture(catalog);
+        catalogRefresh = CompletableFuture.supplyAsync(AvatarLoader::discoverCatalog)
+            .thenApply(entries -> {
+                catalog = entries;
+                lastCatalogRefreshMillis = System.currentTimeMillis();
+                return entries;
+            })
+            .exceptionally(error -> {
+                ShyneCore.LOGGER.warn("[AvatarRuntime] Background catalog refresh failed: {}", error.getMessage());
+                return catalog;
+            });
+        return catalogRefresh;
     }
 
     public static boolean activateAvatar(String avatarId, Minecraft client) {
@@ -136,8 +165,13 @@ public final class AvatarRuntime {
             lastActivation = AvatarActivationResult.failure("", "Avatar id is required");
             return lastActivation;
         }
-        refreshCatalog();
-        for (AvatarCatalogEntry entry : catalog) {
+        AvatarCatalogEntry found = findCatalogEntry(avatarId);
+        if (found == null) {
+            refreshCatalog();
+            found = findCatalogEntry(avatarId);
+        }
+        if (found != null) {
+            AvatarCatalogEntry entry = found;
             if (entry.id().equalsIgnoreCase(avatarId) || entry.name().equalsIgnoreCase(avatarId)) {
                 if (!entry.valid()) {
                     lastActivation = AvatarActivationResult.failure(entry.id(), entry.problem());
@@ -154,6 +188,31 @@ public final class AvatarRuntime {
         }
         lastActivation = AvatarActivationResult.failure(avatarId, "Avatar not found");
         return lastActivation;
+    }
+
+    public static AvatarActivationResult switchAvatar(AvatarCatalogEntry entry, Minecraft client) {
+        if (entry == null) {
+            lastActivation = AvatarActivationResult.failure("", "Avatar is required");
+            return lastActivation;
+        }
+        if (!entry.valid()) {
+            lastActivation = AvatarActivationResult.failure(entry.id(), entry.problem());
+            return lastActivation;
+        }
+        try {
+            return activate(entry.root(), client);
+        } catch (Exception error) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] Could not activate avatar {}: {}", entry.id(), error.getMessage(), error);
+            lastActivation = AvatarActivationResult.failure(entry.id(), safeMessage(error));
+            return lastActivation;
+        }
+    }
+
+    private static AvatarCatalogEntry findCatalogEntry(String avatarId) {
+        for (AvatarCatalogEntry entry : catalog) {
+            if (entry.id().equalsIgnoreCase(avatarId) || entry.name().equalsIgnoreCase(avatarId)) return entry;
+        }
+        return null;
     }
 
     public static boolean reloadActive(Minecraft client) {

@@ -56,7 +56,8 @@ public final class AvatarOutfitScreen extends Screen {
 
     @Override
     protected void init() {
-        AvatarRuntime.refreshOutfits();
+        // Activation already discovered outfits. Reuse that snapshot while paging
+        // and only touch the file system when the user presses Refresh.
         AvatarState active = AvatarRuntime.active();
         if (active == null) {
             onClose();
@@ -126,7 +127,7 @@ public final class AvatarOutfitScreen extends Screen {
         next.active = currentPage + 1 < totalPages;
         Button folder = Button.builder(Component.translatable("screen.shyne_core.outfits.folder"), ignored -> openFolder())
             .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.outfits.folder.tooltip"))).build();
-        Button refresh = Button.builder(Component.translatable("screen.shyne_core.outfits.refresh"), ignored -> openPage(currentPage))
+        Button refresh = Button.builder(Component.translatable("screen.shyne_core.outfits.refresh"), ignored -> refreshOutfits())
             .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.outfits.refresh.tooltip"))).build();
         Button back = Button.builder(Component.translatable("gui.back"), ignored -> onClose()).build();
 
@@ -156,10 +157,14 @@ public final class AvatarOutfitScreen extends Screen {
         int previewBottom = footerY - 8;
         graphics.fill(previewX, contentTop, previewX + previewWidth, previewBottom, 0xFF101B2C);
         graphics.outline(previewX, contentTop, previewWidth, previewBottom - contentTop, 0x8841D7E5);
-        if (this.minecraft != null && this.minecraft.player != null && previewBottom - contentTop > 40) {
+        UiViewportBounds preview = UiViewportBounds.clip(
+            previewX + 4, contentTop + 4, previewX + previewWidth - 4, previewBottom - 4,
+            graphics.guiWidth(), graphics.guiHeight()
+        );
+        if (this.minecraft != null && this.minecraft.player != null && preview.drawable()) {
             int scale = Math.max(18, Math.min(38, (previewBottom - contentTop) / 4));
             InventoryScreen.extractEntityInInventoryFollowsMouse(
-                graphics, previewX + 4, contentTop + 4, previewX + previewWidth - 4, previewBottom - 4,
+                graphics, preview.left(), preview.top(), preview.right(), preview.bottom(),
                 scale, 0.0625F, mouseX, mouseY, this.minecraft.player
             );
         }
@@ -204,6 +209,11 @@ public final class AvatarOutfitScreen extends Screen {
         } catch (IOException error) {
             ShyneCore.LOGGER.error("[AvatarOutfit] Could not open {}: {}", folder, error.getMessage());
         }
+    }
+
+    private void refreshOutfits() {
+        AvatarRuntime.refreshOutfits();
+        openPage(currentPage);
     }
 
     private void openPage(int page) {

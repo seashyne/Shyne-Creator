@@ -49,6 +49,7 @@ public class AvatarManagerScreen extends Screen {
     private int currentPage;
     private int totalPages;
     private boolean compactFooter;
+    private boolean catalogRefreshRequested;
     private List<AvatarCatalogEntry> catalog = List.of();
     private AvatarState active;
 
@@ -64,7 +65,6 @@ public class AvatarManagerScreen extends Screen {
 
     @Override
     protected void init() {
-        AvatarRuntime.refreshCatalog();
         catalog = AvatarRuntime.catalog();
         active = AvatarRuntime.active();
 
@@ -94,6 +94,16 @@ public class AvatarManagerScreen extends Screen {
         addPager();
         addCloudControls(innerX, innerWidth);
         addFooter(innerX, innerWidth);
+        requestCatalogRefresh();
+    }
+
+    private void requestCatalogRefresh() {
+        if (catalogRefreshRequested) return;
+        catalogRefreshRequested = true;
+        Minecraft client = Minecraft.getInstance();
+        AvatarRuntime.refreshCatalogAsync().whenComplete((entries, error) -> client.execute(() -> {
+            if (this.minecraft != null && this.minecraft.gui.screen() == this) rebuildWidgets();
+        }));
     }
 
     private void addAvatarRows() {
@@ -215,7 +225,7 @@ public class AvatarManagerScreen extends Screen {
         try {
             Files.createDirectories(folder);
             Util.getPlatform().openPath(folder);
-            AvatarRuntime.refreshCatalog();
+            AvatarRuntime.refreshCatalogAsync(true);
         } catch (IOException error) {
             seashyne.shynecore.ShyneCore.LOGGER.error("[AvatarManager] Could not open avatar folder {}: {}", folder, error.getMessage());
         }
@@ -273,14 +283,18 @@ public class AvatarManagerScreen extends Screen {
         graphics.text(this.font, Component.literal(shortName), previewX + (previewWidth - this.font.width(shortName)) / 2, labelY, 0xFFF4F7FC, false);
         graphics.fill(previewX + 6, labelY - 4, previewX + previewWidth - 6, labelY - 3, 0x3341D7E5);
 
-        if (this.minecraft != null && this.minecraft.player != null && labelY - contentTop > 30) {
+        UiViewportBounds preview = UiViewportBounds.clip(
+            previewX + 4, contentTop + 4, previewX + previewWidth - 4, labelY - 5,
+            graphics.guiWidth(), graphics.guiHeight()
+        );
+        if (this.minecraft != null && this.minecraft.player != null && preview.drawable()) {
             int scale = Math.max(18, Math.min(40, (labelY - contentTop) / 3));
             InventoryScreen.extractEntityInInventoryFollowsMouse(
                 graphics,
-                previewX + 4,
-                contentTop + 4,
-                previewX + previewWidth - 4,
-                labelY - 5,
+                preview.left(),
+                preview.top(),
+                preview.right(),
+                preview.bottom(),
                 scale,
                 0.0625F,
                 mouseX,
@@ -364,7 +378,9 @@ public class AvatarManagerScreen extends Screen {
     }
 
     private void activate(AvatarCatalogEntry entry) {
-        AvatarRuntime.switchAvatar(entry.id(), Minecraft.getInstance());
+        // The selected catalog entry already contains its validated root path, so
+        // activation does not need another full directory scan on the UI thread.
+        AvatarRuntime.switchAvatar(entry, Minecraft.getInstance());
         openPage(currentPage);
     }
 

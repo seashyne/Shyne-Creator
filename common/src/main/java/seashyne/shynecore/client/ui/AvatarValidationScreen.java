@@ -26,6 +26,8 @@ public final class AvatarValidationScreen extends Screen {
 
     private final Screen parent;
     private final int requestedPage;
+    private final boolean refreshOnOpen;
+    private boolean refreshRequested;
     private List<Line> lines = List.of();
     private int panelX;
     private int panelY;
@@ -35,16 +37,16 @@ public final class AvatarValidationScreen extends Screen {
     private int pageSize;
     private int pages;
 
-    public AvatarValidationScreen(Screen parent) { this(parent, 0); }
-    private AvatarValidationScreen(Screen parent, int page) {
+    public AvatarValidationScreen(Screen parent) { this(parent, 0, true); }
+    private AvatarValidationScreen(Screen parent, int page, boolean refreshOnOpen) {
         super(Component.translatable("screen.shyne_core.validation.title"));
         this.parent = parent;
         this.requestedPage = Math.max(0, page);
+        this.refreshOnOpen = refreshOnOpen;
     }
 
     @Override
     protected void init() {
-        AvatarRuntime.refreshCatalog();
         lines = buildLines(AvatarRuntime.catalog());
         panelWidth = Math.min(760, Math.max(300, width - 20));
         panelHeight = Math.min(420, Math.max(220, height - 20));
@@ -59,12 +61,20 @@ public final class AvatarValidationScreen extends Screen {
             .bounds(panelX + 14, footerY, 30, 20).build()).active = page > 0;
         addRenderableWidget(Button.builder(Component.literal("›"), button -> openPage(page + 1))
             .bounds(panelX + 48, footerY, 30, 20).build()).active = page + 1 < pages;
-        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.validation.rescan"), button -> openPage(0))
+        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.validation.rescan"), button -> rescan())
             .bounds(panelX + panelWidth - 242, footerY, 78, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.validation.folder"), button -> openFolder())
             .bounds(panelX + panelWidth - 160, footerY, 72, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.back"), button -> onClose())
             .bounds(panelX + panelWidth - 84, footerY, 70, 20).build());
+
+        if (refreshOnOpen && !refreshRequested) {
+            refreshRequested = true;
+            var client = net.minecraft.client.Minecraft.getInstance();
+            AvatarRuntime.refreshCatalogAsync(true).whenComplete((entries, error) -> client.execute(() -> {
+                if (minecraft != null && minecraft.gui.screen() == this) rebuildWidgets();
+            }));
+        }
     }
 
     private static List<Line> buildLines(List<AvatarCatalogEntry> catalog) {
@@ -125,7 +135,8 @@ public final class AvatarValidationScreen extends Screen {
             ShyneCore.LOGGER.error("[AvatarValidation] Could not open Avatar folder: {}", error.getMessage());
         }
     }
-    private void openPage(int value) { if (minecraft != null) minecraft.gui.setScreen(new AvatarValidationScreen(parent, value)); }
+    private void openPage(int value) { if (minecraft != null) minecraft.gui.setScreen(new AvatarValidationScreen(parent, value, false)); }
+    private void rescan() { if (minecraft != null) minecraft.gui.setScreen(new AvatarValidationScreen(parent, 0, true)); }
     @Override public void onClose() { if (minecraft != null) minecraft.gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return true; }
     private record Line(Component text, int color) {}
