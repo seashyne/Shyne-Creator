@@ -34,6 +34,7 @@ public final class AvatarState {
     private String syncedSchemaPath = "";
     private final Map<String, Object> vars = new ConcurrentHashMap<>();
     private final Map<String, Object> syncedVars = new ConcurrentHashMap<>();
+    private final Map<String, Double> animationParameters = new ConcurrentHashMap<>();
     private final Map<String, AvatarPartState> parts = new ConcurrentHashMap<>();
     private final Map<String, String> pathAliases = new ConcurrentHashMap<>();
     private final Map<String, Boolean> vanillaVisibility = new ConcurrentHashMap<>();
@@ -49,6 +50,7 @@ public final class AvatarState {
     private byte[] selectedOutfitTexture = new byte[0];
     private UUID boundEntityId;
     private volatile boolean syncedDirty;
+    private volatile boolean animationParametersDirty;
     private volatile boolean snapshotDirty = true;
     private String currentAnimation = "";
     private long currentAnimationStartedAtMillis;
@@ -117,6 +119,23 @@ public final class AvatarState {
     public String syncedSchemaPath() { return syncedSchemaPath; }
     public void setSyncedSchemaPath(String value) { this.syncedSchemaPath = value == null ? "" : value; }
     public Map<String, Object> syncedVars() { return syncedVars; }
+    public Map<String, Double> animationParameters() { return animationParameters; }
+    public void setAnimationParameter(String name, double value) {
+        if (name == null || name.isBlank() || !Double.isFinite(value)) return;
+        String key = normalizeAnimationParameter(name);
+        double bounded = Math.max(-1_000_000.0, Math.min(1_000_000.0, value));
+        Double previous = animationParameters.put(key, bounded);
+        if (previous == null || Math.abs(previous - bounded) > 0.0001) animationParametersDirty = true;
+    }
+    public double animationParameter(String name, double fallback) {
+        if (name == null || name.isBlank()) return fallback;
+        return animationParameters.getOrDefault(normalizeAnimationParameter(name), fallback);
+    }
+    public void clearAnimationParameter(String name) {
+        if (name != null && animationParameters.remove(normalizeAnimationParameter(name)) != null) animationParametersDirty = true;
+    }
+    public boolean areAnimationParametersDirty() { return animationParametersDirty; }
+    public void clearAnimationParametersDirty() { animationParametersDirty = false; }
     public Map<String, AvatarPartState> parts() { return parts; }
     public Map<String, Boolean> vanillaVisibility() { return vanillaVisibility; }
     public List<AvatarAction> actions() { return actions; }
@@ -165,6 +184,11 @@ public final class AvatarState {
         this.currentAnimation = "";
         this.currentAnimationStartedAtMillis = 0L;
         this.snapshotDirty = true;
+    }
+
+    private static String normalizeAnimationParameter(String value) {
+        String normalized = value.trim().toLowerCase(java.util.Locale.ROOT);
+        return normalized.startsWith("v.") ? normalized.substring(2) : normalized;
     }
 
     public void aliasPath(String alias, String canonical) {

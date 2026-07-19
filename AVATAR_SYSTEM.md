@@ -175,7 +175,7 @@ end)
 - manifest, Lua และ model มีขนาดสูงสุด
 - เพดานโมเดลกำหนดได้ใน `shyne-creator-client.json`: `avatarMaxBones`, `avatarMaxCubes`, `avatarMaxAnimations`, `avatarMaxTextures` และ `avatarMaxTextureSize`
 - ค่าเริ่มต้นคือ 4096 bones, 16384 cubes, 512 animations, 256 textures และ texture canvas สูงสุด 8192×8192; ยังคงต้องมีเพดานเพื่อป้องกันแพ็กใช้ RAM/GPU/เครือข่ายจนเกมล่ม
-- ตัวอ่าน animation รองรับทั้ง keyframe `vector` ของ Shyne/Blockbench และ `data_points` ของ Figura
+- ตัวอ่าน animation รองรับ `vector`, shared animator `keyframes`, pre/post `data_points`, expression และ interpolation ของ Blockbench 5.1
 - Lua `require("folder.module")` โหลดไฟล์ `.lua` ภายในโฟลเดอร์อวตารได้ โดยป้องกัน path traversal และ cache module ตามพฤติกรรมมาตรฐาน
 - Texture ไม่บังคับชื่อหรือโฟลเดอร์: Shyne จะลอง path ใน `.bbmodel` ก่อน แล้วค้นหาชื่อไฟล์แบบไม่สนตัวพิมพ์เล็กใหญ่ทั่วทั้งแพ็ก หากโมเดลไม่มีรายการ texture จะค้นพบไฟล์ PNG ทั้งหมดอัตโนมัติ กรณีพบชื่อเดียวกันหลายไฟล์จะหยุดพร้อมแจ้งว่าไฟล์กำกวมเพื่อไม่เลือกภาพผิด
 - outfit จำกัด 64 ไฟล์ต่ออวตาร ไฟล์ต้นฉบับละไม่เกิน 8 MB และต้องเป็น PNG ขนาดที่รองรับ ส่วนภาพที่ส่ง Multiplayer ไม่เกิน 512 KB

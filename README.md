@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.7.28-alpha-figura-keyframes-26.2`
+- Shyne Creator: `2.7.29-alpha-blockbench-5.1-26.2`
 - Minecraft: `26.2`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -15,6 +15,8 @@
 Fabric และ NeoForge ใช้ `mod id`, Shyne API standard และ network protocol version เดียวกัน ส่วนไฟล์ที่ผูกกับ Loader จะถูกแยกออกจากระบบหลัก
 
 Creator quick start, Render Task API และ Profiler: [CREATOR_QUICKSTART_TH.md](CREATOR_QUICKSTART_TH.md)
+
+มาตรฐาน Blockbench animation และ Shyne Expression: [BLOCKBENCH_ANIMATION_STANDARD.md](BLOCKBENCH_ANIMATION_STANDARD.md)
 
 ## Structure
 

@@ -63,7 +63,7 @@ function model.part(path)
 end
 local animation_proxy = {}
 animation_proxy.__index = animation_proxy
-function animation_proxy:play() _avatar_anim_play_ex(self.name, self.speed_value or 1, self.weight_value or 1, self.priority_value or 0, self.loop_value, self.fade_in_value or 0, self.fade_out_value or 0, self.mask_value or {}, self.additive_value or false) return self end
+function animation_proxy:play() _avatar_anim_play_ex(self.name, self.speed_value or 1, self.weight_value or 1, self.priority_value or 0, self.loop_value, self.fade_in_value or 0, self.fade_out_value or 0, self.mask_value or {}, self.additive_value or false, self.transition_value or 0) return self end
 function animation_proxy:stop() _avatar_anim_stop(self.name) return self end
 function animation_proxy:restart() _avatar_anim_stop(self.name); return self:play() end
 function animation_proxy:playing() return _avatar_anim_playing(self.name) end
@@ -74,6 +74,8 @@ function animation_proxy:priority(value) self.priority_value = math.floor(value 
 function animation_proxy:loop(value) self.loop_value = value and true or false; return self end
 function animation_proxy:fade_in(ticks) self.fade_in_value = math.max(0, math.floor(ticks or 0)); return self end
 function animation_proxy:fade_out(ticks) self.fade_out_value = math.max(0, math.floor(ticks or 0)); return self end
+-- Cross-fades competing non-additive layers at the same priority.
+function animation_proxy:transition(ticks) self.transition_value = math.max(0, math.floor(ticks or 0)); return self end
 function animation_proxy:mask(parts)
   if type(parts) == "string" then parts = { parts } end
   if type(parts) ~= "table" then error("animation mask requires a part-name table", 2) end
@@ -85,6 +87,12 @@ function model.animation.get(name) return setmetatable({ name = tostring(name), 
 function model.animation.exists(name) return _avatar_anim_exists(tostring(name or "")) end
 function model.animation.play(name) return model.animation.get(name):play() end
 function model.animation.stop(name) return model.animation.get(name):stop() end
+function model.animation.parameter(name, value)
+  if value == nil then return _avatar_anim_parameter("get", tostring(name or "")) end
+  _avatar_anim_parameter("set", tostring(name or ""), tonumber(value) or 0)
+  return value
+end
+function model.animation.clear_parameter(name) _avatar_anim_parameter("clear", tostring(name or "")); return model.animation end
 setmetatable(model, { __index = function(_, key) return part_proxy("model." .. tostring(key)) end })
 
 local function vanilla_proxy(part)

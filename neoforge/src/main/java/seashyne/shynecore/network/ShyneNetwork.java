@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.Listener, AttachmentRuntime.Listener,
     PowerStateMachine.Listener, SkillRegistry.Listener, PlayerProfileRuntime.Listener, EquipmentRuntime.Listener {
 
-    public static final int PROTOCOL_VERSION = 6;
+    public static final int PROTOCOL_VERSION = 7;
     public static final String CAP_SERVER_AUTHORITATIVE_GAMEPLAY = "gameplay.server_authoritative";
     public static final String CAP_CONTENT_REGISTRY_SYNC = "content.registry_sync";
     public static final String CAP_AVATAR_PEER_SNAPSHOT = "avatar.peer_snapshot_v2";
@@ -263,7 +263,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         latestAvatarSnapshots.put(playerId, normalized);
         NetAvatarSnapshot outgoing = incoming.model() == null
             ? new NetAvatarSnapshot(normalized.playerId(), normalized.avatarId(), normalized.modelId(), normalized.replaceVanilla(), true, null,
-                normalized.parts(), normalized.vanillaVisibility(), normalized.syncedVars(), normalized.currentAnimation(), normalized.animationStartedAtMillis(), normalized.animationLayers(), normalized.nameplateText(), normalized.nameplateVisible())
+                    normalized.parts(), normalized.vanillaVisibility(), normalized.syncedVars(), normalized.currentAnimation(), normalized.animationStartedAtMillis(), normalized.animationLayers(), normalized.animationParameters(), normalized.nameplateText(), normalized.nameplateVisible())
             : normalized;
         broadcast(SYNC_AVATAR_SNAPSHOTS, GSON.toJson(new AvatarSnapshotSyncPayload(List.of(outgoing))));
         broadcastPlayerPresence();
@@ -318,12 +318,12 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
             m.animations().stream().map(a -> new NetAnimationDefinition(a.name(), a.lengthSeconds(), a.looping(), a.animatorCount(),
                 a.boneAnimations().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> {
                     BbBoneAnimation v = e.getValue();
-                    return new NetBoneAnimation(v.boneUuid(), toNetKeys(v.rotation()), toNetKeys(v.position()), toNetKeys(v.scale()));
+                    return new NetBoneAnimation(v.boneUuid(), toNetKeys(v.rotation()), toNetKeys(v.position()), toNetKeys(v.scale()), v.rotationGlobal(), v.quaternionInterpolation());
                 })), a.affectedBones())).toList()
         )).toList();
     }
 
-    private List<NetKeyframe> toNetKeys(List<BbKeyframe> keys) { return keys.stream().map(k -> new NetKeyframe(k.time(), k.x(), k.y(), k.z(), k.easing())).toList(); }
+    private List<NetKeyframe> toNetKeys(List<BbKeyframe> keys) { return keys.stream().map(k -> new NetKeyframe(k.time(), k.pre(), k.post(), k.easing(), k.bezier())).toList(); }
 
     public static NetTextureDefinition toNetTexture(BbModelDefinition model, BbTextureDefinition texture) {
         byte[] bytes = readTextureBytes(model, texture);
@@ -358,6 +358,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         if (incoming.syncedVars() != null && incoming.syncedVars().size() > MAX_SYNCED_VARS) return null;
         if (incoming.currentAnimation() != null && incoming.currentAnimation().length() > 128) return null;
         if (incoming.animationLayers() != null && (incoming.animationLayers().size() > 64 || incoming.animationLayers().stream().anyMatch(layer -> !isSafeAnimationLayer(layer)))) return null;
+        if (!isSafeAnimationParameters(incoming.animationParameters())) return null;
         if (incoming.nameplateText() != null && incoming.nameplateText().length() > 128) return null;
 
         NetAvatarSnapshot previous = latestAvatarSnapshots.get(player.getUUID());
@@ -382,14 +383,34 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
             incoming.syncedVars() == null ? Map.of() : Map.copyOf(incoming.syncedVars()),
             incoming.currentAnimation() == null ? "" : incoming.currentAnimation(), incoming.animationStartedAtMillis(),
             incoming.animationLayers() == null ? List.of() : List.copyOf(incoming.animationLayers()),
+            incoming.animationParameters() == null ? Map.of() : Map.copyOf(incoming.animationParameters()),
             incoming.nameplateText() == null ? "" : incoming.nameplateText(), incoming.nameplateVisible()
         );
+    }
+
+    private static boolean isSafeAnimationParameters(Map<String, Double> parameters) {
+        if (parameters == null) return true;
+        if (parameters.size() > 64) return false;
+        return parameters.entrySet().stream().allMatch(entry -> entry.getKey() != null
+            && entry.getKey().matches("[A-Za-z_][A-Za-z0-9_.-]{0,63}")
+            && entry.getValue() != null && Double.isFinite(entry.getValue()) && Math.abs(entry.getValue()) <= 1_000_000.0);
     }
 
     private static boolean isSafeModel(NetModelDefinition model) {
         if (model.bones() == null || model.cubes() == null || model.animations() == null || model.textures() == null) return false;
         if (model.bones().size() > MAX_MODEL_BONES || model.cubes().size() > MAX_MODEL_CUBES || model.animations().size() > MAX_MODEL_ANIMATIONS || model.textures().size() > MAX_MODEL_TEXTURES) return false;
         if (model.textureWidth() <= 0 || model.textureWidth() > 8192 || model.textureHeight() <= 0 || model.textureHeight() > 8192) return false;
+        long keyframeCount = 0;
+        for (NetAnimationDefinition animation : model.animations()) {
+            if (animation == null || animation.boneAnimations() == null || animation.boneAnimations().size() > MAX_MODEL_BONES) return false;
+            for (NetBoneAnimation bone : animation.boneAnimations().values()) {
+                if (bone == null) return false;
+                for (List<NetKeyframe> channel : Arrays.asList(bone.rotation(), bone.position(), bone.scale())) {
+                    if (channel == null || (keyframeCount += channel.size()) > 20_000) return false;
+                    if (channel.stream().anyMatch(key -> !isSafeKeyframe(key))) return false;
+                }
+            }
+        }
         long totalTextureBytes = 0;
         for (NetTextureDefinition texture : model.textures()) {
             if (texture == null || texture.contentHash() == null || texture.contentBase64() == null || texture.contentBase64().length() > (MAX_TEXTURE_BYTES * 4 / 3) + 8) return false;
@@ -405,6 +426,19 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
             }
         }
         return true;
+    }
+
+    private static boolean isSafeKeyframe(NetKeyframe keyframe) {
+        if (keyframe == null || !Float.isFinite(keyframe.time()) || keyframe.time() < -1 || keyframe.time() > 86_400) return false;
+        return isSafePoint(keyframe.pre()) && isSafePoint(keyframe.post()) && keyframe.easing() != null && keyframe.easing().length() <= 32;
+    }
+
+    private static boolean isSafePoint(seashyne.shynecore.model.BbKeyframePoint point) {
+        return point != null && isSafeExpression(point.x()) && isSafeExpression(point.y()) && isSafeExpression(point.z());
+    }
+
+    private static boolean isSafeExpression(String expression) {
+        return expression != null && !expression.isBlank() && expression.length() <= 2_048;
     }
 
     private static boolean isSafeId(String value) {
@@ -549,7 +583,11 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public record NetEquipmentLoadout(String entityId, String mainHandWeaponId, String offHandWeaponId, Map<String, String> slots, long updatedAtMillis) { public static NetEquipmentLoadout from(EquipmentLoadout loadout) { return new NetEquipmentLoadout(loadout.entityId().toString(), loadout.mainHandWeaponId(), loadout.offHandWeaponId(), loadout.slots(), loadout.updatedAtMillis()); } }
     public record NetAvatarPart(String path, boolean visible, float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float scaleX, float scaleY, float scaleZ, boolean positionControlled, boolean rotationControlled, boolean scaleControlled, int colorArgb, boolean emissive) {}
     public record NetAvatarAnimation(String name, long startedAtMillis, double lengthSeconds, boolean looping, double speed, double weight, int priority, int fadeInTicks, int fadeOutTicks, List<String> mask, boolean additive, long stoppingAtMillis) {}
-    public record NetAvatarSnapshot(String playerId, String avatarId, String modelId, boolean replaceVanilla, boolean onlineSync, NetModelDefinition model, List<NetAvatarPart> parts, Map<String, Boolean> vanillaVisibility, Map<String, Object> syncedVars, String currentAnimation, long animationStartedAtMillis, List<NetAvatarAnimation> animationLayers, String nameplateText, boolean nameplateVisible) {}
+    public record NetAvatarSnapshot(String playerId, String avatarId, String modelId, boolean replaceVanilla, boolean onlineSync, NetModelDefinition model, List<NetAvatarPart> parts, Map<String, Boolean> vanillaVisibility, Map<String, Object> syncedVars, String currentAnimation, long animationStartedAtMillis, List<NetAvatarAnimation> animationLayers, Map<String, Double> animationParameters, String nameplateText, boolean nameplateVisible) {
+        public NetAvatarSnapshot(String playerId, String avatarId, String modelId, boolean replaceVanilla, boolean onlineSync, NetModelDefinition model, List<NetAvatarPart> parts, Map<String, Boolean> vanillaVisibility, Map<String, Object> syncedVars, String currentAnimation, long animationStartedAtMillis, List<NetAvatarAnimation> animationLayers, String nameplateText, boolean nameplateVisible) {
+            this(playerId, avatarId, modelId, replaceVanilla, onlineSync, model, parts, vanillaVisibility, syncedVars, currentAnimation, animationStartedAtMillis, animationLayers, Map.of(), nameplateText, nameplateVisible);
+        }
+    }
     public record NetPlayerPresence(String playerId, boolean avatarAvailable) {}
     public record NetModelDefinition(String modelId, String sourceModId, String displayName, int formatVersion, int textureWidth, int textureHeight, String primaryTextureRelativePath, List<NetTextureDefinition> textures, List<NetBoneDefinition> bones, List<NetCubeDefinition> cubes, List<NetAnimationDefinition> animations) { public BbModelDefinition toRuntime() { return new BbModelDefinition(modelId, sourceModId, displayName, Path.of("__synced__.bbmodel"), formatVersion, textureWidth, textureHeight, primaryTextureRelativePath, textures.stream().map(NetTextureDefinition::toRuntime).toList(), bones.stream().map(NetBoneDefinition::toRuntime).toList(), cubes.stream().map(NetCubeDefinition::toRuntime).toList(), animations.stream().map(NetAnimationDefinition::toRuntime).toList()); } }
     public record NetTextureDefinition(String id, String name, String relativePath, int width, int height, String contentHash, String contentBase64) { public BbTextureDefinition toRuntime() { return new BbTextureDefinition(id, name, relativePath, width, height); } }
@@ -557,8 +595,14 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public record NetCubeDefinition(String name, String parentBoneUuid, float fromX, float fromY, float fromZ, float toX, float toY, float toZ, float originX, float originY, float originZ, float rotationX, float rotationY, float rotationZ, float inflate, Map<String, NetFaceUvDefinition> faces, int textureIndex, boolean mirror) { public BbCubeDefinition toRuntime() { return new BbCubeDefinition(name, parentBoneUuid, fromX, fromY, fromZ, toX, toY, toZ, originX, originY, originZ, rotationX, rotationY, rotationZ, inflate, faces.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toRuntime())), textureIndex, mirror); } }
     public record NetFaceUvDefinition(float u1, float v1, float u2, float v2, int rotation, int textureIndex, boolean enabled) { public BbFaceUvDefinition toRuntime() { return new BbFaceUvDefinition(u1, v1, u2, v2, rotation, textureIndex, enabled); } }
     public record NetAnimationDefinition(String name, double lengthSeconds, boolean looping, int animatorCount, Map<String, NetBoneAnimation> boneAnimations, List<String> affectedBones) { public BbAnimationDefinition toRuntime() { return new BbAnimationDefinition(name, lengthSeconds, looping, animatorCount, boneAnimations.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toRuntime())), affectedBones); } }
-    public record NetBoneAnimation(String boneUuid, List<NetKeyframe> rotation, List<NetKeyframe> position, List<NetKeyframe> scale) { public BbBoneAnimation toRuntime() { return new BbBoneAnimation(boneUuid, rotation.stream().map(NetKeyframe::toRuntime).toList(), position.stream().map(NetKeyframe::toRuntime).toList(), scale.stream().map(NetKeyframe::toRuntime).toList()); } }
-    public record NetKeyframe(float time, float x, float y, float z, String easing) { public BbKeyframe toRuntime() { return new BbKeyframe(time, x, y, z, easing); } }
+    public record NetBoneAnimation(String boneUuid, List<NetKeyframe> rotation, List<NetKeyframe> position, List<NetKeyframe> scale, boolean rotationGlobal, boolean quaternionInterpolation) {
+        public NetBoneAnimation(String boneUuid, List<NetKeyframe> rotation, List<NetKeyframe> position, List<NetKeyframe> scale) { this(boneUuid, rotation, position, scale, false, false); }
+        public BbBoneAnimation toRuntime() { return new BbBoneAnimation(boneUuid, rotation.stream().map(NetKeyframe::toRuntime).toList(), position.stream().map(NetKeyframe::toRuntime).toList(), scale.stream().map(NetKeyframe::toRuntime).toList(), rotationGlobal, quaternionInterpolation); }
+    }
+    public record NetKeyframe(float time, seashyne.shynecore.model.BbKeyframePoint pre, seashyne.shynecore.model.BbKeyframePoint post, String easing, seashyne.shynecore.model.BbBezierData bezier) {
+        public NetKeyframe(float time, float x, float y, float z, String easing) { this(time, seashyne.shynecore.model.BbKeyframePoint.numeric(x, y, z), seashyne.shynecore.model.BbKeyframePoint.numeric(x, y, z), easing, seashyne.shynecore.model.BbBezierData.NONE); }
+        public BbKeyframe toRuntime() { return new BbKeyframe(time, pre, post, easing, bezier); }
+    }
     public record NetAvatarVars(String playerId, String avatarId, Map<String, Object> values) {}
 
     public record JsonPayload(CustomPacketPayload.Type<JsonPayload> payloadId, String json) implements CustomPacketPayload {

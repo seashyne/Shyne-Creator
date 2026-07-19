@@ -172,9 +172,27 @@ public final class ClientLuaAvatarRuntime {
                 Boolean loop = args.arg(5).isnil() ? null : args.arg(5).toboolean();
                 AvatarRuntime.playAnimation(
                     args.arg(1).optjstring(""), args.arg(2).optdouble(1), args.arg(3).optdouble(1), args.arg(4).optint(0), loop,
-                    args.arg(6).optint(0), args.arg(7).optint(0), stringList(args.arg(8)), args.arg(9).optboolean(false)
+                    args.arg(6).optint(0), args.arg(7).optint(0), stringList(args.arg(8)), args.arg(9).optboolean(false), args.arg(10).optint(0)
                 );
                 return LuaValue.NIL;
+            }
+        });
+        globals.set("_avatar_anim_parameter", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                String operation = args.arg(1).optjstring("");
+                String name = args.arg(2).optjstring("");
+                return switch (operation) {
+                    case "set" -> {
+                        state.setAnimationParameter(name, args.arg(3).optdouble(0));
+                        yield LuaValue.valueOf(state.animationParameter(name, 0));
+                    }
+                    case "clear" -> {
+                        state.clearAnimationParameter(name);
+                        yield LuaValue.NIL;
+                    }
+                    case "get" -> LuaValue.valueOf(state.animationParameter(name, 0));
+                    default -> LuaValue.NIL;
+                };
             }
         });
         globals.set("_avatar_anim_stop", new OneArgFunction() {
@@ -512,7 +530,7 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                     result.set("textures", LuaValue.valueOf(model.textures().size()));
                 }
                 LuaTable features = new LuaTable();
-                for (String feature : List.of("multi_animation", "animation_fade", "animation_mask", "additive_animation", "shortest_rotation", "part_color", "part_opacity", "part_translucency", "part_emissive", "camera_transform", "nameplate", "sound", "particle", "input", "input_mouse", "input_modifiers", "input_repeat", "render_text", "render_item", "render_block", "render_sprite", "render_line", "render_world", "profiler", "online_sync")) features.set(feature, LuaValue.TRUE);
+                for (String feature : List.of("multi_animation", "animation_fade", "animation_mask", "animation_transition", "animation_expression", "animation_parameter", "blockbench_5_1", "additive_animation", "shortest_rotation", "part_color", "part_opacity", "part_translucency", "part_emissive", "camera_transform", "nameplate", "sound", "particle", "input", "input_mouse", "input_modifiers", "input_repeat", "render_text", "render_item", "render_block", "render_sprite", "render_line", "render_world", "profiler", "online_sync")) features.set(feature, LuaValue.TRUE);
                 result.set("features", features);
                 return result;
             }

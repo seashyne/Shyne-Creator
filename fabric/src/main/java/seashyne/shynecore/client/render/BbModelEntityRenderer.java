@@ -229,9 +229,10 @@ public final class BbModelEntityRenderer {
         if (layers.isEmpty()) layers = ClientAnimationState.getRemoteAnimationLayers(entityId);
         var activeAnimation = playback == null ? null : model.findAnimation(playback.animationName());
         long now = System.currentTimeMillis();
+        AnimationExpressionContext expressionContext = expressionContext(entityId);
         Set<String> visiting = new HashSet<>();
         for (BbBoneDefinition bone : model.bones()) {
-            buildBonePose(model, bone, entityId, vanillaPose, bonePoses, visiting, playback, layers, activeAnimation, now);
+            buildBonePose(model, bone, entityId, vanillaPose, bonePoses, visiting, playback, layers, activeAnimation, now, expressionContext);
         }
         return bonePoses;
     }
@@ -246,7 +247,8 @@ public final class BbModelEntityRenderer {
         seashyne.shynecore.animation.AnimationPlayback playback,
         List<AvatarAnimationLayer> layers,
         seashyne.shynecore.model.BbAnimationDefinition activeAnimation,
-        long now
+        long now,
+        AnimationExpressionContext expressionContext
     ) {
         BonePose cached = cache.get(bone.uuid());
         if (cached != null) return cached;
@@ -256,7 +258,7 @@ public final class BbModelEntityRenderer {
         if (bone.parentUuid() != null) {
             BbBoneDefinition parentBone = model.findBoneByUuid(bone.parentUuid());
             if (parentBone != null) {
-                parent = buildBonePose(model, parentBone, entityId, vanillaPose, cache, visiting, playback, layers, activeAnimation, now);
+                parent = buildBonePose(model, parentBone, entityId, vanillaPose, cache, visiting, playback, layers, activeAnimation, now, expressionContext);
             }
         }
 
@@ -271,8 +273,8 @@ public final class BbModelEntityRenderer {
                 new Vector3f(1, 1, 1)
             )
             : layers.isEmpty()
-                ? BbModelAnimator.sampleBoneTransform(model, playback.animationName(), bone.uuid(), playback.startedAtMillis(), now, 0f)
-                : blendAnimationLayers(model, bone, layers, now);
+                ? BbModelAnimator.sampleBoneTransform(model, playback.animationName(), bone.uuid(), playback.startedAtMillis(), now, 0f, expressionContext)
+                : blendAnimationLayers(model, bone, layers, now, expressionContext);
 
         AvatarPartState part = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), "model." + bone.name());
         BbBoneAnimation activeBoneAnimation = activeAnimation == null ? null : activeAnimation.boneAnimations().get(bone.uuid());
@@ -328,7 +330,7 @@ public final class BbModelEntityRenderer {
         return result;
     }
 
-    private static BbModelAnimator.Transform blendAnimationLayers(BbModelDefinition model, BbBoneDefinition bone, List<AvatarAnimationLayer> layers, long now) {
+    private static BbModelAnimator.Transform blendAnimationLayers(BbModelDefinition model, BbBoneDefinition bone, List<AvatarAnimationLayer> layers, long now, AnimationExpressionContext expressionContext) {
         Vector3f pivot = new Vector3f(bone.pivotX(), bone.pivotY(), bone.pivotZ());
         Vector3f rotation = new Vector3f(bone.rotationX(), bone.rotationY(), bone.rotationZ());
         Vector3f scale = new Vector3f(1, 1, 1);
@@ -338,7 +340,7 @@ public final class BbModelEntityRenderer {
             float weight = (float) layer.effectiveWeight(now);
             if (weight <= 0) continue;
             BbModelAnimator.Transform sampled = BbModelAnimator.sampleBoneTransform(
-                model, layer.name(), bone.uuid(), layer.sampledStart(now), now, 0f
+                model, layer.name(), bone.uuid(), layer.sampledStart(now), now, 0f, expressionContext, layer.looping()
             );
             if (layer.additive()) {
                 pivot.add(new Vector3f(sampled.pivot()).sub(bone.pivotX(), bone.pivotY(), bone.pivotZ()).mul(weight));
@@ -355,6 +357,17 @@ public final class BbModelEntityRenderer {
             }
         }
         return new BbModelAnimator.Transform(pivot, rotation, scale);
+    }
+
+    private static AnimationExpressionContext expressionContext(UUID entityId) {
+        var client = Minecraft.getInstance();
+        var player = client.level == null ? null : client.level.getPlayerByUUID(entityId);
+        AvatarState local = AvatarRuntime.active();
+        Map<String, Double> parameters = local != null && entityId.equals(local.boundEntityId())
+            ? local.animationParameters() : ClientAnimationState.getRemoteAnimationParameters(entityId);
+        if (player == null) return new AnimationExpressionContext(0, 0, 0, 0, false, false, parameters);
+        double horizontalSpeed = Math.sqrt(player.getDeltaMovement().x * player.getDeltaMovement().x + player.getDeltaMovement().z * player.getDeltaMovement().z) * 20.0;
+        return new AnimationExpressionContext(0, horizontalSpeed, player.yBodyRot, player.getXRot(), player.isInWaterOrRain(), player.isSwimming(), parameters);
     }
 
     private static float blendAngle(float from, float to, float weight) {

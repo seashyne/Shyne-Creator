@@ -72,7 +72,7 @@ public final class BbModelParser {
                 ));
             }
 
-            List<BbAnimationDefinition> animations = parseAnimations(root, rawBones);
+            List<BbAnimationDefinition> animations = parseAnimations(root, rawBones, usesLegacyAnimationCoordinates(root));
             String modelId = sourceModId + ":" + stripExtension(path.getFileName().toString()).toLowerCase(Locale.ROOT);
 
             return new BbModelDefinition(
@@ -139,7 +139,7 @@ public final class BbModelParser {
                 Path direct = root.resolve(declaredPath.replace('/', java.io.File.separatorChar)).normalize();
                 if (direct.startsWith(root) && Files.isRegularFile(direct)) return relativeToModel(modelPath, direct);
             } catch (RuntimeException ignored) {
-                // Figura files often retain an absolute editor path from another computer.
+                // Editor project files often retain an absolute path from another computer.
             }
         }
         String wanted = Path.of(name == null || name.isBlank() ? declaredPath : name).getFileName().toString();
@@ -219,7 +219,7 @@ public final class BbModelParser {
         return faces;
     }
 
-    private static List<BbAnimationDefinition> parseAnimations(JsonObject root, Map<String, RawBone> bones) {
+    private static List<BbAnimationDefinition> parseAnimations(JsonObject root, Map<String, RawBone> bones, boolean legacyCoordinates) {
         List<BbAnimationDefinition> animations = new ArrayList<>();
         if (!root.has("animations") || !root.get("animations").isJsonArray()) return animations;
         for (JsonElement entry : root.getAsJsonArray("animations")) {
@@ -242,9 +242,11 @@ public final class BbModelParser {
                     }
                     boneAnimations.put(boneUuid, new BbBoneAnimation(
                         boneUuid,
-                        parseAnimatorChannel(animator, "rotation"),
-                        parseAnimatorChannel(animator, "position"),
-                        parseAnimatorChannel(animator, "scale")
+                        parseAnimatorChannel(animator, "rotation", legacyCoordinates),
+                        parseAnimatorChannel(animator, "position", legacyCoordinates),
+                        parseAnimatorChannel(animator, "scale", false),
+                        animator.has("rotation_global") && animator.get("rotation_global").getAsBoolean(),
+                        animator.has("quaternion_interpolation") && animator.get("quaternion_interpolation").getAsBoolean()
                     ));
                 }
             }
@@ -254,13 +256,12 @@ public final class BbModelParser {
     }
 
     /**
-     * Reads both native Blockbench channel arrays and Figura's shared
-     * {@code animator.keyframes[]} array. Figura stores the channel name on
-     * each keyframe instead of grouping frames under rotation/position/scale.
+     * Reads both grouped channel arrays and Blockbench's shared
+     * {@code animator.keyframes[]} array, where each frame declares its channel.
      */
-    private static List<BbKeyframe> parseAnimatorChannel(JsonObject animator, String channel) {
+    private static List<BbKeyframe> parseAnimatorChannel(JsonObject animator, String channel, boolean legacyCoordinates) {
         JsonElement nativeChannel = animator.get(channel);
-        if (nativeChannel != null && !nativeChannel.isJsonNull()) return parseKeyframes(nativeChannel);
+        if (nativeChannel != null && !nativeChannel.isJsonNull()) return parseKeyframes(nativeChannel, channel, legacyCoordinates);
         if (!animator.has("keyframes") || !animator.get("keyframes").isJsonArray()) return List.of();
 
         JsonArray matching = new JsonArray();
@@ -271,10 +272,10 @@ public final class BbModelParser {
                 matching.add(frame);
             }
         }
-        return parseKeyframes(matching);
+        return parseKeyframes(matching, channel, legacyCoordinates);
     }
 
-    private static List<BbKeyframe> parseKeyframes(JsonElement channelElement) {
+    private static List<BbKeyframe> parseKeyframes(JsonElement channelElement, String channel, boolean legacyCoordinates) {
         List<BbKeyframe> frames = new ArrayList<>();
         if (channelElement == null || channelElement.isJsonNull()) return frames;
         if (channelElement.isJsonObject()) {
@@ -282,40 +283,112 @@ public final class BbModelParser {
                 float time = safeFloat(entry.getKey(), 0f);
                 if (!entry.getValue().isJsonObject()) continue;
                 JsonObject frame = entry.getValue().getAsJsonObject();
-                float[] vec = readKeyframeVector(frame);
+                BbKeyframePoint[] points = migrateKeyframePoints(readKeyframePoints(frame), channel, legacyCoordinates);
                 String easing = frame.has("easing") ? frame.get("easing").getAsString()
                     : frame.has("interpolation") ? frame.get("interpolation").getAsString() : "linear";
-                frames.add(new BbKeyframe(time, vec[0], vec[1], vec[2], easing));
+                frames.add(new BbKeyframe(time, points[0], points[1], easing, migrateBezier(readBezier(frame), channel, legacyCoordinates)));
             }
         } else if (channelElement.isJsonArray()) {
             for (JsonElement item : channelElement.getAsJsonArray()) {
                 if (!item.isJsonObject()) continue;
                 JsonObject frame = item.getAsJsonObject();
                 float time = frame.has("time") ? safeFloat(frame.get("time"), 0f) : 0f;
-                float[] vec = readKeyframeVector(frame);
+                BbKeyframePoint[] points = migrateKeyframePoints(readKeyframePoints(frame), channel, legacyCoordinates);
                 String easing = frame.has("easing") ? frame.get("easing").getAsString()
                     : frame.has("interpolation") ? frame.get("interpolation").getAsString() : "linear";
-                frames.add(new BbKeyframe(time, vec[0], vec[1], vec[2], easing));
+                frames.add(new BbKeyframe(time, points[0], points[1], easing, migrateBezier(readBezier(frame), channel, legacyCoordinates)));
             }
         }
         frames.sort(Comparator.comparing(BbKeyframe::time));
         return frames;
     }
 
-    private static float[] readKeyframeVector(JsonObject frame) {
-        if (frame.has("vector")) return readVec3(frame.get("vector"), 0, 0, 0);
+    private static BbKeyframePoint[] readKeyframePoints(JsonObject frame) {
+        if (frame.has("vector")) {
+            BbKeyframePoint point = readPoint(frame.get("vector"));
+            return new BbKeyframePoint[] { point, point };
+        }
         if (frame.has("data_points") && frame.get("data_points").isJsonArray()) {
             JsonArray points = frame.getAsJsonArray("data_points");
-            if (!points.isEmpty() && points.get(0).isJsonObject()) {
-                JsonObject point = points.get(0).getAsJsonObject();
-                return new float[] {
-                    safeFloat(point.get("x"), 0),
-                    safeFloat(point.get("y"), 0),
-                    safeFloat(point.get("z"), 0)
-                };
+            if (!points.isEmpty()) {
+                BbKeyframePoint pre = readPoint(points.get(0));
+                BbKeyframePoint post = points.size() > 1 ? readPoint(points.get(points.size() - 1)) : pre;
+                return new BbKeyframePoint[] { pre, post };
             }
         }
-        return new float[] { 0, 0, 0 };
+        BbKeyframePoint zero = BbKeyframePoint.numeric(0, 0, 0);
+        return new BbKeyframePoint[] { zero, zero };
+    }
+
+    private static BbKeyframePoint readPoint(JsonElement element) {
+        if (element != null && element.isJsonObject()) {
+            JsonObject point = element.getAsJsonObject();
+            return new BbKeyframePoint(raw(point.get("x"), "0"), raw(point.get("y"), "0"), raw(point.get("z"), "0"));
+        }
+        if (element != null && element.isJsonArray()) {
+            JsonArray values = element.getAsJsonArray();
+            return new BbKeyframePoint(
+                values.size() > 0 ? raw(values.get(0), "0") : "0",
+                values.size() > 1 ? raw(values.get(1), "0") : "0",
+                values.size() > 2 ? raw(values.get(2), "0") : "0"
+            );
+        }
+        return BbKeyframePoint.numeric(0, 0, 0);
+    }
+
+    private static BbBezierData readBezier(JsonObject frame) {
+        float[] leftTime = readVec3(frame.get("bezier_left_time"), 0, 0, 0);
+        float[] leftValue = readVec3(frame.get("bezier_left_value"), 0, 0, 0);
+        float[] rightTime = readVec3(frame.get("bezier_right_time"), 0, 0, 0);
+        float[] rightValue = readVec3(frame.get("bezier_right_value"), 0, 0, 0);
+        return new BbBezierData(
+            leftTime[0], leftTime[1], leftTime[2], leftValue[0], leftValue[1], leftValue[2],
+            rightTime[0], rightTime[1], rightTime[2], rightValue[0], rightValue[1], rightValue[2]
+        );
+    }
+
+    /** Mirrors Blockbench 5.x's project migration for .bbmodel formats before 5.0. */
+    private static BbKeyframePoint[] migrateKeyframePoints(BbKeyframePoint[] points, String channel, boolean legacyCoordinates) {
+        if (!legacyCoordinates) return points;
+        boolean invertX = "position".equals(channel) || "rotation".equals(channel);
+        boolean invertY = "rotation".equals(channel);
+        if (!invertX && !invertY) return points;
+        BbKeyframePoint[] migrated = new BbKeyframePoint[points.length];
+        for (int i = 0; i < points.length; i++) {
+            BbKeyframePoint point = points[i];
+            migrated[i] = new BbKeyframePoint(
+                invertX ? invertExpression(point.x()) : point.x(),
+                invertY ? invertExpression(point.y()) : point.y(),
+                point.z()
+            );
+        }
+        return migrated;
+    }
+
+    private static BbBezierData migrateBezier(BbBezierData value, String channel, boolean legacyCoordinates) {
+        if (!legacyCoordinates) return value;
+        float x = ("position".equals(channel) || "rotation".equals(channel)) ? -1f : 1f;
+        float y = "rotation".equals(channel) ? -1f : 1f;
+        return new BbBezierData(
+            value.leftTimeX(), value.leftTimeY(), value.leftTimeZ(),
+            value.leftValueX() * x, value.leftValueY() * y, value.leftValueZ(),
+            value.rightTimeX(), value.rightTimeY(), value.rightTimeZ(),
+            value.rightValueX() * x, value.rightValueY() * y, value.rightValueZ()
+        );
+    }
+
+    private static String invertExpression(String source) {
+        if (source == null || source.isBlank() || "0".equals(source.trim())) return "0";
+        try { return Float.toString(-Float.parseFloat(source.trim())); }
+        catch (NumberFormatException ignored) { return "-(" + source + ")"; }
+    }
+
+    private static String raw(JsonElement element, String fallback) {
+        try {
+            return element == null || element.isJsonNull() ? fallback : element.getAsString();
+        } catch (RuntimeException ignored) {
+            return fallback;
+        }
     }
 
     private static void collectRawBones(JsonElement entry, String parentUuid, String parentName, Map<String, RawBone> rawBones) {
@@ -351,7 +424,17 @@ public final class BbModelParser {
     private static int parseFormatVersion(JsonObject root) {
         if (!root.has("meta") || !root.get("meta").isJsonObject()) return 0;
         JsonObject meta = root.getAsJsonObject("meta");
-        return meta.has("format_version") ? safeInt(meta.get("format_version"), 0) : 0;
+        if (!meta.has("format_version")) return 0;
+        try { return (int) Math.round(Double.parseDouble(meta.get("format_version").getAsString()) * 100.0); }
+        catch (RuntimeException ignored) { return 0; }
+    }
+
+    private static boolean usesLegacyAnimationCoordinates(JsonObject root) {
+        if (!root.has("meta") || !root.get("meta").isJsonObject()) return false;
+        JsonObject meta = root.getAsJsonObject("meta");
+        if (!meta.has("format_version")) return false;
+        try { return Double.parseDouble(meta.get("format_version").getAsString()) < 5.0; }
+        catch (RuntimeException ignored) { return false; }
     }
 
     private static float[] readVec3(JsonElement el, float dx, float dy, float dz) {

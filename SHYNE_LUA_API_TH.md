@@ -66,6 +66,8 @@ head:reset()
 model.animation.play("wave")
 model.animation.stop("wave")
 model.animation.exists("wave")
+model.animation.parameter("tail_strength", 1.0)
+model.animation.clear_parameter("tail_strength")
 ```
 
 `script.lua` มีลำดับสูงกว่า animation ใน `.bbmodel` และ Auto Humanoid เฉพาะ channel ที่สคริปต์สั่ง ใช้ `reset()` เพื่อคืนการควบคุมให้ animation/Auto Humanoid
@@ -169,15 +171,19 @@ Particle จำกัด 256 ครั้งต่อ tick เพื่อป้
 ## Animation blending และ Render ต่อชิ้นส่วน
 
 ```lua
-local swim = model.animation.get("swim"):speed(1.2):weight(1):priority(10):loop(true):fade_in(6):fade_out(6)
+local swim = model.animation.get("swim"):speed(1.2):weight(1):priority(10):loop(true):fade_in(6):fade_out(6):transition(7)
 local ears = model.animation.get("ears"):weight(0.7):priority(20):loop(true):mask({ "Head", "Ears" }):additive(true)
+model.animation.parameter("tail_strength", 1.25)
+model.animation.parameter("wet", minecraft.player.in_water() and 1 or 0)
 swim:play()
 ears:play()
 
 model.root.Tail:color(0.4, 0.8, 1.0):opacity(0.85):emissive(true)
 ```
 
-ค่า `priority` สูงกว่าจะ blend ทีหลัง `weight` อยู่ระหว่าง 0–1 และ `speed` อยู่ระหว่าง 0.01–8 ส่วน `fade_in`/`fade_out` ใช้หน่วย tick (20 tick ต่อวินาที) `mask` จำกัด layer ให้กระทบเฉพาะกระดูกที่ระบุ และ `additive(true)` ผสมค่าต่างจาก pose พื้นฐาน การ interpolate มุมจะเลือกเส้นทางสั้นผ่าน ±180° อัตโนมัติ ข้อมูล layer ทั้งหมดซิงก์ให้ผู้เล่นอื่น
+ค่า `priority` สูงกว่าจะ blend ทีหลัง `weight` อยู่ระหว่าง 0–1 และ `speed` อยู่ระหว่าง 0.01–8 ส่วน `fade_in`/`fade_out`/`transition` ใช้หน่วย tick (20 tick ต่อวินาที) `transition` จะ crossfade animation non-additive ที่มี priority เดียวกัน `mask` จำกัด layer ให้กระทบเฉพาะกระดูกที่ระบุ และ `additive(true)` ผสมค่าต่างจาก pose พื้นฐาน
+
+Keyframe Euler ใน Blockbench รักษาการหมุนเต็มรอบ เช่น 0 → 360 ส่วนการ blend ระหว่าง layer จะเลือกเส้นทางสั้นผ่าน ±180° โดยอัตโนมัติ ค่า animation parameter อ่านได้จาก expression ด้วย `v.<ชื่อ>` และซิงก์ให้ผู้เล่นอื่นโดยจำกัดอัตราส่ง
 
 ค่า opacity ต่ำกว่า 1 จะถูกแยกเข้า translucent render pass รายชิ้นโดยอัตโนมัติ จึง blend จริงโดยไม่ทำให้ชิ้นส่วนทึบส่วนอื่นเปลี่ยนโหมด render สี opacity และ emissive ซิงก์ให้ผู้เล่นอื่น
 

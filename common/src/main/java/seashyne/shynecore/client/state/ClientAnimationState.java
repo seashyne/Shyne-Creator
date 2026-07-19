@@ -57,6 +57,7 @@ public final class ClientAnimationState {
     private static final Map<UUID, Map<String, Boolean>> REMOTE_VANILLA_VISIBILITY = new ConcurrentHashMap<>();
     private static final Map<UUID, RemoteAvatarState> REMOTE_AVATARS = new ConcurrentHashMap<>();
     private static final Map<UUID, List<AvatarAnimationLayer>> REMOTE_ANIMATION_LAYERS = new ConcurrentHashMap<>();
+    private static final Map<UUID, Map<String, Double>> REMOTE_ANIMATION_PARAMETERS = new ConcurrentHashMap<>();
     private static final Map<UUID, RemoteNameplate> REMOTE_NAMEPLATES = new ConcurrentHashMap<>();
 
     private ClientAnimationState() {}
@@ -193,6 +194,7 @@ public final class ClientAnimationState {
                 .sorted(Comparator.comparingInt(AvatarAnimationLayer::priority))
                 .toList();
             REMOTE_ANIMATION_LAYERS.put(playerId, animationLayers);
+            REMOTE_ANIMATION_PARAMETERS.put(playerId, snapshot.animationParameters() == null ? Map.of() : Map.copyOf(snapshot.animationParameters()));
             REMOTE_NAMEPLATES.put(playerId, new RemoteNameplate(snapshot.nameplateText() == null ? "" : snapshot.nameplateText(), snapshot.nameplateVisible()));
             Map<String, Boolean> visibility = snapshot.vanillaVisibility() == null ? Map.of() : new ConcurrentHashMap<>(snapshot.vanillaVisibility());
             REMOTE_VANILLA_VISIBILITY.put(playerId, visibility);
@@ -218,6 +220,7 @@ public final class ClientAnimationState {
         PLAYBACKS.remove(playerId);
         REMOTE_VANILLA_VISIBILITY.remove(playerId);
         REMOTE_ANIMATION_LAYERS.remove(playerId);
+        REMOTE_ANIMATION_PARAMETERS.remove(playerId);
         REMOTE_NAMEPLATES.remove(playerId);
         AVATAR_SYNCED_VARS.remove(playerId.toString());
         if (remote != null) AVATAR_PARTS.remove(playerId + "|" + remote.modelId());
@@ -282,6 +285,9 @@ public final class ClientAnimationState {
         List<AvatarAnimationLayer> active = layers.stream().filter(layer -> !layer.finished(now)).toList();
         REMOTE_ANIMATION_LAYERS.put(playerId, active);
         return active;
+    }
+    public static Map<String, Double> getRemoteAnimationParameters(UUID playerId) {
+        return REMOTE_ANIMATION_PARAMETERS.getOrDefault(playerId, Map.of());
     }
     public static String getRemoteNameplateText(UUID playerId) { RemoteNameplate value = REMOTE_NAMEPLATES.get(playerId); return value == null ? "" : value.text(); }
     public static Boolean getRemoteNameplateVisible(UUID playerId) { RemoteNameplate value = REMOTE_NAMEPLATES.get(playerId); return value == null ? null : value.visible(); }

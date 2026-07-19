@@ -4,6 +4,7 @@ import org.luaj.vm2.compiler.LuaC;
 import seashyne.shynecore.client.config.ShyneClientSettings;
 import seashyne.shynecore.model.BbModelDefinition;
 import seashyne.shynecore.model.BbModelParser;
+import seashyne.shynecore.client.render.ShyneExpressionEngine;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -113,6 +114,7 @@ public final class AvatarValidator {
 
         duplicateNames(model.bones().stream().map(bone -> bone.name()).toList(), "bone", issues, manifest.model());
         duplicateNames(model.animations().stream().map(animation -> animation.name()).toList(), "animation", issues, manifest.model());
+        validateAnimationExpressions(model, manifest.model(), issues);
 
         Set<String> declared = new HashSet<>();
         if (manifest.textures() != null) for (String value : manifest.textures()) declared.add(normalize(value));
@@ -142,6 +144,29 @@ public final class AvatarValidator {
         if (textureBytes > MAX_TEXTURE_TOTAL_BYTES) error(issues, "texture_total_size", "Avatar textures exceed the 64 MiB multiplayer limit", manifest.model());
         for (String value : declared) {
             if (!used.contains(value)) warning(issues, "texture_unused", "Declared texture is not used by the model", value);
+        }
+    }
+
+    private static void validateAnimationExpressions(BbModelDefinition model, String file, List<AvatarValidationReport.Issue> issues) {
+        Set<String> reported = new HashSet<>();
+        for (var animation : model.animations()) {
+            for (var bone : animation.boneAnimations().values()) {
+                for (var channel : List.of(bone.rotation(), bone.position(), bone.scale())) {
+                    if (channel == null) continue;
+                    for (var keyframe : channel) {
+                        for (var point : List.of(keyframe.pre(), keyframe.post())) {
+                            for (int axis = 0; axis < 3; axis++) {
+                                String expression = point.axis(axis);
+                                String problem = ShyneExpressionEngine.validate(expression);
+                                String identity = expression + "|" + problem;
+                                if (!problem.isBlank() && reported.add(identity) && reported.size() <= 20) {
+                                    warning(issues, "animation_expression", "Animation '" + animation.name() + "' contains an unsupported expression: " + problem + " [" + expression + "]", file);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

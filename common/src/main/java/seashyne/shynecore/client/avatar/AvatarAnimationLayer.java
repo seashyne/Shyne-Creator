@@ -69,6 +69,11 @@ public record AvatarAnimationLayer(
             fadeInTicks, fadeOutTicks, mask, additive, stoppingAtMillis > 0 ? stoppingAtMillis : nowMillis);
     }
 
+    public AvatarAnimationLayer requestStop(long nowMillis, int transitionTicks) {
+        return new AvatarAnimationLayer(name, startedAtMillis, lengthSeconds, looping, speed, weight, priority,
+            fadeInTicks, Math.max(fadeOutTicks, transitionTicks), mask, additive, stoppingAtMillis > 0 ? stoppingAtMillis : nowMillis);
+    }
+
     private static String normalize(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT).replace('/', '.');
     }

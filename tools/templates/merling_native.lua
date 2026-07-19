@@ -1,6 +1,6 @@
 -- Shyne-native Merling controller.
 -- Coordinates the model's tail form with the matching Blockbench animations;
--- the preserved Figura modules are reference material and are not executed.
+-- preserved source modules are reference material and are not executed.
 
 avatar.hide_vanilla(true)
 avatar.camera.configure({ local_only = true, first_person_masking = true, hide_head = true })
@@ -17,7 +17,6 @@ local tail_amount = small_tail and SMALL_TAIL_SCALE or 0
 local leg_amount = 1
 local ear_amount = 0
 local current_locomotion = nil
-local dynamic_tail_pose = false
 
 local function clamp(value, minimum, maximum)
   return math.max(minimum, math.min(maximum, value))
@@ -42,7 +41,7 @@ local function use_locomotion(name)
   end
   current_locomotion = name
   if name then
-    model.animation.get(name):loop(true):fade_in(7):fade_out(7):priority(0):play()
+    model.animation.get(name):loop(true):transition(7):priority(0):play()
   end
 end
 
@@ -77,7 +76,7 @@ local function update_form()
   local target_legs = wet_amount >= 0.75 and 0 or 1
   local target_ears = wet_amount
 
-  -- Keep the configurable small tail on land, matching the Figura default.
+  -- Keep the configurable small tail on land, matching the original design.
   if small_tail then target_tail = math.max(target_tail, SMALL_TAIL_SCALE) end
 
   tail_amount = approach(tail_amount, target_tail, 0.2)
@@ -91,6 +90,21 @@ local function update_form()
   model.LeftEar:scale(ear_amount)
   model.RightEar:scale(ear_amount)
 
+  -- Parameters are evaluated by Shyne's animation engine, then synchronized
+  -- with remote players as part of the Avatar snapshot.
+  local velocity = minecraft.player.velocity()
+  local speed = clamp(math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z) * 20, 0, 2)
+  local pitch = clamp(-velocity.y * 35, -20, 20)
+  model.animation.parameter("tail_strength", 1 + speed)
+  model.animation.parameter("strength", 1 + speed)
+  model.animation.parameter("pitch", pitch)
+  model.animation.parameter("yaw", 0)
+  model.animation.parameter("roll", 0)
+  model.animation.parameter("headY", minecraft.player.rotation().x)
+  model.animation.parameter("height", wet_amount)
+  model.animation.parameter("wet", wet and 1 or 0)
+  model.animation.parameter("tail", tail_amount >= 0.75 and 1 or 0)
+  model.animation.parameter("shark", 0)
 end
 
 local function select_locomotion()
@@ -119,56 +133,6 @@ local function select_locomotion()
   return nil
 end
 
-local function restore_blockbench_tail_pose()
-  if not dynamic_tail_pose then return end
-  model.Player:reset()
-  model.Body:reset()
-  model.Tail1:reset()
-  model.Tail2:reset()
-  model.Tail3:reset()
-  model.Tail4:reset()
-  model.Fluke:reset()
-  -- Tail1's form scale is a Lua override and must be restored after reset.
-  model.Tail1:scale(tail_amount)
-  dynamic_tail_pose = false
-end
-
-local function update_dynamic_tail_pose()
-  if tail_amount < 0.75 then
-    restore_blockbench_tail_pose()
-    return
-  end
-
-  local time = minecraft.world.time()
-  local velocity = minecraft.player.velocity()
-  local speed = clamp(math.abs(velocity.x) + math.abs(velocity.y) + math.abs(velocity.z), 0, 2)
-  local strength = 1 + speed
-  local phase = time * 0.18
-
-  if minecraft.player.on_ground() and not minecraft.player.swimming() then
-    -- Figura's stand animation uses Molang expressions. Reproduce its base
-    -- curve and idle wave natively so expression strings never collapse to 0.
-    local wave = math.sin(phase) * (strength - 1) * 18
-    model.Player:pos(0, -12, 0)
-    model.Body:rot(0, 0, 0)
-    model.Tail1:rot(-10 - wave, 0, 0)
-    model.Tail2:rot(60 + wave, 0, 0)
-    model.Tail3:rot(40 - wave * 0.5, 0, 0)
-    model.Tail4:rot(35 + wave * 0.35, 0, 0)
-    model.Fluke:rot(wave * 0.35, 0, 0)
-  else
-    local pitch = clamp(-velocity.y * 35, -20, 20)
-    model.Player:pos(0, 0, 0)
-    model.Body:rot(pitch * 0.35, 0, 0)
-    model.Tail1:rot(pitch + math.sin(phase) * strength * 2.5, 0, 0)
-    model.Tail2:rot(pitch + math.sin(phase - 0.8) * strength * 7.5, 0, 0)
-    model.Tail3:rot(pitch + math.sin(phase - 1.6) * strength * 10, 0, 0)
-    model.Tail4:rot(pitch + math.sin(phase - 2.4) * strength * 7.5, 0, 0)
-    model.Fluke:rot(math.sin(phase - 3.2) * strength * 7.5, 0, 0)
-  end
-  dynamic_tail_pose = true
-end
-
 events.on("entity_init", function()
   model.root:visible(true)
   update_form()
@@ -177,7 +141,6 @@ end)
 events.on("tick", function()
   update_form()
   use_locomotion(select_locomotion())
-  update_dynamic_tail_pose()
 end)
 
 ui.action({ id = "tail_auto", title = "Tail: Auto", icon = "wave", on_use = function() set_tail_mode("auto") end })
@@ -202,7 +165,6 @@ input.bind("twirl", {
 })
 
 events.on("avatar_unload", function()
-  restore_blockbench_tail_pose()
   model.Tail1:reset()
   model.LeftLeg:reset()
   model.RightLeg:reset()

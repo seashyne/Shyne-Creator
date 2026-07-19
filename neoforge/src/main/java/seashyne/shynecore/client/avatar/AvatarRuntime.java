@@ -66,10 +66,11 @@ public final class AvatarRuntime {
             }
             if (active != null && activeManifest != null && activeManifest.onlineSync()) {
                 snapshotTicks++;
-                if (snapshotTicks >= 100 || active.isSnapshotDirty()) {
+                if (snapshotTicks >= 100 || active.isSnapshotDirty() || (snapshotTicks >= 5 && active.areAnimationParametersDirty())) {
                     snapshotTicks = 0;
                     sendLocalSnapshot(client);
                     active.clearSnapshotDirty();
+                    active.clearAnimationParametersDirty();
                 }
             }
             syncAttachment(client);
@@ -446,6 +447,11 @@ public final class AvatarRuntime {
 
     public static void playAnimation(String animationName, double speed, double weight, int priority, Boolean loopOverride,
                                      int fadeInTicks, int fadeOutTicks, List<String> mask, boolean additive) {
+        playAnimation(animationName, speed, weight, priority, loopOverride, fadeInTicks, fadeOutTicks, mask, additive, 0);
+    }
+
+    public static void playAnimation(String animationName, double speed, double weight, int priority, Boolean loopOverride,
+                                     int fadeInTicks, int fadeOutTicks, List<String> mask, boolean additive, int transitionTicks) {
         if (active == null || active.boundEntityId() == null) return;
         if (animationName == null || animationName.isBlank()) return;
         active.setCurrentAnimation(animationName);
@@ -453,11 +459,18 @@ public final class AvatarRuntime {
         double length = definition == null || definition.lengthSeconds() <= 0 ? 2.0 : definition.lengthSeconds();
         boolean looping = definition == null || definition.looping();
         if (loopOverride != null) looping = loopOverride;
+        int transition = Math.max(0, Math.min(1200, transitionTicks));
+        if (transition > 0 && !additive) {
+            long now = System.currentTimeMillis();
+            active.animationLayers().replaceAll((key, layer) ->
+                !layer.additive() && layer.priority() == priority && !key.equals(animationName.toLowerCase(Locale.ROOT))
+                    ? layer.requestStop(now, transition) : layer);
+        }
         active.animationLayers().put(animationName.toLowerCase(Locale.ROOT), new AvatarAnimationLayer(
             animationName, System.currentTimeMillis(), length, looping,
             Math.max(0.01, Math.min(8.0, speed)), Math.max(0.0, Math.min(1.0, weight)),
             Math.max(-1000, Math.min(1000, priority)),
-            Math.max(0, Math.min(1200, fadeInTicks)), Math.max(0, Math.min(1200, fadeOutTicks)),
+            Math.max(transition, Math.max(0, Math.min(1200, fadeInTicks))), Math.max(transition, Math.max(0, Math.min(1200, fadeOutTicks))),
             mask == null ? List.of() : List.copyOf(mask), additive, 0L
         ));
         active.markAnimationLayersDirty();
@@ -563,6 +576,7 @@ public final class AvatarRuntime {
                 layer.name(), layer.startedAtMillis(), layer.lengthSeconds(), layer.looping(), layer.speed(), layer.weight(), layer.priority(),
                 layer.fadeInTicks(), layer.fadeOutTicks(), layer.mask(), layer.additive(), layer.stoppingAtMillis()
             )).toList(),
+            Map.copyOf(active.animationParameters()),
             active.nameplateText(),
             active.nameplateVisible()
         );
@@ -588,12 +602,12 @@ public final class AvatarRuntime {
             m.animations().stream().map(a -> new ShyneNetwork.NetAnimationDefinition(a.name(), a.lengthSeconds(), a.looping(), a.animatorCount(),
                 a.boneAnimations().entrySet().stream().collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> {
                     var v = e.getValue();
-                    return new ShyneNetwork.NetBoneAnimation(v.boneUuid(), toNetKeys(v.rotation()), toNetKeys(v.position()), toNetKeys(v.scale()));
+                    return new ShyneNetwork.NetBoneAnimation(v.boneUuid(), toNetKeys(v.rotation()), toNetKeys(v.position()), toNetKeys(v.scale()), v.rotationGlobal(), v.quaternionInterpolation());
                 })), a.affectedBones())).toList()
         );
     }
 
     private static List<ShyneNetwork.NetKeyframe> toNetKeys(List<seashyne.shynecore.model.BbKeyframe> keys) {
-        return keys.stream().map(k -> new ShyneNetwork.NetKeyframe(k.time(), k.x(), k.y(), k.z(), k.easing())).toList();
+        return keys.stream().map(k -> new ShyneNetwork.NetKeyframe(k.time(), k.pre(), k.post(), k.easing(), k.bezier())).toList();
     }
 }
