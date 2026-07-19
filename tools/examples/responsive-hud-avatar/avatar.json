@@ -1,0 +1,11 @@
+{
+  "api_version": 1,
+  "id": "shyne.responsive_hud_example",
+  "name": "Responsive HUD Example",
+  "version": "1.0.0",
+  "main": "script.lua",
+  "model": "model.bbmodel",
+  "replace_vanilla": false,
+  "online_sync": false,
+  "permissions": ["hud_render"]
+}

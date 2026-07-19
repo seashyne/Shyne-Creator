@@ -515,6 +515,7 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                 LuaTable result = new LuaTable();
                 var model = AvatarRuntime.activeModel();
                 result.set("api_version", LuaValue.valueOf(AvatarLoader.AVATAR_API_VERSION));
+                result.set("custom_render_api_version", LuaValue.valueOf("1.1"));
                 result.set("parts_controlled", LuaValue.valueOf(state.parts().size()));
                 result.set("animation_layers", LuaValue.valueOf(state.animationLayers().size()));
                 result.set("input_bindings", LuaValue.valueOf(inputBindings.size()));
@@ -530,7 +531,7 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                     result.set("textures", LuaValue.valueOf(model.textures().size()));
                 }
                 LuaTable features = new LuaTable();
-                for (String feature : List.of("multi_animation", "animation_fade", "animation_mask", "animation_transition", "animation_expression", "animation_parameter", "blockbench_5_1", "additive_animation", "shortest_rotation", "part_color", "part_opacity", "part_translucency", "part_emissive", "camera_transform", "nameplate", "sound", "particle", "input", "input_mouse", "input_modifiers", "input_repeat", "render_text", "render_item", "render_block", "render_sprite", "render_line", "render_world", "profiler", "online_sync")) features.set(feature, LuaValue.TRUE);
+                for (String feature : List.of("multi_animation", "animation_fade", "animation_mask", "animation_transition", "animation_expression", "animation_parameter", "blockbench_5_1", "additive_animation", "shortest_rotation", "part_color", "part_opacity", "part_translucency", "part_emissive", "camera_transform", "nameplate", "sound", "particle", "input", "input_mouse", "input_modifiers", "input_repeat", "render_text", "render_item", "render_block", "render_sprite", "render_line", "render_world", "render_rect", "render_outline", "render_polyline", "render_groups", "render_task_update", "render_screen", "profiler", "online_sync")) features.set(feature, LuaValue.TRUE);
                 result.set("features", features);
                 return result;
             }
@@ -550,7 +551,7 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                     args.arg(9).optdouble(0), args.arg(10).optdouble(0), args.arg(11).optdouble(0),
                     args.arg(12).optdouble(1), args.arg(13).optdouble(16), args.arg(14).optdouble(1),
                     (int) args.arg(15).optlong(0xFFFFFFFFL), args.arg(16).optboolean(false), args.arg(17).optboolean(true),
-                    args.arg(18).optdouble(128)
+                    args.arg(18).optdouble(128), args.arg(19).optint(0), args.arg(20).optdouble(1)
                 );
                 boolean added = AvatarRenderTaskRegistry.upsert(renderTaskOwner, state.avatarId(), id, spec);
                 if (added) renderTaskIds.add(id);
@@ -569,6 +570,27 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                 AvatarRenderTaskRegistry.clearOwner(renderTaskOwner);
                 renderTaskIds.clear();
                 return LuaValue.NIL;
+            }
+        });
+        globals.set("_shyne_render_screen", new ZeroArgFunction() {
+            @Override public LuaValue call() {
+                LuaTable result = new LuaTable();
+                result.set("width", LuaValue.valueOf(AvatarRenderTaskRegistry.lastScreenWidth()));
+                result.set("height", LuaValue.valueOf(AvatarRenderTaskRegistry.lastScreenHeight()));
+                result.set("ready", LuaValue.valueOf(AvatarRenderTaskRegistry.lastScreenWidth() > 0));
+                return result;
+            }
+        });
+        globals.set("_shyne_render_stats", new ZeroArgFunction() {
+            @Override public LuaValue call() {
+                LuaTable result = new LuaTable();
+                result.set("tasks", LuaValue.valueOf(renderTaskIds.size()));
+                result.set("rendered", LuaValue.valueOf(AvatarRenderTaskRegistry.lastRendered()));
+                result.set("culled", LuaValue.valueOf(AvatarRenderTaskRegistry.lastCulled()));
+                result.set("task_limit", LuaValue.valueOf(AvatarRenderTaskRegistry.MAX_TASKS_PER_AVATAR));
+                result.set("frame_limit", LuaValue.valueOf(AvatarRenderTaskRegistry.MAX_RENDERED_TASKS_PER_FRAME));
+                result.set("line_point_limit", LuaValue.valueOf(AvatarRenderTaskRegistry.MAX_LINE_POINTS_PER_FRAME));
+                return result;
             }
         });
         globals.set("_shyne_profiler_snapshot", new ZeroArgFunction() {

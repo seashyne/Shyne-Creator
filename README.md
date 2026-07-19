@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.7.30-alpha-mpl-26.2`
+- Shyne Creator: `2.7.31-alpha-custom-render-api-26.2`
 - Minecraft: `26.2`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -87,7 +87,7 @@ Avatar และ gameplay packs ยังใช้โฟลเดอร์มา
 └─ <content-pack>/
 ```
 
-Core JAR ไม่บรรจุ Avatar, model หรือ gameplay pack ตัวอย่าง ดูรูปแบบไฟล์ใน `AVATAR_SYSTEM.md`, Lua API ใน `SHYNE_LUA_API_TH.md` และการทดสอบหลายผู้เล่นใน `MULTIPLAYER_TESTING.md`
+Core JAR ไม่บรรจุ Avatar, model หรือ gameplay pack ตัวอย่าง ดูรูปแบบไฟล์ใน `AVATAR_SYSTEM.md`, Lua API ใน `SHYNE_LUA_API_TH.md`, Custom Render API ใน `CUSTOM_RENDER_API_TH.md` และการทดสอบหลายผู้เล่นใน `MULTIPLAYER_TESTING.md`
 
 ## License
 

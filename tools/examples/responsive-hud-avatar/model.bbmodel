@@ -1,0 +1,9 @@
+{
+  "meta": {"format_version": "4.10", "model_format": "free"},
+  "name": "Responsive HUD Example",
+  "resolution": {"width": 16, "height": 16},
+  "textures": [],
+  "elements": [],
+  "outliner": [],
+  "animations": []
+}
