@@ -1,12 +1,21 @@
--- Shyne Lua API Standard 1.0 (Avatar runtime)
+-- Shyne Lua API Standard 1.1 (Avatar runtime)
 -- New scripts use normal globals: minecraft, model, avatar, state, events, ui, vector.
 
 local function bool(value) return value and true or false end
 local function read(key) return _shyne_read(key) end
+local vector_methods = {}
+local vector_mt = {
+  __index = vector_methods,
+  __add = function(a, b) return vector.add(a, b) end,
+  __sub = function(a, b) return vector.sub(a, b) end,
+  __mul = function(a, b) return vector.mul(a, b) end,
+  __div = function(a, b) return vector.div(a, b) end,
+  __unm = function(a) return vector.mul(a, -1) end
+}
 local function vec3(x, y, z)
   local value = { x = x or 0, y = y or 0, z = z or 0 }
   value[1], value[2], value[3] = value.x, value.y, value.z
-  return value
+  return setmetatable(value, vector_mt)
 end
 
 vector = {}
@@ -15,6 +24,102 @@ function vector.new(x, y, z)
   return vec3(x, y, z)
 end
 function vector.zero() return vec3(0, 0, 0) end
+local function vector_components(value)
+  if type(value) == "number" then return value, value, value end
+  value = value or {}
+  return value.x or value[1] or 0, value.y or value[2] or 0, value.z or value[3] or 0
+end
+function vector.add(a, b)
+  local ax, ay, az = vector_components(a); local bx, by, bz = vector_components(b)
+  return vec3(ax + bx, ay + by, az + bz)
+end
+function vector.sub(a, b)
+  local ax, ay, az = vector_components(a); local bx, by, bz = vector_components(b)
+  return vec3(ax - bx, ay - by, az - bz)
+end
+function vector.mul(a, b)
+  local ax, ay, az = vector_components(a); local bx, by, bz = vector_components(b)
+  return vec3(ax * bx, ay * by, az * bz)
+end
+function vector.div(a, b)
+  local ax, ay, az = vector_components(a); local bx, by, bz = vector_components(b)
+  if bx == 0 or by == 0 or bz == 0 then error("vector division by zero", 2) end
+  return vec3(ax / bx, ay / by, az / bz)
+end
+function vector.dot(a, b)
+  local ax, ay, az = vector_components(a); local bx, by, bz = vector_components(b)
+  return ax * bx + ay * by + az * bz
+end
+function vector.cross(a, b)
+  local ax, ay, az = vector_components(a); local bx, by, bz = vector_components(b)
+  return vec3(ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx)
+end
+function vector.length(value)
+  local x, y, z = vector_components(value)
+  return math.sqrt(x * x + y * y + z * z)
+end
+function vector.normalize(value)
+  local length = vector.length(value)
+  if length == 0 then return vector.zero() end
+  return vector.div(value, length)
+end
+function vector.distance(a, b) return vector.length(vector.sub(a, b)) end
+function vector.lerp(a, b, amount)
+  amount = math.max(0, math.min(1, tonumber(amount) or 0))
+  return vector.add(a, vector.mul(vector.sub(b, a), amount))
+end
+function vector.clamp(value, minimum, maximum)
+  local x, y, z = vector_components(value)
+  local min_x, min_y, min_z = vector_components(minimum)
+  local max_x, max_y, max_z = vector_components(maximum)
+  return vec3(math.max(min_x, math.min(max_x, x)), math.max(min_y, math.min(max_y, y)), math.max(min_z, math.min(max_z, z)))
+end
+function vector_methods:add(value) return vector.add(self, value) end
+function vector_methods:sub(value) return vector.sub(self, value) end
+function vector_methods:mul(value) return vector.mul(self, value) end
+function vector_methods:div(value) return vector.div(self, value) end
+function vector_methods:dot(value) return vector.dot(self, value) end
+function vector_methods:cross(value) return vector.cross(self, value) end
+function vector_methods:length() return vector.length(self) end
+function vector_methods:normalize() return vector.normalize(self) end
+function vector_methods:distance(value) return vector.distance(self, value) end
+function vector_methods:lerp(value, amount) return vector.lerp(self, value, amount) end
+
+-- Standard 1.1 capability negotiation is available before the Avatar script runs.
+shyne = { api = {}, result = {}, permissions = {} }
+shyne.api.version = SHYNE_API_VERSION or "1.1"
+shyne.api.automatic = SHYNE_API_AUTOMATIC and true or false
+shyne.api.modules = _shyne_api_modules()
+function shyne.api.supports(module, requirement)
+  return _shyne_api_supports(tostring(module or ""), tostring(requirement or "*"))
+end
+function shyne.api.require(module, requirement)
+  if not shyne.api.supports(module, requirement) then
+    error("unsupported Shyne API requirement: " .. tostring(module) .. " " .. tostring(requirement or "*"), 2)
+  end
+  return true
+end
+
+result = shyne.result
+function result.ok(value) return { ok = true, value = value } end
+function result.error(code, message, details)
+  return { ok = false, error = { code = tostring(code or "runtime_error"), message = tostring(message or ""), details = details } }
+end
+function result.try(callback, ...)
+  if type(callback) ~= "function" then return result.error("invalid_callback", "result.try requires a function") end
+  local ok, value = pcall(callback, ...)
+  if ok then return result.ok(value) end
+  return result.error("lua_error", tostring(value))
+end
+
+permissions = shyne.permissions
+function permissions.has(name) return _shyne_permission_allowed(tostring(name or "")) end
+function permissions.requested(name) return _shyne_permission_requested(tostring(name or "")) end
+function permissions.list() return _shyne_permissions() end
+function permissions.require(name)
+  if not permissions.has(name) then error("Shyne permission not granted: " .. tostring(name), 2) end
+  return true
+end
 
 state = {}
 function state.get(key, fallback)
@@ -395,7 +500,7 @@ function render.screen() return _shyne_render_screen() end
 function render.stats() return _shyne_render_stats() end
 function render.on_frame(callback) return events.on("render", callback) end
 
-events = { _handlers = {} }
+events = { _handlers = {}, _internal = {} }
 local function event_name(name) return string.lower(tostring(name or "")) end
 function events.on(name, callback)
   if type(callback) ~= "function" then error("events.on requires a function", 2) end
@@ -408,11 +513,90 @@ function events.off(name, callback)
   local handlers = events._handlers[event_name(name)] or {}
   for i = #handlers, 1, -1 do if handlers[i] == callback then table.remove(handlers, i) end end
 end
+function events.once(name, callback)
+  if type(callback) ~= "function" then error("events.once requires a function", 2) end
+  local wrapper
+  wrapper = function(payload)
+    events.off(name, wrapper)
+    return callback(payload)
+  end
+  return events.on(name, wrapper)
+end
+function events.clear(name)
+  if name == nil then events._handlers = {} else events._handlers[event_name(name)] = nil end
+end
 function events._dispatch(name, payload)
   name = event_name(name)
   payload = payload or { type = name }
-  for _, callback in ipairs(events._handlers[name] or {}) do callback(payload) end
+  for index, callback in ipairs(events._internal[name] or {}) do
+    local ok, message = pcall(callback, payload)
+    if not ok then _shyne_report_error("event_internal", name .. "#" .. tostring(index), tostring(message)) end
+  end
+  -- Snapshot the handler list so callbacks can safely subscribe/unsubscribe while dispatching.
+  local handlers = {}
+  for index, callback in ipairs(events._handlers[name] or {}) do handlers[index] = callback end
+  for index, callback in ipairs(handlers) do
+    local ok, message = pcall(callback, payload)
+    if not ok then _shyne_report_error("event", name .. "#" .. tostring(index), tostring(message)) end
+  end
 end
+
+task = { _next_id = 0, _entries = {}, limit = 128 }
+local function task_add(delay, interval, callback, repeating)
+  if type(callback) ~= "function" then error("task callback must be a function", 3) end
+  if task.pending() >= task.limit then error("task limit reached (" .. tostring(task.limit) .. ")", 3) end
+  task._next_id = task._next_id + 1
+  local id = task._next_id
+  task._entries[id] = {
+    remaining = math.max(0, math.floor(tonumber(delay) or 0)),
+    interval = math.max(1, math.floor(tonumber(interval) or 1)),
+    callback = callback,
+    repeating = repeating
+  }
+  return id
+end
+function task.after(ticks, callback) return task_add(ticks, 1, callback, false) end
+function task.every(ticks, callback, options)
+  options = options or {}
+  local interval = math.max(1, math.floor(tonumber(ticks) or 1))
+  return task_add(options.immediate and 0 or (options.delay or interval), interval, callback, true)
+end
+function task.cancel(id)
+  local existed = task._entries[id] ~= nil
+  task._entries[id] = nil
+  return existed
+end
+function task.clear() task._entries = {} end
+function task.pending()
+  local count = 0
+  for _ in pairs(task._entries) do count = count + 1 end
+  return count
+end
+events._internal.tick = events._internal.tick or {}
+table.insert(events._internal.tick, function(payload)
+  local due = {}
+  for id, entry in pairs(task._entries) do
+    entry.remaining = entry.remaining - 1
+    if entry.remaining <= 0 then table.insert(due, id) end
+  end
+  table.sort(due)
+  for _, id in ipairs(due) do
+    local entry = task._entries[id]
+    if entry ~= nil then
+      local ok, keep = pcall(entry.callback, payload, id)
+      if not ok then
+        _shyne_report_error("task", tostring(id), tostring(keep))
+        task._entries[id] = nil
+      elseif entry.repeating and keep ~= false then
+        entry.remaining = entry.interval
+      else
+        task._entries[id] = nil
+      end
+    end
+  end
+end)
+events._internal.avatar_unload = events._internal.avatar_unload or {}
+table.insert(events._internal.avatar_unload, function() task.clear() end)
 
 ui = {}
 function ui.action(options)
@@ -448,3 +632,8 @@ diagnostics = {}
 function diagnostics.snapshot() return _shyne_diagnostics() end
 profiler = {}
 function profiler.snapshot() return _shyne_profiler_snapshot() end
+
+-- The shyne namespace is optional: concise globals and namespaced access are equivalent.
+shyne.vector, shyne.state, shyne.model, shyne.avatar = vector, state, model, avatar
+shyne.minecraft, shyne.events, shyne.task, shyne.ui = minecraft, events, task, ui
+shyne.emote, shyne.diagnostics, shyne.profiler = emote, diagnostics, profiler

@@ -9,8 +9,25 @@
     "api_version": {
       "type": "integer",
       "const": 1,
-      "default": 1,
-      "description": "Optional explicit API standard. Missing values are locked to Standard 1."
+      "description": "Legacy compatibility field. Explicit value 1 selects the historical Standard 1.0 contract."
+    },
+    "api": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "latest",
+        "1.0",
+        "1.1"
+      ],
+      "default": "latest",
+      "description": "Semantic Shyne Lua API version. Missing, auto, and latest select the newest supported standard."
+    },
+    "requires": {
+      "type": "object",
+      "description": "Optional module requirements checked before Lua starts, for example {\"render\": \">=1.1\"}.",
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "id": {
       "type": "string",

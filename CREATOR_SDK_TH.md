@@ -92,7 +92,10 @@ shyne-mods/avatars/<avatar-id>/
 
 ```json
 {
-  "api_version": 1,
+  "api": "latest",
+  "requires": {
+    "core": ">=1.1"
+  },
   "id": "author.avatar",
   "name": "Avatar Name",
   "version": "1.0.0",
@@ -123,4 +126,4 @@ shyne-mods/avatars/<avatar-id>/
 
 Avatar Lua สามารถแยกไฟล์เป็น module แล้วเรียก `require("lib.my_module")` ได้ ระบบจะค้นหา `lib/my_module.lua` ภายในแพ็กเท่านั้นและ cache ผลลัพธ์ให้หนึ่งครั้งต่อการเปิด Avatar
 
-Avatar ใหม่ควรใช้ Shyne Lua API Standard 1.0 (`minecraft`, `model`, `avatar`, `state`, `events`, `ui`, `vector`) ชื่อ API เก่าจะยังทำงานเพื่อให้แพ็กเดิมไม่เสีย แต่ไม่แนะนำสำหรับงานใหม่
+Avatar ใหม่ควรใช้ Shyne Lua API Standard 1.1 ผ่าน `api: "latest"` หรือเวอร์ชันล็อก `api: "1.1"` และประกาศโมดูลขั้นต่ำใน `requires` API มีทั้งชื่อ global แบบสั้นและ `shyne.*` โดยให้ผลเหมือนกัน

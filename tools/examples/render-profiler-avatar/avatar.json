@@ -1,5 +1,6 @@
 {
-  "api_version": 1,
+  "api": "latest",
+  "requires": {"diagnostics": ">=1.1", "render": ">=1.1"},
   "id": "shyne.render_profiler_example",
   "name": "Render and Profiler Example",
   "version": "1.0.0",

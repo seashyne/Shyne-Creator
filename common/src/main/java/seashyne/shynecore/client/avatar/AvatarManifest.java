@@ -1,6 +1,7 @@
 package seashyne.shynecore.client.avatar;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public record AvatarManifest(
@@ -18,5 +19,8 @@ public record AvatarManifest(
     String textureSyncMode,
     String syncedSchema,
     List<String> textures,
-    Set<AvatarPermission> permissions
+    Set<AvatarPermission> permissions,
+    String api,
+    boolean automaticApi,
+    Map<String, String> apiRequirements
 ) {}

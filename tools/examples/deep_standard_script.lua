@@ -1,4 +1,4 @@
--- Deep: ตัวอย่าง Shyne Lua API Standard 1.0
+-- Deep: ตัวอย่าง Shyne Lua API Standard 1.1
 -- script.lua คุมเฉพาะสิ่งที่สั่ง ส่วนที่ไม่ได้สั่งจะใช้ animation ใน bbmodel หรือ Auto Humanoid
 local mouth = model.root.Head.mouth_open
 local manual_open = false

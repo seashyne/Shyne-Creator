@@ -13,7 +13,7 @@ final class AvatarLoaderTest {
     @TempDir Path temp;
 
     @Test
-    void nameOnlyManifestUsesStableStandardOneDefaults() throws Exception {
+    void nameOnlyManifestUsesLatestStandardDefaults() throws Exception {
         Path root = temp.resolve("Deep-ShyneCore");
         Files.createDirectories(root);
         Files.writeString(root.resolve("avatar.json"), "{\"name\":\"Deep\"}");
@@ -24,6 +24,9 @@ final class AvatarLoaderTest {
 
         assertAll(
             () -> assertEquals(1, manifest.apiVersion()),
+            () -> assertEquals("1.1", manifest.api()),
+            () -> assertTrue(manifest.automaticApi()),
+            () -> assertTrue(manifest.apiRequirements().isEmpty()),
             () -> assertEquals("deep-shynecore", manifest.id()),
             () -> assertEquals("Deep", manifest.name()),
             () -> assertEquals("1.0.0", manifest.version()),
@@ -37,6 +40,32 @@ final class AvatarLoaderTest {
             () -> assertTrue(manifest.textures().isEmpty()),
             () -> assertTrue(manifest.permissions().isEmpty())
         );
+    }
+
+    @Test
+    void legacyVersionLocksOnePointZeroAndSemanticRequirementsAreChecked() throws Exception {
+        Path root = temp.resolve("api-avatar");
+        Files.createDirectories(root);
+        Files.writeString(root.resolve("script.lua"), "return true");
+        Files.writeString(root.resolve("model.bbmodel"), "{}");
+        Files.writeString(root.resolve("avatar.json"), "{\"name\":\"Legacy\",\"api_version\":1}");
+
+        AvatarManifest legacy = AvatarLoader.loadManifest(root);
+        assertEquals("1.0", legacy.api());
+        assertFalse(legacy.automaticApi());
+
+        Files.writeString(root.resolve("avatar.json"), """
+            {"name":"Modern","api":"1.1","requires":{"render":">=1.1","scheduler":"^1.1"}}
+            """);
+        AvatarManifest modern = AvatarLoader.loadManifest(root);
+        assertEquals("1.1", modern.api());
+        assertEquals(">=1.1", modern.apiRequirements().get("render"));
+
+        Files.writeString(root.resolve("avatar.json"), """
+            {"name":"Too New","api":"1.1","requires":{"render":">=2.0"}}
+            """);
+        IOException error = assertThrows(IOException.class, () -> AvatarLoader.loadManifest(root));
+        assertTrue(error.getMessage().contains("requires >=2.0"));
     }
 
     @Test

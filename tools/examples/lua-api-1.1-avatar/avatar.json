@@ -1,0 +1,18 @@
+{
+  "api": "latest",
+  "requires": {
+    "core": ">=1.1",
+    "permissions": ">=1.1",
+    "render": ">=1.1",
+    "scheduler": ">=1.1",
+    "vector": ">=1.1"
+  },
+  "id": "shyne.lua_api_1_1_example",
+  "name": "Shyne Lua API 1.1 Example",
+  "version": "1.0.0",
+  "replace_vanilla": false,
+  "online_sync": false,
+  "permissions": [
+    "hud_render"
+  ]
+}

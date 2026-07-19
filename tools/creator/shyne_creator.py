@@ -9,10 +9,47 @@ import re
 import sys
 from pathlib import Path
 
-ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_.-]{1,63}$")
+ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_.-]{0,63}$")
 MAX_UNPACKED_BYTES = 64 * 1024 * 1024
 TEXTURE_EXTENSIONS = {".png"}
 ALLOWED_PERMISSIONS = {"particle", "sound", "camera", "microphone", "command", "hud_render", "world_render"}
+SUPPORTED_APIS = {"auto", "latest", "1.0", "1.1"}
+API_MODULES = {
+    "animation": "1.1", "core": "1.1", "diagnostics": "1.1", "input": "1.0",
+    "minecraft": "1.0", "modules": "1.0", "network": "1.0", "permissions": "1.1",
+    "render": "1.1", "scheduler": "1.1", "ui": "1.1", "vector": "1.1",
+}
+STANDARD_1_0_MODULES = {"animation", "core", "diagnostics", "input", "minecraft", "modules", "network", "render", "ui", "vector"}
+
+
+def version_pair(value: str) -> tuple[int, int]:
+    parts = value.strip().split(".")
+    if not 1 <= len(parts) <= 3:
+        raise ValueError(f"invalid API version: {value}")
+    return int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+
+
+def requirement_matches(available: str, requirement: str) -> bool:
+    requirement = requirement.strip()
+    if requirement in {"", "*", "latest"}:
+        return True
+    if requirement.startswith("^"):
+        minimum = version_pair(requirement[1:])
+        current = version_pair(available)
+        return current[0] == minimum[0] and current >= minimum
+    operator = "="
+    for candidate in (">=", "<=", ">", "<", "="):
+        if requirement.startswith(candidate):
+            operator, requirement = candidate, requirement[len(candidate):].strip()
+            break
+    current, target = version_pair(available), version_pair(requirement)
+    return {
+        ">=": current >= target,
+        "<=": current <= target,
+        ">": current > target,
+        "<": current < target,
+        "=": current == target,
+    }[operator]
 
 
 def safe_file(root: Path, relative: str) -> Path:
@@ -40,11 +77,40 @@ def validate(root: Path) -> dict:
         except Exception as exc:
             errors.append(f"invalid avatar.json: {exc}")
 
-    avatar_id = str(manifest.get("id", ""))
+    default_id = re.sub(r"[^a-z0-9_.-]+", "_", root.name.lower()).lstrip("._-") or "avatar"
+    avatar_id = str(manifest.get("id", default_id))[:64]
     if manifest and not ID_PATTERN.fullmatch(avatar_id):
-        errors.append("id must use 2-64 lowercase letters, numbers, dot, dash, or underscore")
-    if manifest and int(manifest.get("api_version", 1)) != 1:
-        errors.append("api_version must be 1")
+        errors.append("id must use 1-64 lowercase letters, numbers, dot, dash, or underscore")
+    if manifest and not str(manifest.get("name", "")).strip():
+        errors.append("name is required")
+    if manifest and "api_version" in manifest:
+        try:
+            if int(manifest["api_version"]) != 1:
+                errors.append("api_version must be 1")
+        except (TypeError, ValueError):
+            errors.append("api_version must be the integer 1")
+    selected_api = str(manifest.get("api", "latest")).strip().lower()
+    if selected_api not in SUPPORTED_APIS:
+        errors.append("api must be auto, latest, 1.0, or 1.1")
+    effective_api = "1.0" if "api_version" in manifest and "api" not in manifest else ("1.1" if selected_api in {"auto", "latest"} else selected_api)
+    requirements = manifest.get("requires", {})
+    if requirements and not isinstance(requirements, dict):
+        errors.append("requires must be an object")
+        requirements = {}
+    for module, requirement in requirements.items():
+        if module not in API_MODULES:
+            errors.append(f"unknown API module: {module}")
+        elif not isinstance(requirement, str):
+            errors.append(f"API requirement for {module} must be a string")
+        elif effective_api == "1.0" and module not in STANDARD_1_0_MODULES:
+            errors.append(f"API module {module} is unavailable in Standard 1.0")
+        else:
+            try:
+                available = "1.0" if effective_api == "1.0" else API_MODULES[module]
+                if not requirement_matches(available, requirement):
+                    errors.append(f"API module {module} requires {requirement} but {available} is available")
+            except (TypeError, ValueError):
+                errors.append(f"invalid API requirement for {module}: {requirement}")
     declared_permissions = {str(value).strip().lower() for value in manifest.get("permissions", [])}
     unknown_permissions = sorted(declared_permissions - ALLOWED_PERMISSIONS)
     if unknown_permissions:
@@ -135,7 +201,8 @@ def create(root: Path, avatar_id: str, name: str) -> None:
         raise SystemExit("invalid --id; use lowercase letters, numbers, dot, dash, or underscore")
     root.mkdir(parents=True, exist_ok=False)
     manifest = {
-        "api_version": 1,
+        "api": "latest",
+        "requires": {"render": ">=1.1", "scheduler": ">=1.1"},
         "id": avatar_id,
         "name": name,
         "version": "1.0.0",

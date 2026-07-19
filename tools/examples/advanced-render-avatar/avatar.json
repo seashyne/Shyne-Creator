@@ -1,5 +1,6 @@
 {
-  "api_version": 1,
+  "api": "latest",
+  "requires": {"render": ">=1.1", "vector": ">=1.1"},
   "id": "shyne.advanced_render_example",
   "name": "Advanced Custom Render Example",
   "version": "1.0.0",

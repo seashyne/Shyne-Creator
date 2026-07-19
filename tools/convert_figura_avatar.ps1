@@ -94,7 +94,12 @@ $modelJson = $model | ConvertTo-Json -Depth 100
 
 $description = if ($figuraManifest -and $figuraManifest.description) { [string]$figuraManifest.description } else { "" }
 $manifest = [ordered]@{
-    api_version = 1
+    api = "latest"
+    requires = [ordered]@{
+        animation = ">=1.1"
+        permissions = ">=1.1"
+        vector = ">=1.1"
+    }
     id = $Id
     name = $Name
     version = if ($useMerlingProfile) { "1.2.0-blockbench-engine" } else { "1.0.0-shyne" }
@@ -113,7 +118,7 @@ $manifestJson = $manifest | ConvertTo-Json -Depth 10
 [IO.File]::WriteAllText((Join-Path $destinationRoot "avatar.json"), $manifestJson, [Text.UTF8Encoding]::new($false))
 
 $script = @'
--- Generated native Shyne Avatar API Standard 1.0 entry script.
+-- Generated native Shyne Avatar API Standard 1.1 entry script.
 avatar.hide_vanilla(true)
 avatar.camera.configure({ local_only = true, first_person_masking = true, hide_head = true })
 avatar.texture.sync("manifest")

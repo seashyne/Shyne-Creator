@@ -23,6 +23,9 @@ public final class AvatarState {
     private final boolean publicShare;
     private final Set<AvatarPermission> requestedPermissions;
     private final Set<AvatarPermission> grantedPermissions;
+    private String apiStandard = ShyneApiStandard.LATEST;
+    private boolean automaticApi = true;
+    private Map<String, String> apiRequirements = Map.of();
     private boolean firstPersonMasking;
     private boolean localCameraOnly;
     private boolean hideHeadInFirstPerson;
@@ -93,6 +96,14 @@ public final class AvatarState {
     public boolean publicShare() { return publicShare; }
     public Set<AvatarPermission> requestedPermissions() { return requestedPermissions; }
     public Set<AvatarPermission> grantedPermissions() { return grantedPermissions; }
+    public String apiStandard() { return apiStandard; }
+    public boolean automaticApi() { return automaticApi; }
+    public Map<String, String> apiRequirements() { return apiRequirements; }
+    public void setApiContract(String standard, boolean automatic, Map<String, String> requirements) {
+        this.apiStandard = standard == null || standard.isBlank() ? ShyneApiStandard.LATEST : standard;
+        this.automaticApi = automatic;
+        this.apiRequirements = requirements == null ? Map.of() : Map.copyOf(requirements);
+    }
     public boolean permissionAllowed(AvatarPermission permission) {
         return !publicShare || (requestedPermissions.contains(permission) && grantedPermissions.contains(permission));
     }

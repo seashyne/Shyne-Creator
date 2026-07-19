@@ -1,6 +1,6 @@
-# Shyne Lua API Standard 1.0
+# Shyne Lua API Standard 1.1
 
-มาตรฐานนี้เป็น API ที่ออกแบบสำหรับ Shyne Creator โดยตรง ไม่ใช่สำเนา API ของ Figura ชื่อหลักมีเพียง 7 กลุ่มและใช้ตัวพิมพ์เล็กเหมือนกันทุกแพ็ก:
+มาตรฐานนี้เป็น API ที่ออกแบบสำหรับ Shyne Creator โดยตรง ชื่อ global แบบสั้นและรูปแบบ `shyne.*` ใช้งานเท่ากัน ผู้สร้างจึงเลือกสไตล์ที่อ่านง่ายกับงานของตนได้:
 
 | กลุ่ม | ใช้ทำอะไร |
 |---|---|
@@ -10,7 +10,48 @@
 | `state` | เก็บค่าชั่วคราวหรือค่าที่ซิงก์ |
 | `events` | รับเหตุการณ์ด้วย `events.on(...)` |
 | `ui` | เพิ่ม Action ใน Palette |
-| `vector` | สร้างค่า x/y/z |
+| `vector` | สร้างและคำนวณค่า x/y/z |
+| `render` | วาด HUD, item, block, sprite, line และ world task |
+| `input` | เพิ่มปุ่ม Dynamic ระหว่างเกม |
+| `sound`, `particle` | เล่นเสียงและสร้างอนุภาค |
+| `task` | ตั้งงานครั้งเดียวหรืองานวนตาม tick |
+| `permissions` | ตรวจสิทธิ์ของ Local/Public Avatar |
+| `diagnostics`, `profiler` | ตรวจ API, error, เวลา และหน่วยความจำ |
+
+## เลือก API อัตโนมัติและตรวจความสามารถ
+
+`avatar.json` ที่มีเพียงชื่อจะใช้ API ล่าสุดที่ Mod รองรับโดยอัตโนมัติ ปัจจุบันคือ 1.1:
+
+```json
+{
+  "name": "My Avatar"
+}
+```
+
+หากต้องการประกาศให้ชัดเจน ใช้ `"api": "latest"` หรือใช้ `"api": "1.1"` เพื่อล็อกรุ่น และกำหนดโมดูลขั้นต่ำได้:
+
+```json
+{
+  "name": "My Avatar",
+  "api": "latest",
+  "requires": {
+    "render": ">=1.1",
+    "scheduler": "^1.1"
+  }
+}
+```
+
+ระบบตรวจ `requires` ก่อนเริ่ม Lua จึงไม่ปล่อยให้ Avatar ทำงานครึ่งหนึ่งแล้วค่อยพัง `api_version: 1` เป็นฟิลด์เก่าสำหรับล็อกสัญญา 1.0 เท่านั้น สคริปต์ตรวจความสามารถขณะทำงานได้ดังนี้:
+
+```lua
+print(shyne.api.version, shyne.api.automatic)
+if shyne.api.supports("render", ">=1.1") then
+  render.rect("panel", { x = 8, y = 8, width = 80, height = 24 })
+end
+shyne.api.require("scheduler", ">=1.1")
+```
+
+โมดูลใน Standard 1.1 ได้แก่ `core`, `animation`, `diagnostics`, `input`, `minecraft`, `modules`, `network`, `permissions`, `render`, `scheduler`, `ui` และ `vector`
 
 ## Avatar: ตัวอย่างเริ่มต้น
 
@@ -114,11 +155,46 @@ events.on("tick", function(event) end)
 events.on("render", function(event) end)
 events.on("microphone", function(mic) end)
 events.on("avatar_unload", function(event) end)
+events.once("entity_init", function(event) end)
 ```
 
-ค่า `mic` มี `level`, `speaking`, `muted` และ `whispering` สามารถยกเลิก callback ด้วย `events.off("ชื่อ", callback)`
+ค่า `mic` มี `level`, `speaking`, `muted` และ `whispering` สามารถยกเลิก callback ด้วย `events.off("ชื่อ", callback)` หรือทั้งหมดด้วย `events.clear("ชื่อ")`
 
-ทุก event ส่ง table รูปแบบเดียวกัน โดยมี `type`, `time`, `tick`, `context` และ `delta` เป็นค่าพื้นฐาน
+ทุก event ส่ง table รูปแบบเดียวกัน โดยมี `type`, `time`, `tick`, `context`, `delta`, `sequence` และ `api` เป็นค่าพื้นฐาน Callback เรียงตามลำดับที่ลงทะเบียน และ error ของ callback หนึ่งจะถูกบันทึกใน `diagnostics.snapshot().runtime_errors` โดยไม่หยุด callback ตัวอื่น
+
+## Vector, Result และ Task
+
+```lua
+local velocity = vector.new(1, 2, 3)
+local direction = velocity:normalize()
+local next_pos = minecraft.player.position() + direction * 2
+local distance = next_pos:distance(minecraft.player.position())
+local blend = vector.lerp(vector.zero(), next_pos, 0.5)
+
+local safe = result.try(function() return model.root.Head:rotation() end)
+if not safe.ok then print(safe.error.code, safe.error.message) end
+
+task.after(20, function() print("ผ่านไป 1 วินาที") end)
+local timer = task.every(10, function(event, id)
+  return minecraft.player.loaded() -- คืน false เพื่อหยุดงานวน
+end)
+task.cancel(timer)
+```
+
+Vector รองรับ `add`, `sub`, `mul`, `div`, `dot`, `cross`, `length`, `normalize`, `distance`, `lerp`, `clamp` และ operator `+ - * /` งานตั้งเวลาใช้ tick และจำกัด 128 งานต่อ Avatar งานทั้งหมดถูกล้างเมื่อ unload
+
+## Permission
+
+```lua
+if permissions.has("world_render") then
+  render.world("marker", { type = "text", text = "Here", position = minecraft.player.position() })
+end
+
+permissions.require("camera")
+local all_permissions = permissions.list()
+```
+
+`permissions.has`, `requested`, `require` และ `list` ช่วยให้สคริปต์เลือก fallback ได้โดยไม่ต้องลองเรียก API อันตรายแล้วรอ error
 
 ## Animation object และสถานะ ModelPart
 
@@ -218,7 +294,7 @@ render.remove("icon")
 render.clear()
 ```
 
-รองรับ `text`, `item`, `block`, `sprite`, `line`, `rect`, `outline`, `polyline` และ world-anchored task ทุกชนิด Custom Render API 1.1 เพิ่ม task handle, group ซ้อนชั้น, `z_index`, `opacity`, responsive HUD ผ่าน `render.screen()` และข้อมูลงบผ่าน `render.stats()` โดยยังใช้ `api_version: 1` และไม่ทำให้สคริปต์เดิมพัง ดูรายละเอียดและตัวอย่างเต็มใน `CUSTOM_RENDER_API_TH.md`
+รองรับ `text`, `item`, `block`, `sprite`, `line`, `rect`, `outline`, `polyline` และ world-anchored task ทุกชนิด Custom Render API 1.1 เพิ่ม task handle, group ซ้อนชั้น, `z_index`, `opacity`, responsive HUD ผ่าน `render.screen()` และข้อมูลงบผ่าน `render.stats()` ดูรายละเอียดและตัวอย่างเต็มใน `CUSTOM_RENDER_API_TH.md`
 
 เรียก ID เดิมหรือ `render.update` เพื่ออัปเดต task เดิม เก็บได้ 256 tasks แต่เรนเดอร์ไม่เกิน 128 tasks และ 4096 จุดของเส้นต่อเฟรม World task ถูก cull นอกจอและเกิน `max_distance` (เริ่มต้น 128 blocks) แล้วล้างอัตโนมัติเมื่อ unload การวาดใช้ตำแหน่งโลก project เข้าหน้าจอ จึงไม่เขียนข้อมูลลง world หรือส่ง network ต้องประกาศ permission `hud_render` หรือ `world_render` ตามชนิดงาน
 
@@ -228,29 +304,8 @@ Lua อ่านค่าเดียวกันได้ด้วย `local pr
 
 ## Gameplay/server script
 
-Gameplay pack เป็นโค้ดที่เจ้าของเซิร์ฟเวอร์ติดตั้งและ Server เป็นผู้ตัดสิน จึงใช้คำสั่งเต็มได้:
-
-```lua
-events.on("player_join", function(ctx)
-  minecraft.message("ยินดีต้อนรับ", ctx.player)
-end)
-
-minecraft.command("time set day")
-minecraft.world.set_block(0, 80, 0, "minecraft:stone")
-minecraft.item.give("minecraft:apple", 3, player_id)
-minecraft.item.give_shyne("aether_crystal", 1, player_id)
-minecraft.sound.play("minecraft:block.amethyst_block.chime", player_id)
-minecraft.task.after(20, "on_tick")
-
-model.load("bbmodels/effect.bbmodel")
-model.attach("bbmodels/effect.bbmodel", { player = player_id, scale = 1.0 })
-model.play("bbmodels/effect.bbmodel", "pulse", player_id)
-model.stop(player_id)
-model.detach(player_id)
-```
-
-สิทธิ์และผลลัพธ์จริงยังผ่านตัวตรวจของ Shyne/Minecraft Server ไม่ควรเชื่อค่า damage, mana หรือ cooldown จาก Client
+Gameplay pack ทำงานคนละ trust boundary กับ Avatar Lua และให้ Server เป็นผู้ตัดสิน จึงแยกมาตรฐานไว้ใน `SHYNE_GAMEPLAY_API_TH.md`
 
 ## Version ของมาตรฐาน
 
-`avatar.json` แบบขั้นต่ำใส่เพียง `{"name":"ชื่อ Avatar"}` ได้ หากไม่ระบุ `api_version` ระบบจะล็อกให้เป็น Standard 1 เสมอ ไม่ได้เลื่อนไปตาม API รุ่นใหม่ ค่า `id`, `version`, `main`, `model`, texture, multiplayer, first-person และกล้องใช้ค่าแนะนำอัตโนมัติ แต่ถ้าระบุ `api_version` เองแล้วเป็นรุ่นที่ไม่รองรับ ระบบจะหยุดพร้อมแจ้ง error
+`avatar.json` แบบขั้นต่ำใส่เพียง `{"name":"ชื่อ Avatar"}` ได้ และจะตาม Standard ล่าสุดอัตโนมัติ ค่า `id`, `version`, `main`, `model`, texture, multiplayer, first-person และกล้องใช้ค่าแนะนำอัตโนมัติ สำหรับงานที่ต้องคงพฤติกรรมเดิมให้ล็อกด้วย `"api": "1.1"` และประกาศ `requires` ระบบจะหยุดพร้อมข้อความชัดเจนเมื่อ API หรือโมดูลไม่รองรับ

@@ -1,5 +1,11 @@
 {
-  "api_version": 1,
+  "api": "latest",
+  "requires": {
+    "animation": ">=1.1",
+    "render": ">=1.1",
+    "permissions": ">=1.1",
+    "scheduler": ">=1.1"
+  },
   "id": "shyne.integration_test",
   "name": "Shyne Integration Test",
   "version": "1.0.0",

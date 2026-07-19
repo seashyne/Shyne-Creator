@@ -37,6 +37,9 @@ public final class ClientLuaAvatarRuntime {
     private long lastShyneCommandNanos;
     private int particlesThisTick;
     private long loadElapsedNanos;
+    private final Deque<String> runtimeErrors = new ArrayDeque<>();
+    private final Map<String, Long> eventTimes = new HashMap<>();
+    private long eventSequence;
 
     public ClientLuaAvatarRuntime(AvatarState state, Path scriptPath) {
         this.state = state;
@@ -53,6 +56,8 @@ public final class ClientLuaAvatarRuntime {
             globals.set("SHYNE_AVATAR_PATH", LuaValue.valueOf(state.rootDir().toString().replace('\\', '/')));
             globals.set("AVATAR_ID", LuaValue.valueOf(state.avatarId()));
             globals.set("AVATAR_PATH", LuaValue.valueOf(state.rootDir().toString().replace('\\', '/')));
+            globals.set("SHYNE_API_VERSION", LuaValue.valueOf(state.apiStandard()));
+            globals.set("SHYNE_API_AUTOMATIC", LuaValue.valueOf(state.automaticApi()));
             installApi();
             instructionBudget.reset(LOAD_INSTRUCTION_LIMIT);
             loadBootstrap();
@@ -515,6 +520,8 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                 LuaTable result = new LuaTable();
                 var model = AvatarRuntime.activeModel();
                 result.set("api_version", LuaValue.valueOf(AvatarLoader.AVATAR_API_VERSION));
+                result.set("api_standard", LuaValue.valueOf(state.apiStandard()));
+                result.set("api_automatic", LuaValue.valueOf(state.automaticApi()));
                 result.set("custom_render_api_version", LuaValue.valueOf("1.1"));
                 result.set("parts_controlled", LuaValue.valueOf(state.parts().size()));
                 result.set("animation_layers", LuaValue.valueOf(state.animationLayers().size()));
@@ -524,6 +531,14 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                 result.set("modules_loaded", LuaValue.valueOf(modules.size()));
                 result.set("particles_this_tick", LuaValue.valueOf(particlesThisTick));
                 result.set("render_tasks", LuaValue.valueOf(renderTaskIds.size()));
+                LuaTable apiModules = new LuaTable();
+                ShyneApiStandard.modulesFor(state.apiStandard()).forEach((name, version) ->
+                    apiModules.set(name, LuaValue.valueOf(version)));
+                result.set("api_modules", apiModules);
+                LuaTable errors = new LuaTable();
+                int errorIndex = 1;
+                for (String error : runtimeErrors) errors.set(errorIndex++, LuaValue.valueOf(error));
+                result.set("runtime_errors", errors);
                 if (model != null) {
                     result.set("bones", LuaValue.valueOf(model.bones().size()));
                     result.set("cubes", LuaValue.valueOf(model.cubes().size()));
@@ -531,9 +546,56 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                     result.set("textures", LuaValue.valueOf(model.textures().size()));
                 }
                 LuaTable features = new LuaTable();
-                for (String feature : List.of("multi_animation", "animation_fade", "animation_mask", "animation_transition", "animation_expression", "animation_parameter", "blockbench_5_1", "additive_animation", "shortest_rotation", "part_color", "part_opacity", "part_translucency", "part_emissive", "camera_transform", "nameplate", "sound", "particle", "input", "input_mouse", "input_modifiers", "input_repeat", "render_text", "render_item", "render_block", "render_sprite", "render_line", "render_world", "render_rect", "render_outline", "render_polyline", "render_groups", "render_task_update", "render_screen", "profiler", "online_sync")) features.set(feature, LuaValue.TRUE);
+                for (String feature : List.of("lua_api_1_1", "api_auto_latest", "api_requirements", "event_isolation", "event_delta", "scheduler", "vector_math", "permission_query", "multi_animation", "animation_fade", "animation_mask", "animation_transition", "animation_expression", "animation_parameter", "blockbench_5_1", "additive_animation", "shortest_rotation", "part_color", "part_opacity", "part_translucency", "part_emissive", "camera_transform", "nameplate", "sound", "particle", "input", "input_mouse", "input_modifiers", "input_repeat", "render_text", "render_item", "render_block", "render_sprite", "render_line", "render_world", "render_rect", "render_outline", "render_polyline", "render_groups", "render_task_update", "render_screen", "profiler", "online_sync")) features.set(feature, LuaValue.TRUE);
                 result.set("features", features);
                 return result;
+            }
+        });
+        globals.set("_shyne_api_modules", new ZeroArgFunction() {
+            @Override public LuaValue call() {
+                LuaTable modules = new LuaTable();
+                ShyneApiStandard.modulesFor(state.apiStandard()).forEach((name, version) ->
+                    modules.set(name, LuaValue.valueOf(version)));
+                return modules;
+            }
+        });
+        globals.set("_shyne_api_supports", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                return LuaValue.valueOf(ShyneApiStandard.supports(
+                    state.apiStandard(), args.arg(1).optjstring(""), args.arg(2).optjstring("*")
+                ));
+            }
+        });
+        globals.set("_shyne_permission_allowed", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                return LuaValue.valueOf(AvatarPermission.fromId(arg.optjstring(""))
+                    .map(state::permissionAllowed).orElse(false));
+            }
+        });
+        globals.set("_shyne_permission_requested", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                return LuaValue.valueOf(AvatarPermission.fromId(arg.optjstring(""))
+                    .map(state.requestedPermissions()::contains).orElse(false));
+            }
+        });
+        globals.set("_shyne_permissions", new ZeroArgFunction() {
+            @Override public LuaValue call() {
+                LuaTable permissions = new LuaTable();
+                for (AvatarPermission permission : AvatarPermission.values()) {
+                    LuaTable value = new LuaTable();
+                    value.set("requested", LuaValue.valueOf(state.requestedPermissions().contains(permission)));
+                    value.set("allowed", LuaValue.valueOf(state.permissionAllowed(permission)));
+                    value.set("dangerous", LuaValue.valueOf(permission.dangerous()));
+                    permissions.set(permission.id(), value);
+                }
+                return permissions;
+            }
+        });
+        globals.set("_shyne_report_error", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                reportRuntimeError(args.arg(1).optjstring("runtime"), args.arg(2).optjstring("unknown"),
+                    args.arg(3).optjstring("unknown error"));
+                return LuaValue.NIL;
             }
         });
         globals.set("_shyne_render_task", new VarArgFunction() {
@@ -708,15 +770,26 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
         }
     }
 
-    private static LuaTable eventPayload(String type) {
+    private LuaTable eventPayload(String type) {
         Minecraft client = Minecraft.getInstance();
+        long now = System.nanoTime();
+        Long previous = eventTimes.put(type, now);
         LuaTable event = new LuaTable();
         event.set("type", LuaValue.valueOf(type));
-        event.set("time", LuaValue.valueOf(System.nanoTime() / 1_000_000_000.0));
+        event.set("time", LuaValue.valueOf(now / 1_000_000_000.0));
         event.set("tick", LuaValue.valueOf(client.level == null ? 0 : client.level.getGameTime()));
         event.set("context", LuaValue.valueOf(type.equals("render") ? "player" : "client"));
-        event.set("delta", LuaValue.ZERO);
+        event.set("delta", LuaValue.valueOf(previous == null ? 0 : Math.min(1.0, (now - previous) / 1_000_000_000.0)));
+        event.set("sequence", LuaValue.valueOf(++eventSequence));
+        event.set("api", LuaValue.valueOf(state.apiStandard()));
         return event;
+    }
+
+    private void reportRuntimeError(String category, String source, String message) {
+        String entry = category + ":" + source + ": " + message;
+        if (runtimeErrors.size() >= 32) runtimeErrors.removeFirst();
+        runtimeErrors.addLast(entry);
+        ShyneCore.LOGGER.error("[AvatarLua] {}", entry);
     }
     public void dispose() {
         callEvent("AVATAR_UNLOAD", eventPayload("avatar_unload"));

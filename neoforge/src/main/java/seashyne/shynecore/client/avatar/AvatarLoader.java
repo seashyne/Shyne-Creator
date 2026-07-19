@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.EnumSet;
 import java.util.regex.Pattern;
@@ -130,8 +132,33 @@ public final class AvatarLoader {
                 }
             }
         }
+        Integer legacyApiVersion = json.has("api_version") ? json.get("api_version").getAsInt() : null;
+        String declaredApi = json.has("api") ? json.get("api").getAsString() : "";
+        ShyneApiStandard.Selection apiSelection;
+        try {
+            apiSelection = ShyneApiStandard.select(declaredApi, legacyApiVersion);
+        } catch (IllegalArgumentException unsupported) {
+            throw new IOException(unsupported.getMessage(), unsupported);
+        }
+        Map<String, String> apiRequirements = new LinkedHashMap<>();
+        if (json.has("requires")) {
+            if (!json.get("requires").isJsonObject()) {
+                throw new IOException("avatar requires must be an object");
+            }
+            for (var requirement : json.getAsJsonObject("requires").entrySet()) {
+                if (!requirement.getValue().isJsonPrimitive() || !requirement.getValue().getAsJsonPrimitive().isString()) {
+                    throw new IOException("avatar API requirements must be strings");
+                }
+                apiRequirements.put(requirement.getKey().toLowerCase(Locale.ROOT), requirement.getValue().getAsString());
+            }
+        }
+        try {
+            ShyneApiStandard.validateRequirements(apiSelection.version(), apiRequirements);
+        } catch (IllegalArgumentException unsupported) {
+            throw new IOException(unsupported.getMessage(), unsupported);
+        }
         AvatarManifest manifest = new AvatarManifest(
-            json.has("api_version") ? json.get("api_version").getAsInt() : AVATAR_API_VERSION,
+            Integer.parseInt(apiSelection.version().split("\\.")[0]),
             json.has("id") ? json.get("id").getAsString() : defaultAvatarId(root),
             json.has("name") ? json.get("name").getAsString() : "",
             json.has("version") ? json.get("version").getAsString() : "1.0.0",
@@ -145,11 +172,11 @@ public final class AvatarLoader {
             json.has("texture_sync_mode") ? json.get("texture_sync_mode").getAsString() : "manifest",
             json.has("synced_schema") ? json.get("synced_schema").getAsString() : "",
             List.copyOf(declaredTextures),
-            Set.copyOf(declaredPermissions)
+            Set.copyOf(declaredPermissions),
+            apiSelection.version(),
+            apiSelection.automatic(),
+            Map.copyOf(apiRequirements)
         );
-        if (manifest.apiVersion() != AVATAR_API_VERSION) {
-            throw new IOException("unsupported avatar api_version " + manifest.apiVersion() + "; expected " + AVATAR_API_VERSION);
-        }
         String normalizedId = manifest.id() == null ? "" : manifest.id().toLowerCase(Locale.ROOT);
         if (!SAFE_ID.matcher(normalizedId).matches()) throw new IOException("avatar id must match " + SAFE_ID.pattern());
         if (manifest.name() == null || manifest.name().isBlank()) throw new IOException("avatar name is required");

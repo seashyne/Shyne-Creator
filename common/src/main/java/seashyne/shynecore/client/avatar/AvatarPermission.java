@@ -14,7 +14,7 @@ public enum AvatarPermission {
     MICROPHONE("microphone", true),
     COMMAND("command", true),
     HUD_RENDER("hud_render", true),
-    WORLD_RENDER("world_render", false);
+    WORLD_RENDER("world_render", true);
 
     private final String id;
     private final boolean dangerous;

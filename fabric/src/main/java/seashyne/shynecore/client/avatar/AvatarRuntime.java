@@ -255,6 +255,8 @@ public final class AvatarRuntime {
             manifest.permissions(),
             grantedPermissions
         );
+        // Preserve the resolved semantic API contract for Lua introspection and diagnostics.
+        nextState.setApiContract(manifest.api(), manifest.automaticApi(), manifest.apiRequirements());
         nextState.setOutfits(AvatarOutfitLoader.discover(root));
         nextState.setFirstPersonMasking(manifest.firstPersonMasking());
         nextState.setLocalCameraOnly(manifest.localCamera());

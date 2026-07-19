@@ -1,5 +1,6 @@
 {
-  "api_version": 1,
+  "api": "latest",
+  "requires": {"render": ">=1.1"},
   "id": "shyne.responsive_hud_example",
   "name": "Responsive HUD Example",
   "version": "1.0.0",
