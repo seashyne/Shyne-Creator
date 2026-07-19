@@ -242,15 +242,36 @@ public final class BbModelParser {
                     }
                     boneAnimations.put(boneUuid, new BbBoneAnimation(
                         boneUuid,
-                        parseKeyframes(animator.get("rotation")),
-                        parseKeyframes(animator.get("position")),
-                        parseKeyframes(animator.get("scale"))
+                        parseAnimatorChannel(animator, "rotation"),
+                        parseAnimatorChannel(animator, "position"),
+                        parseAnimatorChannel(animator, "scale")
                     ));
                 }
             }
             animations.add(new BbAnimationDefinition(name, length, looping, boneAnimations.size(), Map.copyOf(boneAnimations), List.copyOf(boneAnimations.keySet())));
         }
         return animations;
+    }
+
+    /**
+     * Reads both native Blockbench channel arrays and Figura's shared
+     * {@code animator.keyframes[]} array. Figura stores the channel name on
+     * each keyframe instead of grouping frames under rotation/position/scale.
+     */
+    private static List<BbKeyframe> parseAnimatorChannel(JsonObject animator, String channel) {
+        JsonElement nativeChannel = animator.get(channel);
+        if (nativeChannel != null && !nativeChannel.isJsonNull()) return parseKeyframes(nativeChannel);
+        if (!animator.has("keyframes") || !animator.get("keyframes").isJsonArray()) return List.of();
+
+        JsonArray matching = new JsonArray();
+        for (JsonElement item : animator.getAsJsonArray("keyframes")) {
+            if (!item.isJsonObject()) continue;
+            JsonObject frame = item.getAsJsonObject();
+            if (frame.has("channel") && channel.equalsIgnoreCase(frame.get("channel").getAsString())) {
+                matching.add(frame);
+            }
+        }
+        return parseKeyframes(matching);
     }
 
     private static List<BbKeyframe> parseKeyframes(JsonElement channelElement) {
@@ -262,7 +283,8 @@ public final class BbModelParser {
                 if (!entry.getValue().isJsonObject()) continue;
                 JsonObject frame = entry.getValue().getAsJsonObject();
                 float[] vec = readKeyframeVector(frame);
-                String easing = frame.has("easing") ? frame.get("easing").getAsString() : "linear";
+                String easing = frame.has("easing") ? frame.get("easing").getAsString()
+                    : frame.has("interpolation") ? frame.get("interpolation").getAsString() : "linear";
                 frames.add(new BbKeyframe(time, vec[0], vec[1], vec[2], easing));
             }
         } else if (channelElement.isJsonArray()) {
@@ -271,7 +293,8 @@ public final class BbModelParser {
                 JsonObject frame = item.getAsJsonObject();
                 float time = frame.has("time") ? safeFloat(frame.get("time"), 0f) : 0f;
                 float[] vec = readKeyframeVector(frame);
-                String easing = frame.has("easing") ? frame.get("easing").getAsString() : "linear";
+                String easing = frame.has("easing") ? frame.get("easing").getAsString()
+                    : frame.has("interpolation") ? frame.get("interpolation").getAsString() : "linear";
                 frames.add(new BbKeyframe(time, vec[0], vec[1], vec[2], easing));
             }
         }

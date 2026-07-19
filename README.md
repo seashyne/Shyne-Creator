@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.7.27-alpha-render-safety-26.2`
+- Shyne Creator: `2.7.28-alpha-figura-keyframes-26.2`
 - Minecraft: `26.2`
 - Java: `25`
 - Fabric Loader: `0.19.3+`

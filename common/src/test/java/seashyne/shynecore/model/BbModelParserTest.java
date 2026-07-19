@@ -43,6 +43,30 @@ final class BbModelParserTest {
     }
 
     @Test
+    void readsFiguraSharedAnimatorKeyframeArray() throws Exception {
+        Path modelFile = temp.resolve("figura.bbmodel");
+        Files.writeString(modelFile, """
+            {
+              "outliner":[{"name":"Tail1","uuid":"tail-bone","origin":[0,0,0],"children":[]}],
+              "animations":[{"name":"small","length":1,"loop":"loop","animators":{"tail-bone":{"keyframes":[
+                {"channel":"rotation","time":0,"data_points":[{"x":"60","y":"0","z":"0"}],"interpolation":"linear"},
+                {"channel":"position","time":0.25,"data_points":[{"x":"0","y":"1","z":"1"}],"interpolation":"linear"}
+              ]}}}]
+            }
+            """);
+
+        BbBoneAnimation animation = BbModelParser.parse(modelFile, "test")
+            .findAnimation("small").boneAnimations().get("tail-bone");
+
+        assertAll(
+            () -> assertEquals(60f, animation.rotation().getFirst().x()),
+            () -> assertEquals(0.25f, animation.position().getFirst().time()),
+            () -> assertEquals(1f, animation.position().getFirst().y()),
+            () -> assertTrue(animation.scale().isEmpty())
+        );
+    }
+
+    @Test
     void rejectsAmbiguousTextureNamesInsteadOfChoosingRandomly() throws Exception {
         Files.createDirectories(temp.resolve("one"));
         Files.createDirectories(temp.resolve("two"));

@@ -6,7 +6,10 @@ param(
     [string]$Destination,
 
     [string]$Id = "",
-    [string]$Name = ""
+    [string]$Name = "",
+
+    [ValidateSet("Auto", "Generic", "Merling")]
+    [string]$Profile = "Auto"
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,6 +46,15 @@ $textureRoot = Join-Path $destinationRoot "textures"
 [IO.Directory]::CreateDirectory($textureRoot) | Out-Null
 
 $model = Get-Content -LiteralPath $modelPath -Raw | ConvertFrom-Json
+$animationNames = @($model.animations | ForEach-Object { [string]$_.name })
+$modelText = $model | ConvertTo-Json -Depth 100 -Compress
+$looksLikeMerling = @("swim", "stand", "small", "smallSwim", "Tail1", "Tail2", "Tail3", "Tail4") |
+    ForEach-Object { $modelText -match ('"' + [Regex]::Escape($_) + '"') } |
+    Where-Object { -not $_ } |
+    Measure-Object |
+    Select-Object -ExpandProperty Count
+$looksLikeMerling = $looksLikeMerling -eq 0
+$useMerlingProfile = $Profile -eq "Merling" -or ($Profile -eq "Auto" -and $looksLikeMerling)
 $copiedTextures = @()
 foreach ($texture in @($model.textures)) {
     $textureName = [IO.Path]::GetFileName([string]$texture.name)
@@ -85,7 +97,7 @@ $manifest = [ordered]@{
     api_version = 1
     id = $Id
     name = $Name
-    version = "1.0.0-shyne"
+    version = if ($useMerlingProfile) { "1.1.0-shyne-native" } else { "1.0.0-shyne" }
     main = "script.lua"
     model = "model.bbmodel"
     replace_vanilla = $true
@@ -95,6 +107,7 @@ $manifest = [ordered]@{
     local_camera = $true
     texture_sync_mode = "manifest"
     textures = @($copiedTextures)
+    permissions = @("camera")
 }
 $manifestJson = $manifest | ConvertTo-Json -Depth 10
 [IO.File]::WriteAllText((Join-Path $destinationRoot "avatar.json"), $manifestJson, [Text.UTF8Encoding]::new($false))
@@ -161,6 +174,12 @@ ui.action({ id = "twirl", title = "Twirl", icon = "spark", on_use = function() p
 ui.action({ id = "sing", title = "Sing", icon = "star", on_use = function() play_one_shot({ "sing", "song" }, 30) end })
 input.bind("twirl", { title = "Twirl", key = input.key.r, on_press = function() play_one_shot({ "twirl", "spin" }, 30) end })
 '@
+if ($useMerlingProfile) {
+    # Merling models need form/animation coordination; the generic starter
+    # otherwise plays the large-tail stand animation while the legs are visible.
+    $merlingTemplate = Join-Path $PSScriptRoot "templates\merling_native.lua"
+    $script = Get-Content -LiteralPath $merlingTemplate -Raw
+}
 [IO.File]::WriteAllText((Join-Path $destinationRoot "script.lua"), $script, [Text.UTF8Encoding]::new($false))
 
 foreach ($scriptFolder in @("lib", "scripts")) {
@@ -173,5 +192,6 @@ foreach ($scriptFolder in @("lib", "scripts")) {
 Write-Output "Converted '$Name' as '$Id'"
 Write-Output "Destination: $destinationRoot"
 Write-Output "Textures: $($copiedTextures -join ', ')"
+Write-Output "Native profile: $(if ($useMerlingProfile) { 'Merling' } else { 'Generic' })"
 Write-Output "A native locomotion, emote, input, and multiplayer starter script was generated."
 Write-Warning "Preserved source behavior modules are reference material and are not executed automatically."
