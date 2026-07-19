@@ -129,6 +129,9 @@ tasks.named('jar', Jar).configure {
     from(rootProject.file('LICENSE')) {
         rename { "${it}_shyne-creator-fabric" }
     }
+    from(rootProject.file('TRADEMARKS.md')) {
+        rename { 'TRADEMARKS_shyne-creator-fabric.md' }
+    }
 }
 
 publishing {

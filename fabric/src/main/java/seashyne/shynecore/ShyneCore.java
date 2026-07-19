@@ -34,7 +34,7 @@ import java.nio.file.Path;
 
 public class ShyneCore implements ModInitializer {
     public static final String MOD_ID = "shyne_creator";
-    public static final String VERSION = "2.7.29-alpha-blockbench-5.1-26.2";
+    public static final String VERSION = "2.7.30-alpha-mpl-26.2";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     public static ShyneCore INSTANCE;
 
