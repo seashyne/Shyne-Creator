@@ -79,7 +79,9 @@
           "sound",
           "camera",
           "microphone",
-          "command"
+          "command",
+          "hud_render",
+          "world_render"
         ]
       },
       "uniqueItems": true,

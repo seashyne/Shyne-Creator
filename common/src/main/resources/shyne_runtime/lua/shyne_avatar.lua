@@ -217,7 +217,8 @@ local function render_task(id, kind, options)
     position.x or options.x or 0, position.y or options.y or 0, position.z or options.z or 0,
     destination.x or options.x2 or 0, destination.y or options.y2 or 0, destination.z or options.z2 or 0,
     options.width or 1, options.height or 16, options.scale or 1,
-    options.color or 0xFFFFFFFF, options.shadow == true, options.visible ~= false)
+    options.color or 0xFFFFFFFF, options.shadow == true, options.visible ~= false,
+    options.max_distance or 128)
   if ok then return id end
   return false
 end

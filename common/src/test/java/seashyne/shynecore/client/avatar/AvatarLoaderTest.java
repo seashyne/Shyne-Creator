@@ -46,12 +46,13 @@ final class AvatarLoaderTest {
         Files.writeString(root.resolve("script.lua"), "return true");
         Files.writeString(root.resolve("model.bbmodel"), "{}");
         Files.writeString(root.resolve("avatar.json"), """
-            {"name":"Permission Test","permissions":["particle","camera","command"]}
+            {"name":"Permission Test","permissions":["particle","camera","command","hud_render","world_render"]}
             """);
 
         AvatarManifest manifest = AvatarLoader.loadManifest(root);
         assertEquals(
-            java.util.Set.of(AvatarPermission.PARTICLE, AvatarPermission.CAMERA, AvatarPermission.COMMAND),
+            java.util.Set.of(AvatarPermission.PARTICLE, AvatarPermission.CAMERA, AvatarPermission.COMMAND,
+                AvatarPermission.HUD_RENDER, AvatarPermission.WORLD_RENDER),
             manifest.permissions()
         );
 

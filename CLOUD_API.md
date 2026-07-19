@@ -1,8 +1,8 @@
-# Shyne Private Avatar Cloud API v1.1
+# Shyne Avatar Cloud API v2.1
 
 Base URL: `https://shyne-avatar-cloud.jirayut-wh.workers.dev`
 
-API นี้เป็นพื้นที่เก็บ Avatar ส่วนตัว ไม่ใช่ API สำหรับเผยแพร่หรือดาวน์โหลด Avatar ของผู้อื่น ทุก endpoint ที่อ่านหรือแก้ข้อมูล Avatar ต้องใช้ `Authorization: Bearer <token>` ของเจ้าของ
+API แยก Private Backup ออกจาก Public Share ชัดเจน ทุก endpoint ที่อ่านหรือแก้ไฟล์ต้องใช้ `Authorization: Bearer <token>` ส่วน metadata ใน Discover อ่านได้โดยไม่รับไฟล์ต้นฉบับหรือกุญแจถอดรหัส
 
 ## Authentication
 
@@ -21,7 +21,7 @@ Minecraft access token จะไม่ถูกส่งไป Shyne Cloud
 - `GET /v1/avatars/<avatar_id>` — manifest ของบัญชีปัจจุบัน
 - `PATCH /v1/avatars/<avatar_id>` — เปลี่ยน name หรือ description
 - `DELETE /v1/avatars/<avatar_id>` — ลบข้อมูลสำรอง
-- `GET /v1/avatars` — ปิดถาวรและตอบ `410 public_library_removed`
+- `GET /v1/avatars` — รายการ Public Avatar สำหรับ Discover
 
 ## Backup protocol
 
@@ -57,3 +57,19 @@ Minecraft access token จะไม่ถูกส่งไป Shyne Cloud
 5. ประกอบใน temporary folder, validate แล้วจึงสลับเข้าโฟลเดอร์ใช้งาน
 
 Worker ตรวจว่าบัญชีเป็นเจ้าของ Avatar และ hash อยู่ใน manifest ปัจจุบันก่อนอ่าน R2 ทุกครั้ง
+
+## Public Share
+
+- `GET /v1/discover` — ค้นหา metadata ของ Public Avatar
+- `GET /v1/shares/<share_id>` — อ่าน metadata, ผู้สร้าง, license, version และ permission
+- `PUT /v1/avatars/<avatar_id>/publication` — Publish ZIP ที่ผ่าน validator เป็น `.sc v2`
+- `DELETE /v1/avatars/<avatar_id>/publication` — Revoke และหยุดออก lease ใหม่
+- `GET /v1/shares/<share_id>/package` — รับแพ็กเกจ `.sc` ที่เข้ารหัสและเซ็นกำกับ
+- `POST /v1/shares/<share_id>/lease` — รับ lease 15 นาทีและ data key ที่ห่อด้วย X25519 สำหรับเครื่องนั้น
+- `GET /v1/shares/<share_id>/versions` — ประวัติเวอร์ชันและสถานะ revoke
+- `POST /v1/shares/<share_id>/reports` — Report Public Avatar
+- `PUT`/`DELETE /v1/creators/<creator_id>/block` — Block หรือปลด Block ผู้สร้าง
+
+Permission contract รุ่น `public_permissions_v2` รองรับ `particle`, `sound`, `camera`, `microphone`, `command`, `hud_render` และ `world_render` รายชื่อจริงอ่านได้จาก `public_avatar_permissions` ใน `GET /v1/status` เพื่อไม่ให้ client กับ backend ใช้ whitelist คนละชุด
+
+Public Share ไม่เปิดเผย ZIP ต้นฉบับหรือกุญแจดิบ ตัว client ตรวจลายเซ็น Ed25519, package hash, lease, device identity และ permission ที่ผู้ใช้อนุมัติก่อนเริ่ม Lua runtime

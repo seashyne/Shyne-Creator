@@ -12,7 +12,9 @@ public enum AvatarPermission {
     SOUND("sound", false),
     CAMERA("camera", true),
     MICROPHONE("microphone", true),
-    COMMAND("command", true);
+    COMMAND("command", true),
+    HUD_RENDER("hud_render", true),
+    WORLD_RENDER("world_render", false);
 
     private final String id;
     private final boolean dangerous;

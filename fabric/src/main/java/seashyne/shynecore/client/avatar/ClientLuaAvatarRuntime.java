@@ -519,16 +519,20 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
         });
         globals.set("_shyne_render_task", new VarArgFunction() {
             @Override public Varargs invoke(Varargs args) {
+                boolean world = args.arg(3).optboolean(false);
+                AvatarPermission renderPermission = world ? AvatarPermission.WORLD_RENDER : AvatarPermission.HUD_RENDER;
+                if (!state.permissionAllowed(renderPermission)) return LuaValue.FALSE;
                 String id = DynamicAvatarInputRegistry.sanitize(args.arg(1).optjstring(""));
                 if (id.isBlank()) return LuaValue.FALSE;
                 if (!renderTaskIds.contains(id) && renderTaskIds.size() >= AvatarRenderTaskRegistry.MAX_TASKS_PER_AVATAR) return LuaValue.FALSE;
                 var spec = new AvatarRenderTaskRegistry.TaskSpec(
-                    args.arg(2).optjstring("text"), args.arg(3).optboolean(false),
+                    args.arg(2).optjstring("text"), world,
                     args.arg(4).optjstring(""), args.arg(5).optjstring(""),
                     args.arg(6).optdouble(0), args.arg(7).optdouble(0), args.arg(8).optdouble(0),
                     args.arg(9).optdouble(0), args.arg(10).optdouble(0), args.arg(11).optdouble(0),
                     args.arg(12).optdouble(1), args.arg(13).optdouble(16), args.arg(14).optdouble(1),
-                    (int) args.arg(15).optlong(0xFFFFFFFFL), args.arg(16).optboolean(false), args.arg(17).optboolean(true)
+                    (int) args.arg(15).optlong(0xFFFFFFFFL), args.arg(16).optboolean(false), args.arg(17).optboolean(true),
+                    args.arg(18).optdouble(128)
                 );
                 boolean added = AvatarRenderTaskRegistry.upsert(renderTaskOwner, state.avatarId(), id, spec);
                 if (added) renderTaskIds.add(id);
@@ -560,6 +564,8 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                 result.set("heap_bytes", LuaValue.valueOf(profile.heapBytes()));
                 result.set("avatar_bytes", LuaValue.valueOf(profile.avatarBytes()));
                 result.set("task_count", LuaValue.valueOf(profile.taskCount()));
+                result.set("rendered_tasks", LuaValue.valueOf(AvatarRenderTaskRegistry.lastRendered()));
+                result.set("culled_tasks", LuaValue.valueOf(AvatarRenderTaskRegistry.lastCulled()));
                 LuaTable metrics = new LuaTable();
                 profile.metrics().forEach((category, metric) -> {
                     LuaTable value = new LuaTable();

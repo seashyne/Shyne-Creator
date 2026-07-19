@@ -1,11 +1,16 @@
 package seashyne.shynecore.client.profiler;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import net.minecraft.client.Minecraft;
 import seashyne.shynecore.model.BbModelDefinition;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -15,6 +20,7 @@ public final class AvatarProfiler {
     public enum Category { LUA_LOAD, LUA_TICK, LUA_RENDER, LUA_EVENT, MODEL_RENDER, TASK_RENDER }
 
     private static final int WINDOW = 240;
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final EnumMap<Category, Series> SERIES = new EnumMap<>(Category.class);
     private static String avatarId = "";
     private static long assetBytes;
@@ -94,6 +100,24 @@ public final class AvatarProfiler {
             metrics, List.copyOf(warnings));
     }
 
+    public static synchronized Path exportSnapshot(int taskCount, long taskBytes, int rendered, int culled) throws IOException {
+        Snapshot snapshot = snapshot(taskCount, taskBytes);
+        Path directory = Minecraft.getInstance().gameDirectory.toPath().resolve("shyne-logs").resolve("profiler");
+        Files.createDirectories(directory);
+        String safeAvatar = avatarId.isBlank() ? "minecraft-default" : avatarId.replaceAll("[^a-zA-Z0-9_.-]", "_");
+        String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").format(LocalDateTime.now());
+        Path target = directory.resolve(safeAvatar + "-" + timestamp + ".json");
+        Path temporary = target.resolveSibling(target.getFileName() + ".tmp");
+        ExportReport report = new ExportReport("shyne-avatar-profiler-v1", LocalDateTime.now().toString(), rendered, culled, snapshot);
+        Files.writeString(temporary, GSON.toJson(report));
+        try {
+            Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException unsupportedAtomicMove) {
+            Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+        return target;
+    }
+
     private static void resetSamples() {
         for (Series series : SERIES.values()) series.clear();
     }
@@ -115,6 +139,8 @@ public final class AvatarProfiler {
                            double estimatedFpsLoss, long heapBytes, long avatarBytes,
                            int taskCount, int bones, int cubes, int animations,
                            EnumMap<Category, Metric> metrics, List<String> warnings) {}
+    private record ExportReport(String format, String exportedAt, int renderedTasks,
+                                int culledTasks, Snapshot snapshot) {}
 
     private static final class Series {
         private final long[] values = new long[WINDOW];

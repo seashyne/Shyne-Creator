@@ -204,14 +204,14 @@ render.item("icon", { item = "minecraft:diamond", x = 12, y = 28 })
 render.block("block", { block = "minecraft:amethyst_block", x = 32, y = 28 })
 render.sprite("logo", { texture = "shyne_creator:textures/gui/shyne_creator_logo.png", x = 52, y = 12, width = 32, height = 32 })
 render.line("line", { from = vector.new(12, 52, 0), to = vector.new(112, 52, 0), color = 0xFFFFFFFF, width = 2 })
-render.world("marker", { type = "text", text = "Target", position = vector.new(100, 70, 100), color = 0xFFFFFF55 })
+render.world("marker", { type = "text", text = "Target", position = vector.new(100, 70, 100), color = 0xFFFFFF55, max_distance = 128 })
 render.remove("icon")
 render.clear()
 ```
 
-รองรับ `text`, `item`, `block`, `sprite`, `line` และ world-anchored task ทุกชนิด เรียก ID เดิมเพื่ออัปเดต task เดิม จำกัด 256 tasks ต่อ Avatar และล้างอัตโนมัติเมื่อ unload การวาด world task ใช้ตำแหน่งโลกแล้ว project เข้าหน้าจอ จึงไม่เขียนข้อมูลลง world หรือส่ง network
+รองรับ `text`, `item`, `block`, `sprite`, `line` และ world-anchored task ทุกชนิด เรียก ID เดิมเพื่ออัปเดต task เดิม เก็บได้ 256 tasks แต่เรนเดอร์ไม่เกิน 128 tasks และ 4096 จุดของเส้นต่อเฟรม World task ถูก cull นอกจอและเกิน `max_distance` (เริ่มต้น 128 blocks) แล้วล้างอัตโนมัติเมื่อ unload การวาดใช้ตำแหน่งโลก project เข้าหน้าจอ จึงไม่เขียนข้อมูลลง world หรือส่ง network ต้องประกาศ permission `hud_render` หรือ `world_render` ตามชนิดงาน
 
-เปิด `Shyne Settings → Advanced → Avatar Profiler` เพื่อดู Lua load/tick/render/event, model render, task render, FPS, frame time, heap, ขนาดอวตาร และการประเมิน FPS loss แบบ rolling 240 samples ดูขั้นตอนสร้างโปรเจกต์และเครื่องมือ validate เพิ่มเติมที่ `CREATOR_QUICKSTART_TH.md`
+เปิด `Shyne Settings → Advanced → Avatar Profiler` เพื่อดู Lua load/tick/render/event, model render, task render, FPS, frame time, heap, ขนาดอวตาร และการประเมิน FPS loss แบบ rolling 240 samples ปุ่ม Export JSON บันทึกรายงานไว้ใน `.minecraft/shyne-logs/profiler/` ดูขั้นตอนสร้างโปรเจกต์และเครื่องมือ validate เพิ่มเติมที่ `CREATOR_QUICKSTART_TH.md`
 
 Lua อ่านค่าเดียวกันได้ด้วย `local profile = profiler.snapshot()` โดยมี `fps`, `frame_ms`, `avatar_frame_ms`, `estimated_fps_loss`, `heap_bytes`, `avatar_bytes`, `task_count` และ `metrics`
 

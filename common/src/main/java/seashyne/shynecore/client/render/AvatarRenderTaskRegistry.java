@@ -19,7 +19,11 @@ import java.util.Map;
 /** Stores and draws render tasks declared by active Avatar Lua runtimes. */
 public final class AvatarRenderTaskRegistry {
     public static final int MAX_TASKS_PER_AVATAR = 256;
+    public static final int MAX_RENDERED_TASKS_PER_FRAME = 128;
+    public static final int MAX_LINE_POINTS_PER_FRAME = 4096;
     private static final Map<String, Entry> TASKS = new LinkedHashMap<>();
+    private static volatile int lastRendered;
+    private static volatile int lastCulled;
 
     private AvatarRenderTaskRegistry() {}
 
@@ -69,16 +73,33 @@ public final class AvatarRenderTaskRegistry {
         return result;
     }
 
+    public static int lastRendered() { return lastRendered; }
+    public static int lastCulled() { return lastCulled; }
+
     public static void extractHud(GuiGraphicsExtractor graphics) {
         long started = System.nanoTime();
         try {
             Minecraft client = Minecraft.getInstance();
+            int rendered = 0;
+            int culled = 0;
+            int linePointsRemaining = MAX_LINE_POINTS_PER_FRAME;
             for (Snapshot snapshot : snapshots()) {
                 TaskSpec task = snapshot.spec;
                 if (!task.visible) continue;
+                if (rendered >= MAX_RENDERED_TASKS_PER_FRAME) {
+                    culled++;
+                    continue;
+                }
+                if (task.world && !withinWorldDistance(task, client.gameRenderer.mainCamera().position())) {
+                    culled++;
+                    continue;
+                }
                 ScreenPoint first = task.world ? project(task.x, task.y, task.z, graphics.guiWidth(), graphics.guiHeight())
                     : new ScreenPoint(task.x, task.y, true);
-                if (!first.visible) continue;
+                if (!first.visible) {
+                    culled++;
+                    continue;
+                }
                 int x = (int) Math.round(first.x);
                 int y = (int) Math.round(first.y);
                 switch (task.type) {
@@ -89,10 +110,19 @@ public final class AvatarRenderTaskRegistry {
                     case "line" -> {
                         ScreenPoint second = task.world ? project(task.x2, task.y2, task.z2, graphics.guiWidth(), graphics.guiHeight())
                             : new ScreenPoint(task.x2, task.y2, true);
-                        if (second.visible) line(graphics, x, y, (int) Math.round(second.x), (int) Math.round(second.y), task.color, task.width);
+                        if (second.visible && linePointsRemaining > 0) {
+                            int used = line(graphics, x, y, (int) Math.round(second.x), (int) Math.round(second.y), task.color, task.width, linePointsRemaining);
+                            linePointsRemaining -= used;
+                        } else {
+                            culled++;
+                            continue;
+                        }
                     }
                 }
+                rendered++;
             }
+            lastRendered = rendered;
+            lastCulled = culled;
         } finally {
             AvatarProfiler.record(AvatarProfiler.Category.TASK_RENDER, System.nanoTime() - started);
         }
@@ -116,20 +146,33 @@ public final class AvatarRenderTaskRegistry {
         graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 0, 0, width, height, width, height);
     }
 
-    private static void line(GuiGraphicsExtractor graphics, int x0, int y0, int x1, int y1, int color, double width) {
+    private static int line(GuiGraphicsExtractor graphics, int x0, int y0, int x1, int y1, int color, double width, int pointBudget) {
         int dx = Math.abs(x1 - x0);
         int dy = Math.abs(y1 - y0);
         int steps = Math.min(1024, Math.max(dx, dy));
         int radius = Math.max(0, Math.min(4, (int) Math.round(width) / 2));
         if (steps == 0) {
             graphics.fill(x0 - radius, y0 - radius, x0 + radius + 1, y0 + radius + 1, color);
-            return;
+            return 1;
         }
-        for (int i = 0; i <= steps; i++) {
-            int x = x0 + (x1 - x0) * i / steps;
-            int y = y0 + (y1 - y0) * i / steps;
+        if (pointBudget <= 1) {
+            graphics.fill(x0 - radius, y0 - radius, x0 + radius + 1, y0 + radius + 1, color);
+            return 1;
+        }
+        int points = Math.min(steps, pointBudget - 1);
+        for (int i = 0; i <= points; i++) {
+            int x = x0 + (x1 - x0) * i / points;
+            int y = y0 + (y1 - y0) * i / points;
             graphics.fill(x - radius, y - radius, x + radius + 1, y + radius + 1, color);
         }
+        return points + 1;
+    }
+
+    private static boolean withinWorldDistance(TaskSpec task, Vec3 camera) {
+        double dx = task.x - camera.x;
+        double dy = task.y - camera.y;
+        double dz = task.z - camera.z;
+        return dx * dx + dy * dy + dz * dz <= task.maxDistance * task.maxDistance;
     }
 
     /** Projects a world position to the HUD, allowing every task type to be world anchored. */
@@ -171,7 +214,7 @@ public final class AvatarRenderTaskRegistry {
             truncate(value.content, 1024), truncate(value.resource, 256),
             finite(value.x), finite(value.y), finite(value.z), finite(value.x2), finite(value.y2), finite(value.z2),
             clamp(value.width, 0.1, 512), clamp(value.height, 0.1, 512), clamp(value.scale, 0.05, 16),
-            value.color, value.shadow, value.visible);
+            value.color, value.shadow, value.visible, clamp(value.maxDistance, 8, 1024));
     }
 
     private static String normalType(String value) {
@@ -187,7 +230,7 @@ public final class AvatarRenderTaskRegistry {
     public record TaskSpec(String type, boolean world, String content, String resource,
                            double x, double y, double z, double x2, double y2, double z2,
                            double width, double height, double scale, int color,
-                           boolean shadow, boolean visible) {}
+                           boolean shadow, boolean visible, double maxDistance) {}
     public record Snapshot(String stableId, String avatarId, String id, TaskSpec spec) {}
     private record ScreenPoint(double x, double y, boolean visible) {}
 

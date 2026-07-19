@@ -12,6 +12,7 @@ from pathlib import Path
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_.-]{1,63}$")
 MAX_UNPACKED_BYTES = 64 * 1024 * 1024
 TEXTURE_EXTENSIONS = {".png"}
+ALLOWED_PERMISSIONS = {"particle", "sound", "camera", "microphone", "command", "hud_render", "world_render"}
 
 
 def safe_file(root: Path, relative: str) -> Path:
@@ -44,6 +45,10 @@ def validate(root: Path) -> dict:
         errors.append("id must use 2-64 lowercase letters, numbers, dot, dash, or underscore")
     if manifest and int(manifest.get("api_version", 1)) != 1:
         errors.append("api_version must be 1")
+    declared_permissions = {str(value).strip().lower() for value in manifest.get("permissions", [])}
+    unknown_permissions = sorted(declared_permissions - ALLOWED_PERMISSIONS)
+    if unknown_permissions:
+        errors.append("unknown permissions: " + ", ".join(unknown_permissions))
 
     for field, default in (("main", "script.lua"), ("model", "model.bbmodel")):
         relative = str(manifest.get(field, default))
@@ -85,6 +90,24 @@ def validate(root: Path) -> dict:
     if total_bytes > MAX_UNPACKED_BYTES:
         errors.append("Avatar folder exceeds 64 MiB")
 
+    lua_source = "\n".join(path.read_text(encoding="utf-8", errors="replace") for path in files if path.suffix.lower() == ".lua")
+    required_permissions: set[str] = set()
+    permission_patterns = {
+        "particle": r"\bparticle\.spawn\s*\(",
+        "sound": r"\bsound\.play\s*\(",
+        "camera": r"\bavatar\.camera\.",
+        "microphone": r"(?:\bmicrophone\.|\bevents\.on\s*\(\s*[\"']microphone[\"'])",
+        "command": r"\bminecraft\.command\s*\(",
+        "hud_render": r"\brender\.(?:text|item|block|sprite|line)\s*\(",
+        "world_render": r"\brender\.world\s*\(",
+    }
+    for permission, pattern in permission_patterns.items():
+        if re.search(pattern, lua_source):
+            required_permissions.add(permission)
+    missing_permissions = sorted(required_permissions - declared_permissions)
+    if missing_permissions:
+        errors.append("script uses undeclared permissions: " + ", ".join(missing_permissions))
+
     discovered_textures = sorted(path.relative_to(root).as_posix() for path in files if path.suffix.lower() in TEXTURE_EXTENSIONS)
     declared = sorted(str(value).replace("\\", "/") for value in manifest.get("textures", []))
     undeclared = sorted(set(discovered_textures) - set(declared))
@@ -102,6 +125,8 @@ def validate(root: Path) -> dict:
         "animations": len(model.get("animations", [])),
         "errors": errors,
         "warnings": warnings,
+        "permissions": sorted(declared_permissions),
+        "required_permissions": sorted(required_permissions),
     }
 
 
@@ -118,6 +143,7 @@ def create(root: Path, avatar_id: str, name: str) -> None:
         "model": "model.bbmodel",
         "replace_vanilla": False,
         "online_sync": True,
+        "permissions": ["hud_render"],
     }
     model = {
         "meta": {"format_version": "4.10", "model_format": "free"},

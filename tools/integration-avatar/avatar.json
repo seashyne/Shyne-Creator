@@ -10,5 +10,6 @@
   "first_person_masking": true,
   "local_camera": true,
   "texture_sync_mode": "manifest",
-  "textures": ["visual.png"]
+  "textures": ["visual.png"],
+  "permissions": ["particle", "sound", "camera", "microphone", "hud_render", "world_render"]
 }

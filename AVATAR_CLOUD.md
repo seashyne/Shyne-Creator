@@ -1,6 +1,6 @@
 # Shyne Avatar Cloud
 
-Shyne Avatar Cloud เป็นพื้นที่สำรอง Avatar ส่วนตัวสำหรับเจ้าของบัญชี Minecraft ใช้เก็บ Avatar ของตัวเองและกู้คืนข้ามเครื่อง ไม่ใช่ระบบเผยแพร่ แจก หรือค้นหา Avatar ของผู้ใช้อื่น
+Shyne Avatar Cloud มีสองส่วนที่แยกสิทธิ์กัน: Private Backup สำหรับเจ้าของบัญชี และ Public Share สำหรับผู้สร้างที่ตั้งใจเผยแพร่ Avatar ให้คนอื่นทดลองใช้
 
 ## สำหรับผู้เล่น
 
@@ -14,9 +14,8 @@ Avatar ในเครื่องยังเป็นโฟลเดอร์ 
 
 หน้าจอแสดง progress, cancel, retry และสาเหตุเมื่อใช้งานปุ่มไม่ได้ การรับส่ง chunk ที่ล้มเหลวจะลองใหม่สูงสุด 3 ครั้ง
 
-## ความเป็นส่วนตัว
+## Private Backup และความเป็นส่วนตัว
 
-- ไม่มี Discover, public, unlisted, ลิงก์แจก หรือ permission สำหรับแจกต่อ
 - รายการ Avatar, manifest และ chunk ต้องมี Shyne session ของเจ้าของ
 - บัญชีอื่นค้นหา ดู metadata หรือดาวน์โหลดไฟล์ไม่ได้ แม้รู้รหัส Avatar หรือ hash ของ chunk
 - รหัส Avatar เป็น namespace ภายในแต่ละบัญชี ผู้ใช้ต่างบัญชีจึงสำรอง Avatar ที่ใช้รหัสเดียวกันได้
@@ -33,5 +32,11 @@ Shyne session ฝั่งเครื่องอยู่ที่ `config/shy
 - Minecraft server: skill, power, combat, profile และ peer Avatar state
 
 Cloud ล่มแล้ว LAN/Server gameplay ยังทำงานได้ Avatar ที่อยู่ในเครื่องและ cache ยังใช้งานได้
+
+## Public Share
+
+ผู้สร้างเลือก Publish เองและกำหนด visibility, license กับ permission manifest ได้ ผู้ใช้คนอื่นเห็นเฉพาะรายการที่ Public ใน Discover และต้อง Sign in พร้อมอนุมัติสิทธิ์อันตรายก่อนใช้ ตัวไฟล์ `.sc` ถูกเข้ารหัส เซ็นกำกับ และใช้ lease อายุสั้นที่ผูกกับบัญชีและเครื่อง เมื่อผู้สร้าง Revoke ระบบหยุดออก lease ใหม่และ Avatar ที่กำลังใช้จะหยุดเมื่อ lease หมด
+
+Public Share ช่วยป้องกันการแก้ไฟล์และแจกต่อแบบทั่วไป แต่ไม่รับประกันว่าจะกันการดึงข้อมูลจาก client ที่ถูกดัดแปลงได้ 100% เพราะเครื่องผู้เล่นต้องถอดรหัสข้อมูลในหน่วยความจำเพื่อเรนเดอร์ในที่สุด
 
 รายละเอียด HTTP อยู่ใน `CLOUD_API.md`

@@ -9,6 +9,7 @@ import seashyne.shynecore.client.profiler.AvatarProfiler;
 import seashyne.shynecore.client.render.AvatarRenderTaskRegistry;
 
 import java.util.Locale;
+import java.nio.file.Path;
 
 /** Live in-game view of the costs attributable to the active Shyne Avatar. */
 public final class AvatarProfilerScreen extends Screen {
@@ -16,6 +17,7 @@ public final class AvatarProfilerScreen extends Screen {
     private int panelX;
     private int panelY;
     private int panelWidth;
+    private Path lastExport;
 
     public AvatarProfilerScreen(Screen parent) {
         super(Component.translatable("screen.shyne_core.profiler.title"));
@@ -27,6 +29,8 @@ public final class AvatarProfilerScreen extends Screen {
         panelWidth = Math.min(600, this.width - 20);
         panelX = (this.width - panelWidth) / 2;
         panelY = Math.max(8, (this.height - 340) / 2);
+        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.profiler.export"), button -> export())
+            .bounds(panelX + panelWidth - 314, panelY + 308, 98, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.profiler.reset"), button -> AvatarProfiler.reset())
             .bounds(panelX + panelWidth - 212, panelY + 308, 98, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), button -> onClose())
@@ -50,7 +54,7 @@ public final class AvatarProfilerScreen extends Screen {
         value(graphics, "Estimated FPS loss", String.format(Locale.ROOT, "%.1f", snapshot.estimatedFpsLoss()), panelX + 420, summaryY, 0xFFFFB86B);
         value(graphics, "Avatar memory", bytes(snapshot.avatarBytes()), panelX + 12, summaryY + 28, 0xFFF3F7FF);
         value(graphics, "JVM heap", bytes(snapshot.heapBytes()), panelX + 180, summaryY + 28, 0xFFF3F7FF);
-        value(graphics, "Tasks", Integer.toString(snapshot.taskCount()), panelX + 340, summaryY + 28, snapshot.taskCount() > 128 ? 0xFFFF6B7A : 0xFFF3F7FF);
+        value(graphics, "Tasks", AvatarRenderTaskRegistry.lastRendered() + "/" + snapshot.taskCount(), panelX + 340, summaryY + 28, AvatarRenderTaskRegistry.lastCulled() > 0 ? 0xFFFFB86B : 0xFFF3F7FF);
         value(graphics, "Model", snapshot.bones() + " bones · " + snapshot.cubes() + " cubes", panelX + 430, summaryY + 28, 0xFFF3F7FF);
 
         graphics.text(this.font, Component.translatable("screen.shyne_core.profiler.metrics").withStyle(ChatFormatting.AQUA), panelX + 12, panelY + 112, 0xFFFFFFFF, false);
@@ -74,7 +78,21 @@ public final class AvatarProfilerScreen extends Screen {
                 .map(value -> Component.translatable("screen.shyne_core.profiler.warning." + value).getString()).toList());
             graphics.text(this.font, Component.literal(this.font.plainSubstrByWidth(findings, panelWidth - 24)), panelX + 12, warningY + 17, 0xFFFF6B7A, false);
         }
+        if (lastExport != null) {
+            String exported = Component.translatable("screen.shyne_core.profiler.exported", lastExport.getFileName().toString()).getString();
+            graphics.text(this.font, Component.literal(this.font.plainSubstrByWidth(exported, Math.max(80, panelWidth - 338))), panelX + 12, panelY + 314, 0xFF65F2B3, false);
+        }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    }
+
+    private void export() {
+        try {
+            lastExport = AvatarProfiler.exportSnapshot(AvatarRenderTaskRegistry.snapshots().size(),
+                AvatarRenderTaskRegistry.estimatedBytes(), AvatarRenderTaskRegistry.lastRendered(),
+                AvatarRenderTaskRegistry.lastCulled());
+        } catch (Exception ignored) {
+            lastExport = null;
+        }
     }
 
     private void value(GuiGraphicsExtractor graphics, String label, String value, int x, int y, int color) {
