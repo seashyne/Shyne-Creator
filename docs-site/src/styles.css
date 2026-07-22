@@ -1,0 +1,257 @@
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
+
+:root { font-family:'Noto Sans Thai',sans-serif; color:#f6f7ef; background:#0a0b0e; font-synthesis:none; --lime:#cbff45; --violet:#9d78ff; --cyan:#55e7ff; --line:#292b31; }
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+html,body,#root { overflow-x:hidden; }
+body { margin:0; min-width:320px; background:radial-gradient(circle at 75% 18%,#202415 0,transparent 25%),#0a0b0e; }
+button,a { font:inherit; }
+a { color:inherit; text-decoration:none; }
+.site-shell { min-height:100vh; }
+.topbar { height:70px; border-bottom:1px solid var(--line); background:rgba(10,11,14,.88); backdrop-filter:blur(16px); display:flex; align-items:center; position:fixed; inset:0 0 auto; z-index:20; padding:0 28px; }
+.brand { display:flex; align-items:center; gap:10px; font:600 16px 'Chakra Petch'; letter-spacing:.05em; width:258px; }
+.brand b { color:var(--lime); }.brand em { font-style:normal; font-size:9px; color:#8d9198; border:1px solid #3a3d43; padding:3px 5px; }
+.brand-mark { display:grid; place-items:center; width:34px; height:34px; color:#0b0d08; background:var(--lime); clip-path:polygon(50% 0,100% 25%,88% 84%,36% 100%,0 65%,12% 16%); }
+.topnav { height:100%; display:flex; gap:30px; align-items:center; font-size:13px; color:#999da4; }.topnav a{height:100%;display:grid;place-items:center;position:relative}.topnav a.active{color:white}.topnav a.active:after{content:"";position:absolute;bottom:0;width:100%;height:2px;background:var(--lime)}
+.header-actions { margin-left:auto;display:flex;align-items:center;gap:8px }.search-button,.icon-button { border:1px solid #303239;background:#15161b;color:#b4b7bd;height:38px;display:flex;align-items:center;gap:10px;cursor:pointer }.search-button{padding:0 10px 0 13px;min-width:220px;text-align:left}.search-button span{flex:1;font-size:12px}.search-button kbd,.search-input kbd{font:10px 'Chakra Petch';background:#272930;border:1px solid #393c43;padding:3px 6px;color:#8e9299}.icon-button{width:38px;justify-content:center}.mobile-menu{display:none}
+.sidebar { position:fixed;top:70px;bottom:0;left:0;width:258px;border-right:1px solid var(--line);background:#0d0e12;padding:24px 18px;z-index:15;overflow:auto;display:flex;flex-direction:column }.version-pill{border:1px solid #303239;background:#15171b;padding:10px 11px;font:11px 'Chakra Petch';display:flex;align-items:center;gap:8px}.version-pill span{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime)}.version-pill svg{margin-left:auto}.sidebar nav{margin-top:22px}.sidebar section{margin-bottom:22px}.sidebar h3{font:10px 'Chakra Petch';letter-spacing:.16em;color:#62666f;padding:0 12px}.sidebar nav a{display:flex;align-items:center;gap:8px;color:#a2a5ac;font-size:12px;padding:8px 12px;border-left:2px solid transparent}.sidebar nav a:hover{color:white;background:#14161a}.sidebar nav a.selected{color:var(--lime);background:linear-gradient(90deg,rgba(203,255,69,.1),transparent);border-color:var(--lime)}.nav-spark{font-size:10px}.sidebar-foot{margin-top:auto;border-top:1px solid var(--line);padding:18px 8px 0;color:#696d74;font-size:10px;display:flex;gap:8px;align-items:center}
+main { margin-left:258px;padding-top:70px;overflow:hidden }.announcement{height:39px;border-bottom:1px solid #2b2e25;background:rgba(203,255,69,.035);display:flex;align-items:center;justify-content:center;gap:9px;color:#aeb1a6;font:11px 'Chakra Petch'}.announcement span{font-size:9px;background:var(--lime);color:#0a0c08;padding:2px 6px;font-weight:700}.hero{min-height:570px;display:grid;grid-template-columns:1.05fr .95fr;align-items:center;max-width:1260px;margin:auto;padding:68px 6vw 52px;position:relative}.hero:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to right,black,transparent 85%);pointer-events:none}.hero-copy{position:relative;z-index:2}.overline{font:10px 'Chakra Petch';letter-spacing:.17em;color:#969aa1;display:flex;align-items:center;gap:12px}.overline i{width:48px;height:1px;background:var(--lime)}h1{font:700 clamp(45px,5.5vw,78px)/.96 'Chakra Petch';letter-spacing:-.045em;margin:22px 0 25px}h1 span,.quick-copy h2 span{color:var(--lime)}.lead{color:#a6a9af;font-size:15px;line-height:1.8;font-weight:300}.hero-actions{display:flex;gap:10px;margin-top:30px}.hero-actions a{height:48px;display:flex;align-items:center;gap:10px;padding:0 19px;font-size:12px;font-weight:600}.primary{background:var(--lime);color:#090b07;box-shadow:6px 6px 0 #394613}.secondary{border:1px solid #393c43;background:#121419}.compat{margin-top:38px;display:flex;align-items:center;gap:12px;font:10px 'Chakra Petch';color:#72767e}.compat b{color:#c6c9ce;font-size:10px}.compat i{width:3px;height:3px;background:#53565c;border-radius:50%}.compat small{border-left:1px solid #34363c;padding-left:12px;color:#6c7077}
+.hero-visual{height:410px;position:relative;display:grid;place-items:center}.orbit{position:absolute;border:1px solid #343822;border-radius:50%;transform:rotate(-18deg)}.orbit-one{width:360px;height:240px}.orbit-two{width:290px;height:360px;border-color:#272c30;transform:rotate(35deg)}.voxel-head{width:190px;height:190px;position:relative;background:linear-gradient(135deg,#d0ff57 0 45%,#95bc32 46% 72%,#596d25 73%);box-shadow:22px 25px 0 #1a1f10,0 0 65px rgba(203,255,69,.17);transform:rotate(-5deg);clip-path:polygon(10% 0,90% 0,100% 10%,100% 90%,90% 100%,10% 100%,0 90%,0 10%)}.face{position:absolute;inset:70px 34px auto;display:flex;justify-content:space-between}.face i{width:29px;height:38px;background:#13170f;box-shadow:inset -7px -8px #684cf1}.ear{position:absolute;top:-83px;width:57px;height:105px;background:#b6e447;z-index:-1}.ear.left{left:15px;transform:rotate(-10deg)}.ear.right{right:12px;transform:rotate(14deg);background:#8eaf35}.tag{position:absolute;background:#121419;border:1px solid #383b42;border-left:2px solid var(--lime);padding:8px 15px;font:8px 'Chakra Petch';letter-spacing:.13em;color:#777b84}.tag b{font-size:11px;color:white}.tag-model{top:70px;right:3%}.tag-zero{bottom:78px;left:4%;border-color:#44386b;border-left-color:var(--violet)}.coordinate{position:absolute;right:4%;bottom:32px;color:#4f545c;font:8px/1.7 'Chakra Petch';letter-spacing:.1em}
+.path{border-top:1px solid var(--line);padding:70px 6vw 85px;max-width:1400px;margin:auto}.section-heading{display:flex;justify-content:space-between;align-items:end;margin-bottom:30px}.section-heading p{font:9px 'Chakra Petch';letter-spacing:.18em;color:var(--lime)}.section-heading h2{font:600 28px 'Chakra Petch';margin:9px 0 0}.section-heading>span{color:#555961;font:9px 'Chakra Petch'}.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.path-card{border:1px solid #2c2f35;background:linear-gradient(145deg,#15171c,#0e1013);padding:24px;min-height:260px;transition:.25s;position:relative;overflow:hidden}.path-card:after{content:"";position:absolute;width:120px;height:120px;border-radius:50%;filter:blur(60px);opacity:.12;right:-30px;bottom:-30px;background:var(--accent)}.path-card:hover{transform:translateY(-5px);border-color:var(--accent)}.path-card.lime{--accent:var(--lime)}.path-card.violet{--accent:var(--violet)}.path-card.cyan{--accent:var(--cyan)}.card-top{display:flex;justify-content:space-between}.card-icon{width:42px;height:42px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent)}.card-top small{font:10px 'Chakra Petch';color:#4f535b}.path-card>p{font:9px 'Chakra Petch';letter-spacing:.15em;color:var(--accent);margin:27px 0 8px}.path-card h3{font:600 19px 'Chakra Petch';margin:0}.path-card .rule{height:1px;background:#2a2d32;margin:17px 0}.path-card>span{font-size:11px;color:#82868e;line-height:1.7}.path-card>b{display:flex;align-items:center;gap:8px;font-size:10px;margin-top:22px;color:#c3c6cb}
+.quickstart{border-top:1px solid var(--line);background:linear-gradient(125deg,#111319,#0c0d10);padding:80px 7vw;display:grid;grid-template-columns:.8fr 1.2fr;gap:7vw;align-items:center}.quick-copy h2{font:600 39px/1.1 'Chakra Petch';margin:18px 0 32px}.quick-copy ol{list-style:none;padding:0;margin:0}.quick-copy li{display:flex;gap:17px;padding:13px 0;border-top:1px solid #292c31}.quick-copy li>b{font:10px 'Chakra Petch';color:var(--lime);padding-top:3px}.quick-copy strong{font:600 13px 'Chakra Petch'}.quick-copy li p{margin:4px 0 0;color:#797d85;font-size:10px}.code-window{background:#090a0d;border:1px solid #30333a;box-shadow:18px 20px 0 #07080a}.window-bar{height:43px;background:#15171c;border-bottom:1px solid #2c2f35;display:flex;align-items:center;padding:0 14px;font:10px 'Chakra Petch';color:#8b8f97}.window-bar>div{display:flex;gap:5px}.window-bar i{width:7px;height:7px;border-radius:50%;background:#42454d}.window-bar i:first-child{background:#9d78ff}.window-bar span{margin:auto}.window-bar button{color:#9da0a7;border:0;background:none;display:flex;gap:6px;align-items:center;font-size:9px;cursor:pointer}.code-window pre{margin:0;padding:24px;color:#c3e78f;font:12px/1.65 'Chakra Petch';overflow:auto}.code-status{border-top:1px solid #272a30;padding:10px 14px;display:flex;justify-content:space-between;font:8px 'Chakra Petch';letter-spacing:.1em;color:#61656c}.code-status span{display:flex;gap:6px;align-items:center;color:var(--lime)}
+.search-overlay{position:fixed;inset:0;background:rgba(4,5,7,.78);backdrop-filter:blur(6px);z-index:40;padding-top:12vh}.search-modal{width:min(610px,calc(100% - 30px));margin:auto;background:#121419;border:1px solid #393c44;box-shadow:0 25px 100px #000}.search-input{height:62px;display:flex;align-items:center;gap:13px;padding:0 18px;border-bottom:1px solid #2e3137;color:var(--lime)}.search-input input{flex:1;background:transparent;border:0;outline:0;color:white;font-size:14px}.search-results{padding:8px}.search-results button{width:100%;border:0;background:transparent;color:#b5b8be;display:flex;align-items:center;gap:12px;text-align:left;padding:10px;cursor:pointer}.search-results button:hover{background:#1b1e24;color:white}.search-results button span{display:flex;flex-direction:column;flex:1}.search-results button b{font-size:12px}.search-results button small{font-size:9px;color:#6e727a}
+@media(max-width:900px){.topnav,.search-button span,.search-button kbd{display:none}.search-button{min-width:38px;width:38px;padding:0;justify-content:center}.mobile-menu{display:flex}.sidebar{transform:translateX(-100%);transition:.25s}.sidebar.open{transform:none;box-shadow:20px 0 70px #000}main{margin-left:0}.hero{grid-template-columns:1fr;padding-top:55px}.hero-visual{height:330px}.card-grid{grid-template-columns:1fr}.quickstart{grid-template-columns:1fr}.brand{width:auto}.header-actions{margin-left:auto}.topbar{padding:0 15px}}
+@media(max-width:560px){.brand em,.desktop,.announcement svg{display:none}.brand{font-size:13px}.hero{padding:48px 22px 42px}.hero-actions{flex-direction:column}.hero-actions a{justify-content:center}.compat{flex-wrap:wrap}.hero-visual{transform:scale(.82);margin:-20px}.path{padding:55px 20px}.section-heading>span{display:none}.quickstart{padding:60px 20px}.code-window{width:100%}.code-window pre{font-size:10px}.topbar{height:62px}main{padding-top:62px}.sidebar{top:62px}}
+
+/* Full documentation application */
+.brand img { width:34px; height:34px; object-fit:cover; border-radius:7px; image-rendering:pixelated; }
+.home-main { margin-left:0; padding-top:70px; }
+.content-main { margin-left:258px; padding-top:70px; min-height:100vh; overflow:visible; }
+.topnav a.active { color:white; }
+.sidebar nav a.active { color:var(--lime); background:linear-gradient(90deg,rgba(203,255,69,.1),transparent); border-color:var(--lime); }
+.sidebar nav a svg { flex:0 0 auto; opacity:.72; }
+.sidebar nav a.active svg { opacity:1; }
+.sidebar-foot img { width:19px; height:19px; border-radius:4px; image-rendering:pixelated; }
+.announcement a { color:var(--lime); display:flex; align-items:center; gap:6px; margin-left:5px; }
+.hero-logo { position:absolute; width:275px; height:auto; opacity:.055; filter:grayscale(1); transform:rotate(-6deg); }
+.text-link { color:var(--lime); display:inline-flex; align-items:center; gap:8px; margin-top:20px; font-size:11px; font-weight:600; }
+
+.doc-layout { width:min(1180px,100%); margin:0 auto; padding:54px 48px 90px; display:grid; grid-template-columns:minmax(0,790px) 205px; gap:68px; align-items:start; }
+.doc-article { min-width:0; }
+.doc-breadcrumb { display:flex; align-items:center; gap:7px; color:#6e727b; font-size:10px; margin-bottom:24px; }
+.doc-breadcrumb a { color:#aeb2b9; }
+.doc-header { display:flex; gap:20px; align-items:flex-start; padding-bottom:30px; }
+.doc-icon { flex:0 0 auto; width:54px; height:54px; display:grid; place-items:center; color:var(--lime); border:1px solid #394128; background:linear-gradient(145deg,rgba(203,255,69,.12),rgba(203,255,69,.025)); box-shadow:7px 7px 0 #151910; }
+.doc-header>div>p { margin:0 0 7px; color:var(--lime); font:9px 'Chakra Petch'; letter-spacing:.15em; }
+.doc-header h1 { font:600 clamp(31px,4vw,49px)/1.08 'Chakra Petch'; margin:0 0 12px; letter-spacing:-.035em; }
+.doc-header>div>span { color:#8c9098; font-size:12px; line-height:1.7; }
+.doc-meta { display:flex; justify-content:space-between; align-items:center; padding:11px 13px; border-block:1px solid #2a2d33; color:#686c74; font:9px 'Chakra Petch'; margin-bottom:40px; }
+.doc-meta span,.doc-meta a { display:flex; align-items:center; gap:7px; }
+.doc-meta a { color:#a7abb2; }
+.toc { position:sticky; top:102px; border-left:1px solid #292c31; padding-left:18px; max-height:calc(100vh - 125px); overflow:auto; }
+.toc h3 { margin:0 0 13px; color:#d1d4d9; font:600 10px 'Chakra Petch'; text-transform:uppercase; letter-spacing:.1em; }
+.toc>a { display:block; padding:5px 0; color:#777b83; font-size:10px; line-height:1.4; }
+.toc>a:hover { color:var(--lime); }
+.toc>a.level-3 { padding-left:11px; font-size:9px; }
+.toc-help { margin-top:22px; padding:13px; border:1px solid #30333a; background:#121419; display:flex; flex-direction:column; gap:6px; color:#747880; font-size:9px; line-height:1.5; }
+.toc-help svg { color:var(--violet); }.toc-help b { color:#d0d3d8; }.toc-help a { color:var(--lime); margin-top:4px; }
+
+.markdown-body { color:#afb2b8; font-size:13px; line-height:1.82; }
+.markdown-body h1,.markdown-body h2,.markdown-body h3 { color:#eff1eb; font-family:'Chakra Petch','Noto Sans Thai',sans-serif; scroll-margin-top:95px; }
+.markdown-body h1 { font-size:29px; line-height:1.2; font-weight:600; letter-spacing:-.025em; margin:5px 0 18px; }
+.markdown-body h2 { font-size:25px; font-weight:600; letter-spacing:-.02em; margin:54px 0 16px; padding-bottom:10px; border-bottom:1px solid #2b2e34; }
+.markdown-body h2:before { content:'//'; color:var(--lime); font:10px 'Chakra Petch'; margin-right:9px; vertical-align:middle; }
+.markdown-body h3 { font-size:17px; font-weight:600; margin:35px 0 12px; }
+.markdown-body p { margin:13px 0; }
+.markdown-body strong { color:#e8eae5; font-weight:600; }
+.markdown-body a { color:var(--lime); text-decoration:underline; text-underline-offset:3px; display:inline-flex; align-items:center; gap:3px; }
+.markdown-body ul,.markdown-body ol { padding-left:22px; }
+.markdown-body li { padding-left:4px; margin:5px 0; }
+.markdown-body li::marker { color:var(--lime); font-family:'Chakra Petch'; }
+.markdown-body blockquote { margin:23px 0; padding:14px 17px; border-left:3px solid var(--violet); background:rgba(157,120,255,.07); color:#c4c0d1; }
+.markdown-body blockquote p { margin:0; }
+.markdown-body code { background:#1b1e23; border:1px solid #2e3239; padding:2px 5px; color:#d0ef88; border-radius:2px; font:11px 'Chakra Petch',monospace; }
+.md-code { margin:21px 0; border:1px solid #30333a; background:#090a0d; box-shadow:7px 8px 0 #060709; overflow:hidden; }
+.md-code>div { height:36px; background:#15171c; border-bottom:1px solid #2b2e34; display:flex; align-items:center; justify-content:space-between; padding:0 10px 0 14px; }
+.md-code>div span { color:#656a72; font:8px 'Chakra Petch'; letter-spacing:.14em; }
+.md-code button { border:0; background:none; color:#9ea2aa; font-size:9px; display:flex; align-items:center; gap:6px; cursor:pointer; }
+.md-code pre { margin:0; padding:18px 20px; overflow:auto; color:#d6e7a8; font:11px/1.75 'Chakra Petch',monospace; }
+.md-code pre code { border:0; background:transparent; padding:0; color:inherit; font:inherit; }
+.table-wrap { overflow:auto; margin:22px 0; border:1px solid #30333a; }
+.markdown-body table { width:100%; border-collapse:collapse; font-size:11px; }
+.markdown-body th { background:#181a20; color:#d9dce1; text-align:left; font:600 10px 'Chakra Petch'; }
+.markdown-body th,.markdown-body td { padding:10px 12px; border-bottom:1px solid #292c31; border-right:1px solid #292c31; }
+.markdown-body tr:last-child td { border-bottom:0; }
+.markdown-body hr { border:0; border-top:1px solid #2b2e34; margin:36px 0; }
+.markdown-body img { max-width:100%; border:1px solid #32353c; }
+.doc-pagination { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:66px; padding-top:24px; border-top:1px solid #2b2e34; }
+.doc-pagination a { min-height:74px; border:1px solid #30333a; background:#111318; padding:14px 16px; display:flex; flex-direction:column; justify-content:center; transition:.2s; }
+.doc-pagination a:hover { border-color:var(--lime); transform:translateY(-2px); }
+.doc-pagination small { color:#6f737b; font-size:9px; display:flex; align-items:center; gap:5px; }
+.doc-pagination b { color:#d9dce0; font:600 12px 'Chakra Petch'; margin-top:5px; }
+.doc-pagination .next { text-align:right; align-items:flex-end; }.doc-pagination .next small{justify-content:flex-end}
+
+.listing-page { min-height:100vh; }
+.listing-hero { padding:75px 7vw 50px; border-bottom:1px solid #292c31; background:radial-gradient(circle at 85% 0,rgba(203,255,69,.08),transparent 30%),linear-gradient(120deg,#101217,#0b0c0f); }
+.listing-hero>p:first-child { color:var(--lime); font:9px 'Chakra Petch'; letter-spacing:.17em; }
+.listing-hero h1 { font-size:clamp(42px,6vw,72px); margin:15px 0 18px; }
+.listing-hero h1 span { color:var(--lime); }
+.listing-hero>p:last-child { color:#83878f; font-size:12px; max-width:560px; }
+.api-grid { padding:45px 7vw 80px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.api-card { min-height:185px; border:1px solid #2d3036; background:linear-gradient(145deg,#15171c,#0f1014); padding:24px; display:flex; gap:20px; transition:.22s; }
+.api-card:hover { border-color:var(--lime); transform:translateY(-3px); }
+.api-card>span { flex:0 0 auto; width:42px; height:42px; display:grid; place-items:center; background:rgba(203,255,69,.08); color:var(--lime); border:1px solid #384026; }
+.api-card small { color:#6c7078; font:8px 'Chakra Petch'; letter-spacing:.1em; }
+.api-card h2 { font:600 17px 'Chakra Petch'; margin:7px 0; }
+.api-card p { color:#81858d; font-size:10px; line-height:1.65; margin:0; }
+.api-card b { color:var(--lime); display:flex; align-items:center; gap:7px; font-size:9px; margin-top:17px; }
+.showcase-grid { padding:45px 7vw 26px; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.showcase-grid button { border:1px solid #2d3036; color:#e8eae5; background:#111318; padding:22px; text-align:left; cursor:pointer; position:relative; min-height:218px; transition:.2s; }
+.showcase-grid button:hover,.showcase-grid button.active { border-color:var(--violet); background:linear-gradient(145deg,rgba(157,120,255,.1),#111318); }
+.showcase-grid button>span { color:#555a62; font:9px 'Chakra Petch'; float:right; }.showcase-grid button>svg { color:var(--violet); }
+.showcase-grid button>svg:last-child { position:absolute; right:18px; bottom:18px; color:#696e76; }
+.showcase-grid h2 { font:600 16px 'Chakra Petch'; margin:18px 0 9px; }
+.showcase-grid p { color:#7d8189; font-size:10px; line-height:1.65; }.showcase-grid small{font:8px 'Chakra Petch';color:var(--lime)}
+.example-detail { margin:0 7vw 80px; border:1px solid #30333a; padding:32px; display:grid; grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr); gap:38px; background:#0e1013; }
+.example-detail>img { width:100%; height:auto; image-rendering:pixelated; border:1px solid #33363d; align-self:start; }.example-detail>.markdown-body{min-width:0}
+
+footer { border-top:1px solid #292c31; min-height:104px; padding:24px 7vw; display:flex; align-items:center; justify-content:space-between; gap:30px; color:#656971; background:#090a0d; }
+footer>div { display:flex; align-items:center; gap:11px; }footer img{width:35px;height:35px;border-radius:6px;image-rendering:pixelated}footer span{display:flex;flex-direction:column}footer b{font:600 11px 'Chakra Petch';color:#d8dbdf}footer small{font-size:8px}footer p{font-size:9px}footer a{font-size:9px;color:#9a9ea6;margin-left:12px}
+.empty-search { text-align:center; color:#6f737b; font-size:11px; padding:25px; }
+
+@media(max-width:1100px){
+  .doc-layout{grid-template-columns:minmax(0,1fr);max-width:840px}.toc{display:none}.showcase-grid{grid-template-columns:1fr}.example-detail{grid-template-columns:1fr}.example-detail>img{max-width:520px}
+}
+@media(max-width:900px){
+  .home-main,.content-main{margin-left:0}.content-main{padding-top:70px}.doc-layout{padding:45px 6vw 75px}.api-grid{grid-template-columns:1fr}.topnav a.active:after{display:none}
+}
+@media(max-width:600px){
+  .home-main,.content-main{padding-top:62px}.doc-layout{padding:32px 20px 65px}.doc-header{gap:14px}.doc-icon{width:43px;height:43px}.doc-header h1{font-size:30px}.doc-meta{align-items:flex-start;gap:10px}.doc-meta>a{display:none}.markdown-body{font-size:12px}.markdown-body h2{font-size:21px}.doc-pagination{grid-template-columns:1fr}.listing-hero{padding:54px 22px 40px}.api-grid,.showcase-grid{padding:28px 20px 60px}.api-card{padding:18px;gap:13px}.showcase-grid{padding-bottom:18px}.example-detail{margin:0 20px 60px;padding:20px;gap:22px}footer{align-items:flex-start;flex-direction:column;padding:25px 22px}footer p{margin:0}.hero-logo{width:220px}
+}
+
+/* Readability pass — Shyne cyan/violet palette */
+:root {
+  --lime:#67dcf5;
+  --violet:#a78bfa;
+  --cyan:#67dcf5;
+  --line:#30394a;
+  color:#eef3fb;
+  background:#0b101a;
+}
+body {
+  color:#eef3fb;
+  background:radial-gradient(circle at 80% 8%,rgba(70,180,225,.09),transparent 28%),#0b101a;
+  font-size:16px;
+}
+.topbar { background:rgba(11,16,26,.94); border-color:#30394a; }
+.sidebar { background:#0e1522; border-color:#30394a; padding-inline:16px; }
+.sidebar h3 { color:#8c99ac; font-size:11px; margin:18px 0 9px; }
+.sidebar nav a { color:#cbd4e2; font-size:14px; line-height:1.5; padding:10px 12px; border-radius:0 6px 6px 0; }
+.sidebar nav a:hover { color:#fff; background:#172233; }
+.sidebar nav a.active { color:#8feaff; background:linear-gradient(90deg,rgba(103,220,245,.14),rgba(103,220,245,.025)); }
+.version-pill { color:#d8e4f4; background:#151e2d; border-color:#3a465a; font-size:11px; }
+.sidebar-foot { color:#8e9aad; font-size:11px; }
+.topnav { color:#c0cad9; font-size:15px; }
+.search-button,.icon-button { color:#c8d2e1; background:#151e2d; border-color:#3a465a; }
+.search-button span { font-size:14px; }
+.announcement { color:#b8c3d2; background:rgba(103,220,245,.05); border-color:#30394a; font-size:12px; }
+.announcement span { background:#67dcf5; }
+.hero { min-height:610px; }
+.hero-copy .overline,.quick-copy .overline { color:#aeb9c9; font-size:11px; }
+.hero h1 { font-size:clamp(50px,5.5vw,78px); color:#f4f7fc; }
+.lead { color:#c3ccda; font-size:17px; line-height:1.9; max-width:670px; }
+.hero-actions a { font-size:14px; height:52px; }
+.primary { background:#67dcf5; color:#071018; box-shadow:6px 6px 0 #214b5c; }
+.secondary { background:#131c2a; border-color:#3b4759; color:#e4ebf5; }
+.compat { color:#98a5b8; font-size:11px; }
+.compat b { color:#e3eaf4; font-size:11px; }
+.path { border-color:#30394a; }
+.section-heading p { color:#67dcf5; font-size:10px; }
+.section-heading h2 { color:#f0f4fa; font-size:32px; }
+.path-card { background:linear-gradient(145deg,#151e2d,#101722); border-color:#354055; padding:27px; }
+.path-card>p { font-size:10px; }
+.path-card h3 { font-size:21px; }
+.path-card>span { color:#b2bdcd; font-size:13px; line-height:1.8; }
+.path-card>b { color:#dbe4f1; font-size:12px; }
+.quickstart { background:linear-gradient(125deg,#111a28,#0d1420); border-color:#30394a; }
+.quick-copy h2 { color:#f1f5fb; }
+.quick-copy strong { color:#eef3fa; font-size:15px; }
+.quick-copy li p { color:#b1bccd; font-size:12px; line-height:1.7; }
+.text-link { font-size:13px; }
+.code-window { border-color:#39465a; background:#0a1019; }
+.code-window pre { color:#c5e8f3; font-size:13px; line-height:1.75; }
+.window-bar { color:#bcc7d6; background:#16202f; border-color:#354055; font-size:11px; }
+.code-status { color:#99a5b7; font-size:9px; }
+.content-main { background:#0b101a; }
+.doc-layout { grid-template-columns:minmax(0,820px) 215px; gap:72px; }
+.doc-breadcrumb { color:#9aa7b9; font-size:12px; }
+.doc-breadcrumb a { color:#cbd5e3; }
+.doc-header>div>p { color:#7ce4fa; font-size:10px; }
+.doc-header h1 { color:#f6f8fc; font:700 clamp(36px,4vw,50px)/1.18 'Noto Sans Thai',sans-serif; letter-spacing:-.025em; }
+.doc-header>div>span { color:#c8d1de; font-size:16px; line-height:1.85; }
+.doc-icon { color:#75e2fa; border-color:#356078; background:linear-gradient(145deg,rgba(103,220,245,.16),rgba(103,220,245,.04)); box-shadow:7px 7px 0 #102330; }
+.doc-meta { color:#9ba8ba; font-size:11px; border-color:#30394a; padding:13px 14px; }
+.doc-meta a { color:#c8d3e1; }
+.markdown-body { color:#d7dee8; font-size:18px; line-height:1.95; letter-spacing:.002em; }
+.markdown-body p { margin:16px 0; }
+.markdown-body h1,.markdown-body h2,.markdown-body h3 { color:#f5f7fb; font-family:'Noto Sans Thai',sans-serif; font-weight:700; }
+.markdown-body h1 { font-size:32px; }
+.markdown-body h2 { font-size:28px; margin-top:58px; border-color:#354055; }
+.markdown-body h2:before { color:#67dcf5; font-size:11px; }
+.markdown-body h3 { font-size:22px; margin-top:40px; }
+.markdown-body strong { color:#f7f9fc; }
+.markdown-body li { margin:8px 0; }
+.markdown-body li::marker { color:#73def5; }
+.markdown-body a { color:#79e3fa; text-decoration-thickness:1px; }
+.markdown-body blockquote { color:#d7d1e9; background:rgba(167,139,250,.09); border-color:#a78bfa; padding:17px 20px; }
+.markdown-body code { color:#c8f1f9; background:#172231; border-color:#3b4b61; font-size:14px; }
+.md-code { background:#09111b; border-color:#3a465a; box-shadow:7px 8px 0 #070c13; }
+.md-code>div { background:#152030; border-color:#354055; }
+.md-code>div span,.md-code button { color:#aebacc; font-size:10px; }
+.md-code pre { color:#d0eff5; font-size:14px; line-height:1.85; padding:22px 24px; }
+.table-wrap { border-color:#3a465a; }
+.markdown-body table { font-size:15px; }
+.markdown-body th { background:#172231; color:#f0f4f9; font-size:13px; }
+.markdown-body th,.markdown-body td { padding:13px 15px; border-color:#354055; }
+.toc { border-color:#30394a; }
+.toc h3 { color:#e0e6ef; font-size:12px; }
+.toc>a { color:#b2bdcd; font-size:13px; line-height:1.6; padding:7px 0; }
+.toc>a.level-3 { font-size:12px; }
+.toc-help { color:#a9b5c5; background:#141e2d; border-color:#3a465a; font-size:11px; }
+.doc-pagination a { background:#141d2b; border-color:#3a465a; }
+.doc-pagination small { color:#a4b0c1; font-size:11px; }
+.doc-pagination b { color:#edf2f8; font-size:14px; }
+.listing-hero { background:radial-gradient(circle at 85% 0,rgba(103,220,245,.1),transparent 30%),linear-gradient(120deg,#111a28,#0c131f); border-color:#30394a; }
+.listing-hero>p:first-child { color:#67dcf5; font-size:10px; }
+.listing-hero>p:last-child { color:#b8c3d2; font-size:15px; line-height:1.8; }
+.api-card,.showcase-grid button { background:linear-gradient(145deg,#151e2d,#101722); border-color:#354055; }
+.api-card small { color:#9ca9ba; font-size:10px; }
+.api-card h2,.showcase-grid h2 { color:#f0f4fa; font-size:19px; }
+.api-card p,.showcase-grid p { color:#b2bdcd; font-size:13px; line-height:1.75; }
+.api-card b,.showcase-grid small { font-size:11px; }
+.example-detail { background:#101824; border-color:#3a465a; }
+.search-modal { background:#121c2a; border-color:#435168; }
+.search-input { border-color:#39465a; }
+.search-input input { font-size:15px; }
+.search-results button { color:#cbd4e1; padding:13px; }
+.search-results button:hover { background:#1b293b; }
+.search-results button b { font-size:14px; }
+.search-results button small { color:#9ba8ba; font-size:11px; line-height:1.5; }
+footer { color:#9eabbd; background:#09101a; border-color:#30394a; }
+footer p,footer a { font-size:11px; }
+
+@media(max-width:900px) {
+  .doc-layout { max-width:900px; }
+  .markdown-body { font-size:18px; }
+}
+@media(max-width:600px) {
+  body { font-size:15px; }
+  .lead { font-size:16px; }
+  .doc-header h1 { font-size:32px; }
+  .doc-header>div>span { font-size:14px; }
+  .markdown-body { font-size:17px; line-height:1.9; }
+  .markdown-body h1 { font-size:27px; }
+  .markdown-body h2 { font-size:24px; }
+  .markdown-body h3 { font-size:19px; }
+  .md-code pre { font-size:12px; }
+}

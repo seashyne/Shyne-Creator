@@ -1,6 +1,8 @@
 # Shyne Custom Render API 1.1
 
-Custom Render API 1.1 เป็นส่วนหนึ่งของ Shyne Lua API Standard 1.1 Avatar ใหม่ใช้ได้ผ่าน `api: "latest"` หรือ `api: "1.1"` และตรวจได้จาก `shyne.api.supports("render", ">=1.1")`, `render.api_version` หรือ `diagnostics.snapshot().custom_render_api_version`
+เอกสารนี้ตรงกับ Shyne Creator `2.8.0-alpha-26.2`
+
+Custom Render API 1.1 เป็นโมดูล render ภายใต้ Shyne Avatar Standard 2.0 Avatar ใหม่ใช้ผ่าน `api: "2.0"` หรือ `api: "latest"` และตรวจได้จาก `shyne.api.supports("render", ">=1.1")`, `render.api_version` หรือ `diagnostics.snapshot().custom_render_api_version`
 
 ## Primitive
 

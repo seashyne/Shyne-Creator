@@ -1,5 +1,7 @@
 # Shyne Creator SDK
 
+เอกสารนี้ตรงกับ Shyne Creator `2.8.0-alpha-26.2`
+
 เอกสารนี้เป็นจุดเริ่มต้นสำหรับมอดเสริมที่สร้าง Power, Skill และ Avatar โดยไม่ฝัง content ตัวอย่างไว้ใน Shyne Creator
 
 ## โครงมอด Gameplay
@@ -88,22 +90,32 @@ shyne-mods/avatars/<avatar-id>/
 
 ทั้งการพัฒนาและใช้งานจริงใช้ตำแหน่งเดียวคือ `shyne-mods/avatars/<avatar-id>/` ตัว Avatar เป็นโฟลเดอร์ธรรมดา ไม่ต้องเปลี่ยนนามสกุลหรือบีบอัดไฟล์
 
-`avatar.json` ขั้นต่ำ:
+`avatar.json` ขั้นต่ำแบบ Zero-Lua:
 
 ```json
 {
-  "api": "latest",
-  "requires": {
-    "core": ">=1.1"
-  },
+  "standard": "2.0",
   "id": "author.avatar",
   "name": "Avatar Name",
-  "version": "1.0.0",
-  "main": "script.lua",
-  "model": "model.bbmodel",
-  "online_sync": true
+  "profile": "accessory",
+  "behavior": {
+    "preset": "auto"
+  }
 }
 ```
+
+### Avatar แบบ Overlay
+
+สำหรับหู หาง ปีก หรือ armor cosmetic ที่ยังต้องการให้เห็น skin/armor ของ Minecraft ให้ใช้ `"profile": "accessory"` และกำหนด `parent_type` ของ bone ใน Blockbench เป็น `Head`, `Body`, `LeftArm`, `RightArm`, `LeftLeg` หรือ `RightLeg` Shyne 2.8.0 จะผูก bone ตามส่วนผู้เล่นอัตโนมัติ แม้ไม่มี Lua script โดย pose ของ vanilla part จะซ้อนกับ animation ของ bone อย่างเป็น parent transform
+
+หาก asset จำเป็นต้องสลับ attachment ระหว่างเล่น จึงค่อยระบุ `main` และใช้ Shyne-native Lua:
+
+```lua
+avatar.hide_vanilla(false)
+model.part("model.Wings"):vanilla_parent("BODY")
+```
+
+การผูกด้วย `parent_type` และ `vanilla_parent()` จะถูกส่งไปยังผู้เล่น Shyne คนอื่นพร้อม avatar snapshot
 
 ใช้ id ที่มี namespace ของผู้สร้าง ห้ามใช้ชื่อ Shyne Creator/Figura หรือ asset ของบุคคลอื่นให้ผู้เล่นเข้าใจว่าเป็นของทางการ
 
@@ -126,4 +138,4 @@ shyne-mods/avatars/<avatar-id>/
 
 Avatar Lua สามารถแยกไฟล์เป็น module แล้วเรียก `require("lib.my_module")` ได้ ระบบจะค้นหา `lib/my_module.lua` ภายในแพ็กเท่านั้นและ cache ผลลัพธ์ให้หนึ่งครั้งต่อการเปิด Avatar
 
-Avatar ใหม่ควรใช้ Shyne Lua API Standard 1.1 ผ่าน `api: "latest"` หรือเวอร์ชันล็อก `api: "1.1"` และประกาศโมดูลขั้นต่ำใน `requires` API มีทั้งชื่อ global แบบสั้นและ `shyne.*` โดยให้ผลเหมือนกัน
+Avatar ใหม่ควรใช้ declarative Standard 2.0 ก่อน Lua เสมอ งานขั้นสูงที่ระบุ `main` ให้ล็อก `api: "2.0"` และประกาศโมดูลขั้นต่ำใน `requires`; Rig/physics ผ่าน Lua ต้องประกาศ `"rig": ">=1.3"`

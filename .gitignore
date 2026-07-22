@@ -11,3 +11,6 @@ repo/
 *.stdout.log
 *.stderr.log
 luac.out
+docs-site/node_modules/
+docs-site/dist/
+docs-site/*.tsbuildinfo
