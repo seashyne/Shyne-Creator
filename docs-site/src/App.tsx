@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { HashRouter, Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -11,6 +11,7 @@ import {
 import { docs, exampleDocs, fileToSlug, version, type DocIcon, type DocItem } from './content'
 
 const CURSEFORGE_URL = 'https://www.curseforge.com/minecraft/mc-mods/shyne-creator'
+const ModelViewer = lazy(() => import('./ModelViewer'))
 
 const iconMap: Record<DocIcon, LucideIcon> = {
   book: BookOpen, download: Download, sparkles: Sparkles, box: Box, play: Play,
@@ -150,10 +151,8 @@ function HomePage() {
         <div className="hero-actions"><a className="download-cta" href={CURSEFORGE_URL} target="_blank" rel="noreferrer"><Download size={18}/> ดาวน์โหลดจาก CurseForge</a><Link className="primary" to="/docs/first-avatar">เริ่มสร้าง Avatar <ArrowRight size={18}/></Link><Link className="secondary" to="/docs/standard-2"><BookOpen size={18}/> Standard 2.0</Link></div>
         <div className="compat"><span>VERSION</span><b>{version}</b><i></i><b>MINECRAFT 26.2</b><small>JAVA 25</small></div>
       </div>
-      <div className="hero-visual" aria-hidden="true">
-        <div className="orbit orbit-one"></div><div className="orbit orbit-two"></div>
-        <div className="logo-stage"><span className="logo-glow"></span><img className="hero-brand-logo" src="shyne-logo.png" alt="" /></div>
-        <span className="tag tag-model">MODEL<br/><b>READY</b></span><span className="tag tag-zero">ZERO<br/><b>LUA</b></span>
+      <div className="hero-visual">
+        <Suspense fallback={<div className="model-viewer model-fallback"><img src="shyne-icon.png" alt=""/><span>กำลังเตรียมตัวอย่าง 3D</span></div>}><ModelViewer /></Suspense>
       </div>
     </section>
     <section className="path">

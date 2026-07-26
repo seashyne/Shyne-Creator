@@ -309,6 +309,145 @@ footer p,footer a { font-size:11px; }
   background:#caff61;
   transform:translate(-2px,-2px);
 }
+.hero-visual { height:500px; }
+.model-viewer {
+  position:relative;
+  width:min(100%,500px);
+  height:470px;
+  overflow:hidden;
+  border:1px solid #35465c;
+  background:
+    radial-gradient(circle at 50% 38%,rgba(74,205,242,.15),transparent 33%),
+    radial-gradient(circle at 70% 60%,rgba(116,87,255,.12),transparent 36%),
+    linear-gradient(145deg,rgba(18,29,44,.96),rgba(7,12,20,.98));
+  box-shadow:18px 20px 0 rgba(4,9,15,.75),0 0 70px rgba(73,197,235,.08);
+  isolation:isolate;
+}
+.model-viewer:before {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background-image:linear-gradient(rgba(116,218,242,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(116,218,242,.045) 1px,transparent 1px);
+  background-size:32px 32px;
+  mask-image:linear-gradient(to bottom,black,transparent 85%);
+}
+.model-viewer:after {
+  content:"";
+  position:absolute;
+  inset:12px;
+  z-index:3;
+  pointer-events:none;
+  border:1px solid rgba(121,227,250,.1);
+}
+.model-fallback {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:15px;
+  color:#aebdd0;
+  font:10px 'Chakra Petch';
+  letter-spacing:.1em;
+}
+.model-fallback img {
+  width:72px;
+  height:72px;
+  border-radius:18px;
+  box-shadow:0 0 35px rgba(103,220,245,.25);
+  animation:model-loading 1.2s ease-in-out infinite;
+}
+.model-canvas {
+  position:absolute;
+  inset:0;
+  z-index:1;
+  cursor:grab;
+  touch-action:none;
+}
+.model-canvas:active { cursor:grabbing; }
+.model-canvas canvas { display:block; width:100%; height:100%; }
+.model-brand {
+  position:absolute;
+  z-index:4;
+  top:23px;
+  left:23px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  pointer-events:none;
+}
+.model-brand img {
+  width:32px;
+  height:32px;
+  border-radius:8px;
+  box-shadow:0 0 20px rgba(103,220,245,.24);
+}
+.model-brand span { display:flex; flex-direction:column; }
+.model-brand b { color:#f2f7fd; font:700 10px 'Chakra Petch'; letter-spacing:.08em; }
+.model-brand small { color:#73dff7; font:8px 'Chakra Petch'; letter-spacing:.13em; margin-top:3px; }
+.model-status {
+  position:absolute;
+  z-index:4;
+  top:25px;
+  right:24px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:#b4c1d2;
+  font:9px 'Chakra Petch';
+  letter-spacing:.08em;
+  pointer-events:none;
+}
+.model-status i {
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#7d8a9b;
+  box-shadow:0 0 0 4px rgba(125,138,155,.08);
+}
+.model-status.loading i { animation:model-loading 1s ease-in-out infinite; }
+.model-status.ready { color:#a9f5cf; }
+.model-status.ready i { background:#57e79f; box-shadow:0 0 0 4px rgba(87,231,159,.1),0 0 13px rgba(87,231,159,.65); }
+.model-status.error { color:#ffb2b7; }
+.model-status.error i { background:#ff6d78; }
+@keyframes model-loading { 50% { opacity:.3; transform:scale(.7); } }
+.model-hint {
+  position:absolute;
+  z-index:4;
+  left:24px;
+  bottom:24px;
+  color:#8290a3;
+  font:8px 'Chakra Petch';
+  letter-spacing:.1em;
+  pointer-events:none;
+}
+.model-controls {
+  position:absolute;
+  z-index:5;
+  right:24px;
+  bottom:20px;
+  display:flex;
+  gap:7px;
+}
+.model-controls button {
+  height:34px;
+  padding:0 10px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:#cad5e4;
+  background:rgba(14,24,37,.88);
+  border:1px solid #3b4c62;
+  font-size:10px;
+  cursor:pointer;
+  backdrop-filter:blur(8px);
+}
+.model-controls button:hover {
+  color:#071018;
+  background:#75e2fa;
+  border-color:#9cedff;
+}
 
 @media(max-width:900px) {
   .doc-layout { max-width:900px; }
@@ -319,6 +458,8 @@ footer p,footer a { font-size:11px; }
     justify-content:center;
   }
   .download-button span { display:none; }
+  .hero-visual { height:470px; }
+  .model-viewer { height:440px; }
 }
 @media(max-width:600px) {
   body { font-size:15px; }
@@ -330,4 +471,12 @@ footer p,footer a { font-size:11px; }
   .markdown-body h2 { font-size:24px; }
   .markdown-body h3 { font-size:19px; }
   .md-code pre { font-size:12px; }
+  .hero-visual { height:420px; transform:none; margin:0; }
+  .model-viewer { height:390px; box-shadow:10px 12px 0 rgba(4,9,15,.75); }
+  .model-brand { top:19px; left:19px; }
+  .model-status { top:22px; right:20px; }
+  .model-hint { display:none; }
+  .model-controls { right:19px; bottom:17px; }
+  .model-controls button span { display:none; }
+  .model-controls button { width:36px; padding:0; justify-content:center; }
 }
