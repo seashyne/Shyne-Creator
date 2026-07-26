@@ -56,22 +56,22 @@ public class ShyneSettingsScreen extends Screen {
             navWidth = panelWidth - 16;
             contentX = panelX + 8;
             contentWidth = panelWidth - 16;
-            int tabWidth = (navWidth - GAP * 3) / 4;
+            Category[] categories = Category.values();
+            int tabWidth = (navWidth - GAP * (categories.length - 1)) / categories.length;
             int navY = panelY + 51;
-            addCategoryButton(Category.INTERFACE, panelX + 8, navY, tabWidth);
-            addCategoryButton(Category.AVATAR, panelX + 8 + tabWidth + GAP, navY, tabWidth);
-            addCategoryButton(Category.CLOUD, panelX + 8 + (tabWidth + GAP) * 2, navY, tabWidth);
-            addCategoryButton(Category.ADVANCED, panelX + 8 + (tabWidth + GAP) * 3, navY, tabWidth);
+            for (int i = 0; i < categories.length; i++) {
+                addCategoryButton(categories[i], panelX + 8 + (tabWidth + GAP) * i, navY, tabWidth);
+            }
             rowY = panelY + 79;
         } else {
             navWidth = Math.min(118, Math.max(92, panelWidth / 4));
             contentX = panelX + navWidth + GAP;
             contentWidth = panelWidth - navWidth - GAP - 8;
             int navY = panelY + 57;
-            addCategoryButton(Category.INTERFACE, panelX + 8, navY, navWidth - 16);
-            addCategoryButton(Category.AVATAR, panelX + 8, navY + 24, navWidth - 16);
-            addCategoryButton(Category.CLOUD, panelX + 8, navY + 48, navWidth - 16);
-            addCategoryButton(Category.ADVANCED, panelX + 8, navY + 72, navWidth - 16);
+            Category[] categories = Category.values();
+            for (int i = 0; i < categories.length; i++) {
+                addCategoryButton(categories[i], panelX + 8, navY + i * 24, navWidth - 16);
+            }
             rowY = panelY + 57;
         }
 
@@ -83,15 +83,23 @@ public class ShyneSettingsScreen extends Screen {
         }
 
         List<ScreenAction> actions = actionsFor(category);
-        int actionStart = rowY + settings.size() * 36 + (settings.isEmpty() ? 0 : 5);
+        int actionStart = actionStartFor(category, settings.size());
         for (int i = 0; i < actions.size(); i++) {
             ScreenAction action = actions.get(i);
+            int actionX = contentX;
+            int actionY = actionStart + i * 24;
+            int actionWidth = contentWidth;
+            if (category == Category.CREATOR && compact) {
+                actionWidth = (contentWidth - GAP) / 2;
+                actionX = contentX + (i % 2) * (actionWidth + GAP);
+                actionY = actionStart + (i / 2) * 24;
+            }
             Button button = Button.builder(action.label.get(), pressed -> {
                 action.run.run();
                 pressed.setMessage(action.label.get());
             })
-                .tooltip(Tooltip.create(Component.translatable(action.descriptionKey)))
-                .bounds(contentX, actionStart + i * 24, contentWidth, 20).build();
+                .tooltip(Tooltip.create(action.tooltip.get()))
+                .bounds(actionX, actionY, actionWidth, 20).build();
             button.active = action.enabled.getAsBoolean();
             addRenderableWidget(button);
         }
@@ -118,7 +126,7 @@ public class ShyneSettingsScreen extends Screen {
     }
 
     private void addCategoryButton(Category value, int x, int y, int width) {
-        Component label = Component.translatable(value.translationKey)
+        Component label = Component.translatable(compact ? value.compactTranslationKey : value.translationKey)
             .withStyle(value == category ? ChatFormatting.AQUA : ChatFormatting.WHITE);
         Button button = Button.builder(label, btn -> {
             category = value;
@@ -151,7 +159,7 @@ public class ShyneSettingsScreen extends Screen {
         graphics.fillGradient(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xF20A1630, 0xF2071026);
         graphics.outline(panelX, panelY, panelWidth, panelHeight, 0xFF22D7E8);
         if (compact) {
-            int tabWidth = (navWidth - GAP * 3) / 4;
+            int tabWidth = (navWidth - GAP * (Category.values().length - 1)) / Category.values().length;
             int selectedX = panelX + 8 + category.ordinal() * (tabWidth + GAP);
             graphics.fill(selectedX, panelY + 73, selectedX + tabWidth, panelY + 76, 0xFF22D7E8);
         } else {
@@ -168,6 +176,15 @@ public class ShyneSettingsScreen extends Screen {
         if (!compact) {
             graphics.text(this.font, Component.translatable(category.translationKey).withStyle(ChatFormatting.AQUA), contentX + 6, panelY + 48, 0xFFFFFFFF, false);
         }
+        if (category == Category.CREATOR) {
+            graphics.fill(contentX, rowY, contentX + contentWidth, rowY + 24, 0x2419BFD1);
+            graphics.text(this.font,
+                Component.translatable("screen.shyne_core.creator.by", ShyneCreatorInfo.CREATOR_NAME),
+                contentX + 7, rowY + 3, 0xFFF3F7FF, false);
+            graphics.text(this.font,
+                Component.translatable("screen.shyne_core.creator.version", ShyneCore.VERSION),
+                contentX + 7, rowY + 14, 0xFF8195B4, false);
+        }
         List<Setting> settings = settingsFor(category);
         for (int i = 0; i < settings.size(); i++) {
             Setting setting = settings.get(i);
@@ -180,8 +197,10 @@ public class ShyneSettingsScreen extends Screen {
 
         List<ScreenAction> actions = actionsFor(category);
         if (!actions.isEmpty()) {
-            int actionStart = rowY + settings.size() * 36 + (settings.isEmpty() ? 0 : 5);
-            graphics.text(this.font, Component.translatable("screen.shyne_core.settings.quick_actions"), contentX + 5, actionStart - 10, 0xFF8195B4, false);
+            int actionStart = actionStartFor(category, settings.size());
+            if (category != Category.CREATOR) {
+                graphics.text(this.font, Component.translatable("screen.shyne_core.settings.quick_actions"), contentX + 5, actionStart - 10, 0xFF8195B4, false);
+            }
         }
 
         graphics.text(this.font, Component.literal("✓ ").withStyle(ChatFormatting.AQUA)
@@ -205,6 +224,7 @@ public class ShyneSettingsScreen extends Screen {
             case ADVANCED -> List.of(
                 new Setting("setting.shyne_core.debug", "setting.shyne_core.debug.desc", () -> ShyneClientSettings.renderDebugLines, v -> ShyneClientSettings.renderDebugLines = v)
             );
+            case CREATOR -> List.of();
         };
     }
 
@@ -233,7 +253,32 @@ public class ShyneSettingsScreen extends Screen {
                 new ScreenAction("screen.shyne_core.avatars.status.check", "screen.shyne_core.avatars.status.check.tooltip", this::checkCloud, () -> !ShyneStatusClient.lastResult().working()),
                 new ScreenAction("screen.shyne_core.cloud.open", "screen.shyne_core.cloud.open.tooltip", () -> openScreen(new CloudAvatarLibraryScreen(this)), () -> ShyneClientSettings.cloudEnabled)
             );
+            case CREATOR -> ShyneCreatorInfo.links().stream()
+                .map(link -> new ScreenAction(
+                    link.labelKey(),
+                    link.tooltipKey(),
+                    () -> openUrl(link.uri()),
+                    () -> true,
+                    () -> creatorLinkLabel(link),
+                    () -> Component.translatable(link.tooltipKey())
+                        .append(Component.literal("\n" + link.uri()).withStyle(ChatFormatting.GRAY))
+                ))
+                .toList();
         };
+    }
+
+    private Component creatorLinkLabel(ShyneCreatorInfo.Link link) {
+        Component label = Component.translatable(link.labelKey());
+        if (!compact) {
+            label = label.copy()
+                .append(Component.literal("  ·  " + link.displayUrl()).withStyle(ChatFormatting.GRAY));
+        }
+        return label;
+    }
+
+    private int actionStartFor(Category value, int settingCount) {
+        if (value == Category.CREATOR) return rowY + 28;
+        return rowY + settingCount * 36 + (settingCount == 0 ? 0 : 5);
     }
 
     private void cycleRemoteAvatarBudget() {
@@ -268,6 +313,14 @@ public class ShyneSettingsScreen extends Screen {
         }
     }
 
+    private void openUrl(java.net.URI uri) {
+        try {
+            Util.getPlatform().openUri(uri);
+        } catch (RuntimeException exception) {
+            ShyneCore.LOGGER.warn("[ShyneCreator] Could not open creator URL {}: {}", uri, exception.getMessage());
+        }
+    }
+
     private void checkCloud() {
         if (this.minecraft == null) return;
         var client = this.minecraft;
@@ -287,15 +340,18 @@ public class ShyneSettingsScreen extends Screen {
     }
 
     private enum Category {
-        INTERFACE("screen.shyne_core.category.interface"),
-        AVATAR("screen.shyne_core.category.avatar"),
-        CLOUD("screen.shyne_core.category.cloud"),
-        ADVANCED("screen.shyne_core.category.advanced");
+        INTERFACE("screen.shyne_core.category.interface", "screen.shyne_core.category.interface.short"),
+        AVATAR("screen.shyne_core.category.avatar", "screen.shyne_core.category.avatar.short"),
+        CLOUD("screen.shyne_core.category.cloud", "screen.shyne_core.category.cloud.short"),
+        ADVANCED("screen.shyne_core.category.advanced", "screen.shyne_core.category.advanced.short"),
+        CREATOR("screen.shyne_core.category.creator", "screen.shyne_core.category.creator.short");
 
         private final String translationKey;
+        private final String compactTranslationKey;
 
-        Category(String translationKey) {
+        Category(String translationKey, String compactTranslationKey) {
             this.translationKey = translationKey;
+            this.compactTranslationKey = compactTranslationKey;
         }
     }
 
@@ -306,10 +362,28 @@ public class ShyneSettingsScreen extends Screen {
         String descriptionKey,
         Runnable run,
         BooleanSupplier enabled,
-        Supplier<Component> label
+        Supplier<Component> label,
+        Supplier<Component> tooltip
     ) {
         private ScreenAction(String nameKey, String descriptionKey, Runnable run, BooleanSupplier enabled) {
-            this(nameKey, descriptionKey, run, enabled, () -> Component.translatable(nameKey));
+            this(
+                nameKey,
+                descriptionKey,
+                run,
+                enabled,
+                () -> Component.translatable(nameKey),
+                () -> Component.translatable(descriptionKey)
+            );
+        }
+
+        private ScreenAction(
+            String nameKey,
+            String descriptionKey,
+            Runnable run,
+            BooleanSupplier enabled,
+            Supplier<Component> label
+        ) {
+            this(nameKey, descriptionKey, run, enabled, label, () -> Component.translatable(descriptionKey));
         }
     }
 

@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.9.0-alpha-26.2`
+- Shyne Creator: `2.9.1-alpha-26.2`
 - Minecraft: `26.2`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -32,6 +32,12 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 `accessory` เป็นค่าเริ่มต้นแบบ overlay ที่ปลอดภัยและไม่ซ่อนตัวผู้เล่น vanilla มาตรฐานนี้ใช้ Shyne runtime โดยตรง ไม่พึ่ง Figura และไม่รับรอง compatibility กับสคริปต์ Figura/สคริปต์ legacy อ่านสัญญาและตัวอย่างทั้งหมดที่ [SHYNE_STANDARD_2_TH.md](SHYNE_STANDARD_2_TH.md)
 
 เครื่องมือตั้ง profile, attachment, role, animation state และ export manifest จาก Blockbench อยู่ที่ [Shyne Blockbench Plugin](tools/blockbench/README_TH.md)
+
+## 2.9.1-alpha Creator Details
+
+- เพิ่มแท็บผู้สร้างในหน้า Shyne Settings แสดงชื่อผู้สร้างและเวอร์ชันที่กำลังใช้งาน
+- เพิ่มปุ่มเปิดคู่มือ, GitHub source, CurseForge และหน้า Issues ด้วย URL ทางการ
+- ใช้ชื่อแท็บแบบสั้นเมื่อหน้าจอแคบ และแก้ URL ใน metadata ของ Fabric/NeoForge ให้ตรงกับ repository ปัจจุบัน
 
 ## 2.9.0-alpha Runtime, Outfit & Humanoid Standards
 

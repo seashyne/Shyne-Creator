@@ -9,7 +9,7 @@
 license="${mod_license}"
 
 # A URL to refer people to when problems occur with this mod
-issueTrackerURL="https://github.com/seashyne/ShyneCore/issues"
+issueTrackerURL="https://github.com/seashyne/Shyne-Creator/issues"
 
 # A list of mods - how many allowed here is determined by the individual mod loader
 [[mods]] #mandatory
