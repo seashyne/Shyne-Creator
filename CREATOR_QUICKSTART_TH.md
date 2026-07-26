@@ -1,112 +1,180 @@
-# เริ่มสร้าง Avatar บน Shyne Standard 2.0
+# สร้าง Avatar แรกด้วย Shyne Standard 2.0
 
-Shyne Standard 2.0 ใช้แนวทาง model-first: สร้างโมเดลและ animation ใน Blockbench แล้วกำหนดพฤติกรรมใน `avatar.json` งานทั่วไปไม่ต้องมี `script.lua` ตัวเกมใช้ Shyne runtime เอง ไม่ต้องติดตั้ง Figura และไม่รับรองสคริปต์ Figura/compatibility รุ่นเก่า
+คู่มือนี้พาเริ่มจากโปรเจกต์ว่างจนเห็น Avatar ในเกม เหมาะสำหรับคนที่เพิ่งใช้ Blockbench และยังไม่เคยเขียน Lua
 
-## 1. สร้างโปรเจกต์
+> **เป้าหมาย:** สร้างหมวก หู หรือของตกแต่งที่ขยับตามหัวผู้เล่น โดยใช้ `avatar.json` เพียงหนึ่งบรรทัดและไม่ต้องมี `script.lua`
 
-```powershell
-.\tools\creator\shyne-creator.ps1 new E:\Minecraft\avatars\my-avatar --id my.avatar --name "My Avatar"
+## ก่อนเริ่ม เตรียม 3 อย่าง
+
+1. Minecraft 26.2 ที่ติดตั้ง Shyne Creator แล้ว
+2. [Blockbench](https://www.blockbench.net/) สำหรับทำโมเดล
+3. [Shyne Standard 2.0 Blockbench Plugin](tools/blockbench/README_TH.md)
+
+โฟลเดอร์ Avatar อยู่ใต้โฟลเดอร์เกม:
+
+```text
+shyne-mods/
+└─ avatars/
+   └─ my-first-avatar/
 ```
 
-เปิด `model.bbmodel` ด้วย Blockbench แล้วเริ่ม `avatar.json` แบบสั้นได้เลย:
+ถ้าใช้ CurseForge ตำแหน่งจะมีหน้าตาคล้าย:
+
+```text
+C:\Users\<ชื่อผู้ใช้>\curseforge\minecraft\Instances\<ชื่อโปรไฟล์>\shyne-mods\avatars\
+```
+
+## 1. เลือกประเภท Avatar
+
+เริ่มจาก **Accessory** ง่ายที่สุด เพราะเป็นของเสริมที่วาดทับตัว Minecraft เดิม เหมาะกับหมวก หู หาง ปีก และของติดตัว
+
+| ประเภท | ใช้เมื่อ | เหมาะกับมือใหม่ |
+|---|---|---|
+| `accessory` | เพิ่มของตกแต่งให้ตัวผู้เล่นเดิม | แนะนำ |
+| `full_body` | ใช้โมเดลของเราแทนรูปร่างทั้งตัว | ทำหลังจาก Accessory สำเร็จ |
+| `merling` | Avatar ใต้น้ำหรือรูปร่างเฉพาะทาง | ระดับต่อยอด |
+
+สำหรับ Accessory ไฟล์ `avatar.json` แบบสั้นที่สุดคือ:
 
 ```json
 {
-  "name": "My Avatar"
+  "name": "My First Avatar"
 }
 ```
 
-Shyne เติม Standard 2.0, ID จากชื่อโฟลเดอร์, `model.bbmodel`, profile `accessory` และ Auto Animation ให้เอง ไม่ต้องใส่ `main` หาก behavior จากโมเดลเพียงพอ Texture จะถูกอ่านจาก model และไม่บังคับชื่อไฟล์ หากเป็นโมเดลเต็มตัวให้เพิ่ม `"profile":"full_body"`; โมเดล aquatic ใช้ `merling` อ่านรายละเอียด fields และตัวอย่าง controller ที่ [SHYNE_STANDARD_2_TH.md](SHYNE_STANDARD_2_TH.md)
+Shyne จะเติม Standard 2.0, ID, `model.bbmodel`, profile `accessory` และ Auto Animation ให้โดยอัตโนมัติ
 
-เมื่อติดตั้ง Blockbench plugin แล้ว ใช้ `File → Export → Export Shyne Avatar Package (.zip)` เพื่อรวม manifest, model, texture, icon, outfit และ Lua เป็นแพ็กเดียว ถ้าเปิด `Use Advanced Shyne Lua` plugin จะถามให้เลือก `script.lua` และโมดูลตอน export
+## 2. ติดตั้ง Blockbench Plugin
 
-Shyne เคารพ `visibility`/`export` เริ่มต้นของ group และ element และวาดได้ทั้ง cube กับ mesh วาง `avatar.png` ไว้ข้าง manifest หากต้องการไอคอนรายการ; ระบบจะลดภาพขนาดใหญ่ให้เหมาะกับ GPU โดยอัตโนมัติ
+1. เปิด Blockbench
+2. ไปที่ `File → Plugins… → Load Plugin from File`
+3. เลือก `tools/blockbench/shyne_standard_2.js`
+4. เปิดหรือสร้างไฟล์ `.bbmodel`
+5. ตรวจว่าเมนู `Tools → Validate Shyne Standard 2.0` ปรากฏขึ้น
 
-## 2. ตรวจไฟล์ก่อนเข้าเกม
+เมื่อติดตั้งครั้งแรกสำเร็จ ไม่ต้องโหลด Plugin ซ้ำทุกครั้ง
+
+> ยังไม่ต้องเปิด **Use Advanced Shyne Lua** งาน Avatar แรกใช้โมเดลและ Animation จาก Blockbench ได้โดยตรง
+
+## 3. สร้างโมเดลและกำหนดจุดยึด
+
+ตัวอย่างนี้สร้างของตกแต่งที่ตามหัว:
+
+1. สร้าง Group ชื่อ `HeadAccessory`
+2. เลือก Group แล้วตั้ง `Shyne Vanilla Attachment` เป็น `Head`
+3. สร้าง Cube เป็นลูกของ Group เช่น `Hat` หรือ `BunnyEar`
+4. ใส่ Texture และจัด UV ให้เรียบร้อย
+5. กด Save เป็น `model.bbmodel`
+
+โครงสร้างที่ถูกต้องควรเป็นแบบนี้:
+
+```text
+HeadAccessory  [Attachment: Head]
+├─ Hat
+├─ LeftEar
+└─ RightEar
+```
+
+เมื่อเลือก `Head`, ทั้ง Group จะก้ม เงย และหมุนตามหัว Minecraft โดยไม่ต้องเขียน Lua
+
+จุดยึดที่ใช้บ่อย:
+
+| จุดยึด | ตัวอย่าง |
+|---|---|
+| `Head` | หมวก หู แว่น ผม |
+| `Body` | เสื้อคลุม กระเป๋า หาง |
+| `LeftArm` / `RightArm` | ถุงมือ กำไล ของติดแขน |
+| `LeftLeg` / `RightLeg` | รองเท้า ของติดขา |
+
+### เพิ่ม Animation แบบง่าย
+
+ถ้ายังไม่ต้องการ Animation ให้ข้ามหัวข้อนี้ได้
+
+1. สร้าง Animation ใน Blockbench เช่น `Idle`
+2. ตั้ง `Shyne Animation State` เป็น `Idle`
+3. ถ้าต้องการให้เล่นตลอด ให้เปิด `Shyne Ambient Autoplay`
+
+ชื่อ Animation มาตรฐาน เช่น `Idle`, `Walk`, `Sprint`, `Swim` และ `Blink` จะถูก Auto Animation Controller เลือกตามสถานะผู้เล่น
+
+## 4. Export เป็นแพ็ก Shyne
+
+1. เลือก `Tools → Validate Shyne Standard 2.0`
+2. แก้รายการสีแดงให้หมด
+3. ไปที่ `File → Export → Export Shyne Avatar Package (.zip)`
+4. ตั้งชื่อ Avatar และเลือกตำแหน่งบันทึก
+5. แตก ZIP ลงใน `shyne-mods/avatars/`
+
+หลังแตกไฟล์ควรได้โครงสร้าง:
+
+```text
+shyne-mods/
+└─ avatars/
+   └─ my-first-avatar/
+      ├─ avatar.json
+      ├─ model.bbmodel
+      ├─ textures/
+      └─ avatar.png       # มีหรือไม่มีก็ได้
+```
+
+ระวังอย่าให้โฟลเดอร์ซ้อนกันสองชั้น:
+
+```text
+# ผิด
+avatars/my-first-avatar/my-first-avatar/avatar.json
+
+# ถูก
+avatars/my-first-avatar/avatar.json
+```
+
+ถ้าไม่ใช้ Plugin สามารถสร้างโฟลเดอร์ด้วยมือได้ โดยอย่างน้อยต้องมี `avatar.json` และ `model.bbmodel`
+
+## 5. ใส่เกมและทดสอบ
+
+1. เปิด Minecraft ด้วยโปรไฟล์ที่ติดตั้ง Shyne Creator
+2. เปิดเมนู **Shyne Creator → Avatar Library**
+3. เลือก `my-first-avatar`
+4. กด **ตรวจไฟล์** หากต้องการดูคำเตือนแบบละเอียด
+5. กดใช้ Avatar แล้วดูโมเดลในมุมมองบุคคลที่สาม
+
+หลังแก้ไฟล์ ให้กลับมาที่ Avatar Library แล้วกด **Reload** ไม่จำเป็นต้องปิดเกมทุกครั้ง
+
+### เช็กลิสต์ว่าสำเร็จแล้ว
+
+- Avatar ปรากฏใน Library
+- Texture แสดงถูกด้านและไม่เป็นสีม่วงดำ
+- ของตกแต่งอยู่ตำแหน่งถูกต้อง
+- เมื่อหันหัว ของตกแต่งหมุนตาม
+- เข้าโลก Multiplayer แล้วไม่มีข้อความ `ERROR`
+
+เมื่อทั้งห้าข้อผ่าน Avatar แรกของคุณพร้อมใช้งานแล้ว
+
+## แก้ปัญหาที่พบบ่อย
+
+| อาการ | ตรวจตรงไหน | วิธีแก้ |
+|---|---|---|
+| Avatar ไม่ขึ้นในรายการ | ตำแหน่ง `avatar.json` | ย้ายไฟล์ให้อยู่ที่ `avatars/<avatar-id>/avatar.json` |
+| ขึ้น `ERROR` | ปุ่ม **ตรวจไฟล์** | อ่านชื่อไฟล์และสาเหตุที่รายงาน แล้วแก้รายการแรกก่อน |
+| โมเดลอยู่กลางตัว | Vanilla Attachment | ตั้ง Group หลักเป็น `Head`, `Body`, แขน หรือขาให้ถูก |
+| Texture หาย | Texture ใน Blockbench | ตรวจว่า Texture ถูกบันทึกหรือรวมอยู่ในแพ็ก ZIP |
+| Animation ไม่เล่น | Animation State | ตั้ง State หรือเปิด Ambient Autoplay |
+| ของตกแต่งบังตัวผู้เล่น | Profile | ใช้ `accessory`; อย่าเริ่มด้วย `full_body` |
+| แก้ไฟล์แล้วไม่เปลี่ยน | Avatar Library | กด **Reload** หลัง Save หรือ Export |
+
+## ตัวเลือกเสริมสำหรับคนใช้คำสั่ง
+
+เครื่องมือนี้ไม่จำเป็นสำหรับ Avatar แรก แต่ช่วยตรวจแพ็กก่อนแจก:
 
 ```powershell
-.\tools\creator\shyne-creator.ps1 validate E:\Minecraft\avatars\my-avatar
-.\tools\creator\shyne-creator.ps1 inspect E:\Minecraft\avatars\my-avatar
+.\tools\creator\shyne-creator.ps1 validate E:\Minecraft\avatars\my-first-avatar
+.\tools\creator\shyne-creator.ps1 inspect E:\Minecraft\avatars\my-first-avatar
 ```
 
-ตัวตรวจจะเช็ก JSON, model, path traversal, path ชื่อซ้ำ, จำนวน cube/animation, ชื่อ animation ที่ behavior อ้างถึง, ขนาดรวม และ texture ขนาดใหญ่ หากประกาศ `main` จึงตรวจ entry script และ permission ของ Lua เพิ่ม
+## ไปต่อทางไหนดี
 
-เมื่อต้องย้ายแพ็กที่คุณมีสิทธิ์แก้ไข ให้นำเข้าเฉพาะ model, hierarchy, texture และ animation แล้วสร้าง behavior ของ Shyne ใหม่ สคริปต์ Figura ไม่ถูกรันและ Standard 2.0 ไม่รับประกัน legacy compatibility หากใช้ `tools/convert_figura_avatar.ps1` ต้องระบุปลายทางใหม่หรือ directory ว่างเสมอ ตัวแปลงจะไม่เขียนทับงานเก่า ดูคำสั่งและกติกาการย้ายใน [SHYNE_STANDARD_2_TH.md](SHYNE_STANDARD_2_TH.md)
+- อ่าน [Shyne Avatar Standard 2.0](SHYNE_STANDARD_2_TH.md) เมื่อต้องการ `full_body`, behavior หรือ outfit
+- อ่าน [Blockbench Animation Standard](BLOCKBENCH_ANIMATION_STANDARD.md) เมื่อต้องการ Animation ซับซ้อน
+- อ่าน [ระบบ Avatar](AVATAR_SYSTEM.md) เมื่อต้องการ first-person arms, palette และ multiplayer
+- อ่าน [Lua API 2.0](SHYNE_LUA_API_TH.md) เมื่อ logic จาก Blockbench ไม่พอ
+- อ่าน [Custom Render API 1.3](CUSTOM_RENDER_API_TH.md) เมื่อต้องการ HUD หรือสิ่งที่วาดในโลก
 
-Shyne อ่าน `meta.format_version` เพื่อใช้แกน animation ให้ถูกทั้ง Blockbench 4.x และ 5.x และรองรับ expression `Math.sin/cos` กับ `q.anim_time` โดยตรง ตัวอย่างอย่าง Shark Tail จึงเล่น Idle ได้จาก model โดยไม่ต้องคัดลอก `Molang.lua` หรือสคริปต์ที่มีหน้าที่เพียง `animations.model.Idle:play()`
-
-## 3. Avatar ส่วนเสริม: หู หาง และปีก
-
-หาก Avatar เป็นของเสริมที่ต้องแสดงร่วมกับตัว Minecraft เดิม ให้เลือก safe profile ใน `avatar.json`:
-
-```json
-{
-  "standard": "2.0",
-  "profile": "accessory"
-}
-```
-
-ใน Blockbench ให้เลือก bone หลักของของเสริม เช่น `BunnyEars` แล้วตั้ง `parent_type` เป็น `Head` Shyne จะอ่านค่าและผูก bone เข้ากับหัวผู้เล่นอัตโนมัติ หูจึงก้ม เงย และหมุนตามหัว โดยไม่ต้องเขียน Lua เพิ่ม แม้ animation ของหูกำลังควบคุม rotation อยู่ pose หัวก็ยังเป็น parent ของ animation เสมอ
-
-รองรับ `Head`, `Body`, `LeftArm`, `RightArm`, `LeftLeg` และ `RightLeg` เหมาะกับหู หมวก หาง ปีก ของติดแขน และรองเท้า ควรตั้ง `parent_type` ให้ถูกใน Blockbench เพื่อไม่ต้องเขียน Lua
-
-Animation ยังเล่นปกติบน bone ที่ผูกแล้วและเริ่มได้จาก manifest:
-
-```json
-"behavior": {
-  "autoplay": ["ear_wiggle"]
-}
-```
-
-เมื่อชื่อ part ซ้ำ ให้ระบุ canonical full path ตาม hierarchy เช่น `model.part("model.Character.Head.BunnyEars")` ชื่อสั้นเหมาะเฉพาะ part ที่มีชื่อไม่ซ้ำ เพื่อไม่ให้ rig ซับซ้อนควบคุมผิด bone
-
-ถ้าต้องการแขนหรือ item-pivot ใน first-person ให้สร้าง bone root แยกชื่อ `LeftArmFP` และ `RightArmFP` พร้อม cube ลูกของแต่ละข้าง Shyne จะใช้เฉพาะ tree นี้ในมุมมองบุคคลที่หนึ่งและซ่อนจากการวาดตัวผู้เล่นปกติ ถ้าไม่มี cube หรือ script ซ่อน root ไว้ จะกลับไปใช้มือ vanilla อัตโนมัติ ดูข้อกำหนดเต็มใน `AVATAR_SYSTEM.md`.
-
-ของลอยหรือ companion ให้สร้าง top-level group แยก เช่น `Companion` แล้วใช้ native SquAPI ของ Shyne (ไม่ต้องวาง `lib/SquAPI.lua` ของ Figura):
-
-```lua
-local orb = require("SquAPI").hoverPoint:new(
-  model.part("model.Companion"), vector.new(0.8, 1.2, 0),
-  0.2, 5, 1, 0.05, true, true
-)
-orb:setCollisionRadius(0.16)
-```
-
-argument ตัวสุดท้ายเปิด collision แบบภาพกับ block/entity; มันไม่แก้ hitbox หรือ physics ของเกม โค้ดนี้เป็น Shyne-native Lua สำหรับงานขั้นสูงและไม่เกี่ยวกับ Figura compatibility
-
-## 4. Render Task
-
-```lua
-render.text("status", { text = "Ready", x = 12, y = 12, color = 0xFF55FFFF, shadow = true })
-render.item("held", { item = "minecraft:diamond", x = 12, y = 28 })
-render.block("block", { block = "minecraft:amethyst_block", x = 32, y = 28 })
-render.sprite("logo", { texture = "shyne_creator:textures/gui/shyne_creator_logo.png", x = 52, y = 12, width = 32, height = 32 })
-render.line("meter", { from = vector.new(12, 52, 0), to = vector.new(112, 52, 0), color = 0xFF55FFFF, width = 2 })
-render.rect("panel", { x = 8, y = 8, width = 128, height = 48, color = 0xC0101728, z_index = -1 })
-render.outline("edge", { x = 8, y = 8, width = 128, height = 48, thickness = 2, color = 0xFF55FFFF })
-
--- geometry 3D ใน world renderer: มี depth test และรับแสงโลก
-render.world("marker", { type = "text", text = "Target", position = vector.new(100, 70, 100), color = 0xFFFFFF55, shadow = true })
-render.world("route", { type = "line", from = vector.new(100, 70, 100), to = vector.new(110, 70, 110), color = 0xFFFF55FF, width = 2 })
-
--- ผูกกับ bone โดยตรง; ไม่ต้องอัปเดตตำแหน่งใน events.render
-render.item("hand_charm", {
-  item = "minecraft:amethyst_shard", attach = "RightHand",
-  local_offset = vector.new(0, 2, 0), billboard = false, scale = 0.35
-})
-
-render.remove("status")
-render.clear()
-```
-
-Avatar ต้องประกาศ `hud_render` สำหรับงานบน HUD และ `world_render` สำหรับงานที่ยึดตำแหน่งโลก ใน Public Share สิทธิ์ `hud_render` ปิดไว้จนกว่าผู้ใช้จะอนุมัติ เพราะสามารถวาดทับหน้าจอเกมได้
-
-เรียก task ด้วย ID เดิมเพื่ออัปเดตโดยไม่สร้าง object ใหม่ เก็บได้สูงสุด 256 tasks ต่อ Avatar แต่เรนเดอร์ไม่เกิน 128 tasks ต่อ pass, 4096 จุดของเส้น HUD และ 4096 glyph World task มีระยะเริ่มต้น 128 blocks ปรับได้ด้วย `max_distance` ระหว่าง 8–1024 blocks และถูกล้างอัตโนมัติเมื่อเปลี่ยนหรือรีโหลด Avatar
-
-Custom Render API 1.3 รองรับ world geometry 3D, native bone binding, bone rotation/scale, world light/fullbright, `rect`, `outline`, `polyline`, `render.update`, task handle, group, layer, opacity, `render.screen()` และ `render.stats()` ดูคู่มือเต็มที่ `CUSTOM_RENDER_API_TH.md`
-
-## 5. Profiler
-
-เปิด `Shyne Settings → Advanced → Avatar Profiler` เพื่อดู FPS, frame time, Lua load/tick/render/event, model render, render tasks, จำนวน task ที่ถูก cull, heap, ขนาดอวตาร และรายการสิ่งที่อาจทำให้ FPS ลด กด `ส่งออก JSON` เพื่อบันทึกรายงานไว้ที่ `.minecraft/shyne-logs/profiler/` ควรพยายามให้ Avatar/frame ต่ำกว่า 4 ms และหลีกเลี่ยง task จำนวนมากที่อัปเดตทุก tick โดยไม่จำเป็น
-
-ตัวอย่างพร้อมใช้: `tools/examples/lua-api-2.0-avatar`, `tools/examples/render-profiler-avatar`, `tools/examples/advanced-render-avatar` และ `tools/examples/responsive-hud-avatar`
+เริ่มจาก Model-first ก่อน แล้วเพิ่ม Lua เฉพาะสิ่งที่จำเป็น จะทำให้ Avatar ดูแลง่ายและทำงานลื่นกว่าครับ

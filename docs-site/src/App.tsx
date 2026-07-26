@@ -185,14 +185,35 @@ function DocPage() {
       <div className="doc-breadcrumb"><Link to="/docs/overview">คู่มือ</Link><ChevronRight size={13}/><span>{doc.category}</span></div>
       <header className="doc-header"><span className="doc-icon"><Icon/></span><div><p>{doc.api ? 'SHYNE API REFERENCE' : 'SHYNE CREATOR GUIDE'}</p><h1>{doc.title}</h1><span>{doc.description}</span></div></header>
       <div className="doc-meta"><span><Activity size={14}/> อ้างอิงจากซอร์ส Shyne {version}</span><a href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer">ดูซอร์ส <ExternalLink size={13}/></a></div>
+      {doc.slug === 'first-avatar' && <QuickstartOverview />}
       <MarkdownContent content={body} />
       <nav className="doc-pagination">
         {index > 0 ? <Link to={`/docs/${docs[index - 1].slug}`}><small><ArrowLeft size={13}/> ก่อนหน้า</small><b>{docs[index - 1].shortTitle}</b></Link> : <span/>}
         {index < docs.length - 1 && <Link className="next" to={`/docs/${docs[index + 1].slug}`}><small>ถัดไป <ArrowRight size={13}/></small><b>{docs[index + 1].shortTitle}</b></Link>}
       </nav>
     </article>
-    <aside className="toc"><h3>ในหน้านี้</h3>{headings.map((heading) => <a className={`level-${heading.level}`} key={`${heading.id}-${heading.text}`} href={`#${heading.id}`}>{heading.text}</a>)}<div className="toc-help"><Sparkles size={15}/><b>ติดขัดตรงไหน?</b><span>ตรวจตัวอย่างและ permission ที่หัวข้อ Showcase</span><Link to="/showcase">ดูตัวอย่าง</Link></div></aside>
+    <aside className="toc"><h3>ในหน้านี้</h3>{headings.map((heading) => <button type="button" className={`level-${heading.level}`} key={`${heading.id}-${heading.text}`} onClick={() => scrollToSection(heading.id)}>{heading.text}</button>)}<div className="toc-help"><Sparkles size={15}/><b>ติดขัดตรงไหน?</b><span>ตรวจตัวอย่างและ permission ที่หัวข้อ Showcase</span><Link to="/showcase">ดูตัวอย่าง</Link></div></aside>
   </div>
+}
+
+function QuickstartOverview() {
+  const steps = [
+    { number: '01', title: 'เลือกประเภท', text: 'ของเสริมหรือเต็มตัว', icon: Box, target: '1-เลือกประเภท-avatar' },
+    { number: '02', title: 'ติดตั้ง Plugin', text: 'ตั้งค่าใน Blockbench', icon: Wrench, target: '2-ติดตั้ง-blockbench-plugin' },
+    { number: '03', title: 'ทำโมเดล', text: 'กำหนดจุดยึดให้ถูก', icon: Layers, target: '3-สร้างโมเดลและกำหนดจุดยึด' },
+    { number: '04', title: 'Export', text: 'รับแพ็ก ZIP พร้อมใช้', icon: Download, target: '4-export-เป็นแพ็ก-shyne' },
+    { number: '05', title: 'เข้าเกม', text: 'ติดตั้งและทดสอบ', icon: Play, target: '5-ใส่เกมและทดสอบ' },
+  ]
+  return <section className="quick-guide-overview" aria-label="เส้นทางสร้าง Avatar แรก">
+    <div className="quick-guide-head"><div><span>เริ่มตรงนี้</span><h2>Avatar แรกใน 5 ขั้น</h2><p>ทำตามลำดับนี้ได้เลย งานแรกไม่ต้องเขียน Lua</p></div><b>ประมาณ 10–15 นาที</b></div>
+    <div className="quick-guide-grid">{steps.map(({ number, title, text, icon: StepIcon, target }) => <button type="button" onClick={() => scrollToSection(target)} key={number}>
+      <span><StepIcon size={17}/><small>{number}</small></span><strong>{title}</strong><p>{text}</p>
+    </button>)}</div>
+  </section>
+}
+
+function scrollToSection(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 function ApiPage() {
