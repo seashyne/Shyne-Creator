@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.8.0-alpha-26.2`
+- Shyne Creator: `2.8.4-alpha-26.2`
 - Minecraft: `26.2`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -33,7 +33,25 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 
 เครื่องมือตั้ง profile, attachment, role, animation state และ export manifest จาก Blockbench อยู่ที่ [Shyne Blockbench Plugin](tools/blockbench/README_TH.md)
 
-## 2.7.45 Native Fidelity Fix
+## 2.8.4-alpha Multiplayer Safety & Performance
+
+- Remote Avatar ใช้การสมัครรับข้อมูลรายผู้เล่น ผู้ใช้ที่ Block จะหยุดรับ model, pose, synced vars และ animation ของคนนั้นจาก Server
+- จำกัดปริมาณข้อมูลตามจำนวน byte แยก full model ออกจาก pose update และไม่รวม snapshot ของผู้เล่นทั้งหมดไว้ใน packet เดียว
+- ตรวจงบทรัพยากรก่อนติดตั้ง remote model/texture พร้อม Vanilla fallback เมื่อ Avatar เกินค่าที่ผู้ใช้เลือก
+- เพิ่มทางเข้า Shyne Settings แบบโลโก้จากหน้า Main Menu และรักษาทางเข้าจาก Pause Menu เดิม
+- Release pipeline ตรวจ version/protocol ของ Fabric และ NeoForge, ล้าง artifact เก่า และสร้าง SHA-256 ให้ JAR ทั้งสองไฟล์
+
+## 2.8.3-alpha Avatar Cloud 2.2
+
+- Public Share ใช้ ZIP มาตรฐานผ่าน HTTPS พร้อมตรวจ ZIP policy และ SHA-256 ทั้งฝั่ง Backend และ Client
+- Permission ของ Public Avatar ผูกกับ package hash และรองรับ `particle`, `sound`, `camera`, `microphone`, `command`, `hud_render` และ `world_render`
+- ผู้สร้าง Revoke เพื่อลบ Public ZIP และหยุดการดาวน์โหลดครั้งใหม่ได้ โดย Private Backup ไม่ได้รับผลกระทบ
+- ไม่ใช้ `.sc v1`, `.sc v2`, data key หรือ lease แบบกำหนดเอง และไม่อ้างว่าสามารถลบสำเนาที่ผู้เล่นติดตั้งไปแล้วจากระยะไกล
+- Private chunk แยก namespace ตามเจ้าของ ป้องกันการอ้าง hash ข้ามบัญชี
+
+คู่มือผู้ใช้และ API: [AVATAR_CLOUD.md](AVATAR_CLOUD.md), [CLOUD_API.md](CLOUD_API.md) และ [PUBLIC_SHARE.md](PUBLIC_SHARE.md)
+
+## 2.8.0-alpha Native Fidelity Fix
 
 - runtime ของ Shyne ยังคงเป็นระบบ native ทั้งหมดและไม่ต้องติดตั้งหรือโหลด Figura; ไฟล์/สคริปต์ Figura ต้นทางใช้เป็นข้อมูลอ้างอิงตอนแปลงเท่านั้น
 - ตัวอ่าน `.bbmodel` เคารพค่าเริ่มต้น `visibility`/`export` ของ group และ element, รองรับ mesh และใช้ canonical full path เมื่อชื่อ part ซ้ำ โดย short alias ใช้ได้เฉพาะชื่อที่ไม่กำกวม
@@ -41,7 +59,9 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 - ส่ง vanilla visibility mask ตาม UUID ทั้ง local/remote ไปยัง body/skin layer, cape, Elytra, armor แต่ละ slot, held item, head item และ first-person arm โดยไม่ซ่อน Shyne model layer
 - แก้ `avatar.png` สีดำจากการส่งพารามิเตอร์วาดภาพผิด พร้อม decode/downscale ไอคอนขนาดใหญ่ก่อนอัปโหลด และแสดงชื่อไฟล์ outfit ตัวเลขยาวเป็น `Outfit N` โดยไม่เปลี่ยน id จริง
 - ตัวแปลงใช้ `-VanillaMode Auto` เป็นค่าเริ่มต้น ตรวจ full-body replacement จาก manifest/สคริปต์ต้นทาง ค้นหา `.bbmodel` ในโฟลเดอร์ย่อย และถอด Base64 texture เป็นไฟล์ภายในแพ็กได้
-- ปรับ network protocol เป็น `10`; client/server ต้องใช้รุ่นเดียวกันเพราะ snapshot เพิ่ม mesh และ visibility metadata
+- ปรับ network protocol เป็น `12`; snapshot ใช้ revision ACK/retry, ตรวจ nested model/PNG ก่อน decode และ rebase เวลา animation แบบไม่อิงนาฬิกาของเครื่อง
+- แยก Lua Standard bootstrap เดิม 952 บรรทัดเป็น 7 โมดูลภายในขนาด 51–227 บรรทัด โดย host compile เป็น chunk เดียว ผู้สร้าง Avatar จึงไม่ต้อง `require` เพิ่ม
+- outfit เป็น full replacement ตามค่าเริ่มต้นเพื่อให้ alternate texture โปร่งใสตรงต้นฉบับ; ใช้ชื่อ `*.overlay.png` เมื่อต้องการ alpha-composite บน texture เดิม
 
 การแก้ชุดนี้เพิ่มความตรงกับโมเดลต้นทาง แต่ไม่รับรองว่า Avatar Figura ทุกแพ็กจะทำงานเหมือนเดิม 100%; API หรือ render context เฉพาะทางที่ยังไม่รองรับต้องย้ายเป็น Shyne-native เพิ่มเติม
 
@@ -58,7 +78,7 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 - รองรับ Avatar แบบ Overlay สำหรับหู หาง ปีก และของเสริมด้วย `replace_vanilla: false`
 - เพิ่ม target/raycast detail สำหรับ block และ entity ใน Shyne Lua API
 - เพิ่ม `shyne_role` / `shyne_tags` และ API `model.role()` / `model.tag()` โดย path ของโมเดลยังเป็น API หลักสำหรับ rig ซับซ้อน
-- ปรับ network protocol เป็น `9`; ฝั่ง client และ server ต้องใช้ Shyne รุ่นนี้ให้ตรงกัน
+- รุ่น 2.7.44 ใช้ network protocol `9`; รุ่นปัจจุบันใช้ protocol `14` และ client/server ต้องใช้รุ่นเดียวกัน
 
 Creator quick start, Render Task API และ Profiler: [CREATOR_QUICKSTART_TH.md](CREATOR_QUICKSTART_TH.md)
 
@@ -100,10 +120,16 @@ Build และตรวจทั้งสอง Loader:
 .\gradlew.bat buildAll
 ```
 
-รวบรวมเฉพาะ release JAR ไว้ใน `build/releases`:
+เพิ่ม patch version อัตโนมัติ จากนั้นทดสอบและสร้าง release JAR พร้อม checksum:
 
 ```powershell
-.\gradlew.bat collectReleaseJars
+.\tools\release_build.ps1
+```
+
+หากเพิ่ม version แล้ว สามารถรวบรวมเฉพาะ release JAR ปัจจุบันไว้ใน `build/releases` ได้ด้วย:
+
+```powershell
+.\gradlew.bat releaseBundle
 ```
 
 Build แยก Loader:

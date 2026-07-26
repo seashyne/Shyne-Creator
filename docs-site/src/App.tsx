@@ -83,7 +83,7 @@ function AppShell() {
       </nav>
       <div className="header-actions">
         <button className="search-button" onClick={() => setSearchOpen(true)}><Search size={16}/><span>ค้นหาเอกสาร</span><kbd>⌘ K</kbd></button>
-        <a className="icon-button" href="https://github.com/seashyne/ShyneCore" target="_blank" rel="noreferrer" aria-label="ซอร์สโค้ด Shyne Creator"><Code2 size={19}/></a>
+        <a className="icon-button" href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer" aria-label="ซอร์สโค้ด Shyne Creator"><Code2 size={19}/></a>
         <button className="icon-button mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-label="เปิดเมนู">{menuOpen ? <X/> : <Menu/>}</button>
       </div>
     </header>
@@ -183,7 +183,7 @@ function DocPage() {
     <article className="doc-article">
       <div className="doc-breadcrumb"><Link to="/docs/overview">คู่มือ</Link><ChevronRight size={13}/><span>{doc.category}</span></div>
       <header className="doc-header"><span className="doc-icon"><Icon/></span><div><p>{doc.api ? 'SHYNE API REFERENCE' : 'SHYNE CREATOR GUIDE'}</p><h1>{doc.title}</h1><span>{doc.description}</span></div></header>
-      <div className="doc-meta"><span><Activity size={14}/> อ้างอิงจากซอร์ส Shyne {version}</span><a href="https://github.com/seashyne/ShyneCore" target="_blank" rel="noreferrer">ดูซอร์ส <ExternalLink size={13}/></a></div>
+      <div className="doc-meta"><span><Activity size={14}/> อ้างอิงจากซอร์ส Shyne {version}</span><a href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer">ดูซอร์ส <ExternalLink size={13}/></a></div>
       <MarkdownContent content={body} />
       <nav className="doc-pagination">
         {index > 0 ? <Link to={`/docs/${docs[index - 1].slug}`}><small><ArrowLeft size={13}/> ก่อนหน้า</small><b>{docs[index - 1].shortTitle}</b></Link> : <span/>}
@@ -213,8 +213,9 @@ function MarkdownContent({ content }: { content: string }) {
     h2: ({ children }) => <h2 id={slugify(textFromNode(children))}>{children}</h2>,
     h3: ({ children }) => <h3 id={slugify(textFromNode(children))}>{children}</h3>,
     a: ({ href = '', children }) => {
-      const file = href.split('/').pop() || ''
-      const targetSlug = fileToSlug[file]
+      const markdownPath = decodeURIComponent(href.split('#')[0]).replace(/^\.\//, '').replace(/\\/g, '/')
+      const file = markdownPath.split('/').pop() || ''
+      const targetSlug = fileToSlug[markdownPath] ?? fileToSlug[file]
       if (targetSlug) return <Link to={`/docs/${targetSlug}`}>{children}</Link>
       if (href.startsWith('#')) return <a href={href}>{children}</a>
       return <a href={href} target="_blank" rel="noreferrer">{children}<ExternalLink size={12}/></a>
@@ -232,7 +233,7 @@ function CodeBlock({ children }: { children: ReactNode }) {
 }
 
 function Footer() {
-  return <footer><div><img src="shyne-icon.png" alt="Shyne Creator"/><span><b>SHYNE CREATOR</b><small>Create beyond the skin.</small></span></div><p>เอกสารสำหรับ Shyne Creator {version} · Minecraft 26.2 · MPL-2.0</p><div><a href="https://www.curseforge.com/minecraft/mc-mods/shyne-creator" target="_blank" rel="noreferrer">CurseForge</a><a href="https://github.com/seashyne/ShyneCore" target="_blank" rel="noreferrer">GitHub</a></div></footer>
+  return <footer><div><img src="shyne-icon.png" alt="Shyne Creator"/><span><b>SHYNE CREATOR</b><small>Create beyond the skin.</small></span></div><p>เอกสารสำหรับ Shyne Creator {version} · Minecraft 26.2 · MPL-2.0</p><div><a href="https://www.curseforge.com/minecraft/mc-mods/shyne-creator" target="_blank" rel="noreferrer">CurseForge</a><a href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer">GitHub</a></div></footer>
 }
 
 function extractHeadings(markdown: string) {

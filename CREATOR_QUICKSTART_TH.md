@@ -8,22 +8,17 @@ Shyne Standard 2.0 ใช้แนวทาง model-first: สร้างโ�
 .\tools\creator\shyne-creator.ps1 new E:\Minecraft\avatars\my-avatar --id my.avatar --name "My Avatar"
 ```
 
-เปิด `model.bbmodel` ด้วย Blockbench แล้วสร้าง `avatar.json` แบบ Standard 2.0 โดยเริ่มจาก Zero-Lua ก่อน:
+เปิด `model.bbmodel` ด้วย Blockbench แล้วเริ่ม `avatar.json` แบบสั้นได้เลย:
 
 ```json
 {
-  "standard": "2.0",
-  "name": "My Avatar",
-  "profile": "accessory",
-  "model": "model.bbmodel",
-  "behavior": {
-    "preset": "auto",
-    "autoplay": ["Idle"]
-  }
+  "name": "My Avatar"
 }
 ```
 
-ไม่ต้องใส่ `main` และไม่ต้องสร้าง `script.lua` หาก `behavior` ครอบคลุมงานทั้งหมด Texture จะถูกค้นหาอัตโนมัติและไม่บังคับชื่อไฟล์ หากเป็นโมเดลเต็มตัวให้เปลี่ยน `profile` เป็น `full_body`; โมเดล aquatic ใช้ `merling` อ่านรายละเอียด fields และตัวอย่าง controller ที่ [SHYNE_STANDARD_2_TH.md](SHYNE_STANDARD_2_TH.md)
+Shyne เติม Standard 2.0, ID จากชื่อโฟลเดอร์, `model.bbmodel`, profile `accessory` และ Auto Animation ให้เอง ไม่ต้องใส่ `main` หาก behavior จากโมเดลเพียงพอ Texture จะถูกอ่านจาก model และไม่บังคับชื่อไฟล์ หากเป็นโมเดลเต็มตัวให้เพิ่ม `"profile":"full_body"`; โมเดล aquatic ใช้ `merling` อ่านรายละเอียด fields และตัวอย่าง controller ที่ [SHYNE_STANDARD_2_TH.md](SHYNE_STANDARD_2_TH.md)
+
+เมื่อติดตั้ง Blockbench plugin แล้ว ใช้ `File → Export → Export Shyne Avatar Package (.zip)` เพื่อรวม manifest, model, texture, icon, outfit และ Lua เป็นแพ็กเดียว ถ้าเปิด `Use Advanced Shyne Lua` plugin จะถามให้เลือก `script.lua` และโมดูลตอน export
 
 Shyne เคารพ `visibility`/`export` เริ่มต้นของ group และ element และวาดได้ทั้ง cube กับ mesh วาง `avatar.png` ไว้ข้าง manifest หากต้องการไอคอนรายการ; ระบบจะลดภาพขนาดใหญ่ให้เหมาะกับ GPU โดยอัตโนมัติ
 
@@ -37,6 +32,8 @@ Shyne เคารพ `visibility`/`export` เริ่มต้นของ gr
 ตัวตรวจจะเช็ก JSON, model, path traversal, path ชื่อซ้ำ, จำนวน cube/animation, ชื่อ animation ที่ behavior อ้างถึง, ขนาดรวม และ texture ขนาดใหญ่ หากประกาศ `main` จึงตรวจ entry script และ permission ของ Lua เพิ่ม
 
 เมื่อต้องย้ายแพ็กที่คุณมีสิทธิ์แก้ไข ให้นำเข้าเฉพาะ model, hierarchy, texture และ animation แล้วสร้าง behavior ของ Shyne ใหม่ สคริปต์ Figura ไม่ถูกรันและ Standard 2.0 ไม่รับประกัน legacy compatibility หากใช้ `tools/convert_figura_avatar.ps1` ต้องระบุปลายทางใหม่หรือ directory ว่างเสมอ ตัวแปลงจะไม่เขียนทับงานเก่า ดูคำสั่งและกติกาการย้ายใน [SHYNE_STANDARD_2_TH.md](SHYNE_STANDARD_2_TH.md)
+
+Shyne อ่าน `meta.format_version` เพื่อใช้แกน animation ให้ถูกทั้ง Blockbench 4.x และ 5.x และรองรับ expression `Math.sin/cos` กับ `q.anim_time` โดยตรง ตัวอย่างอย่าง Shark Tail จึงเล่น Idle ได้จาก model โดยไม่ต้องคัดลอก `Molang.lua` หรือสคริปต์ที่มีหน้าที่เพียง `animations.model.Idle:play()`
 
 ## 3. Avatar ส่วนเสริม: หู หาง และปีก
 
@@ -88,9 +85,15 @@ render.line("meter", { from = vector.new(12, 52, 0), to = vector.new(112, 52, 0)
 render.rect("panel", { x = 8, y = 8, width = 128, height = 48, color = 0xC0101728, z_index = -1 })
 render.outline("edge", { x = 8, y = 8, width = 128, height = 48, thickness = 2, color = 0xFF55FFFF })
 
--- งานที่ยึดตำแหน่งในโลกและถูก project มายังหน้าจอ
+-- geometry 3D ใน world renderer: มี depth test และรับแสงโลก
 render.world("marker", { type = "text", text = "Target", position = vector.new(100, 70, 100), color = 0xFFFFFF55, shadow = true })
 render.world("route", { type = "line", from = vector.new(100, 70, 100), to = vector.new(110, 70, 110), color = 0xFFFF55FF, width = 2 })
+
+-- ผูกกับ bone โดยตรง; ไม่ต้องอัปเดตตำแหน่งใน events.render
+render.item("hand_charm", {
+  item = "minecraft:amethyst_shard", attach = "RightHand",
+  local_offset = vector.new(0, 2, 0), billboard = false, scale = 0.35
+})
 
 render.remove("status")
 render.clear()
@@ -98,9 +101,9 @@ render.clear()
 
 Avatar ต้องประกาศ `hud_render` สำหรับงานบน HUD และ `world_render` สำหรับงานที่ยึดตำแหน่งโลก ใน Public Share สิทธิ์ `hud_render` ปิดไว้จนกว่าผู้ใช้จะอนุมัติ เพราะสามารถวาดทับหน้าจอเกมได้
 
-เรียก task ด้วย ID เดิมเพื่ออัปเดตโดยไม่สร้าง object ใหม่ เก็บได้สูงสุด 256 tasks ต่อ Avatar แต่เรนเดอร์ไม่เกิน 128 tasks และ 4096 จุดของเส้นต่อเฟรม World task มีระยะเริ่มต้น 128 blocks ปรับได้ด้วย `max_distance` ระหว่าง 8–1024 blocks และถูกล้างอัตโนมัติเมื่อเปลี่ยนหรือรีโหลด Avatar
+เรียก task ด้วย ID เดิมเพื่ออัปเดตโดยไม่สร้าง object ใหม่ เก็บได้สูงสุด 256 tasks ต่อ Avatar แต่เรนเดอร์ไม่เกิน 128 tasks ต่อ pass, 4096 จุดของเส้น HUD และ 4096 glyph World task มีระยะเริ่มต้น 128 blocks ปรับได้ด้วย `max_distance` ระหว่าง 8–1024 blocks และถูกล้างอัตโนมัติเมื่อเปลี่ยนหรือรีโหลด Avatar
 
-Custom Render API 1.1 เพิ่ม `rect`, `outline`, `polyline`, `render.update`, task handle, group, layer, opacity, `render.screen()` และ `render.stats()` ดูคู่มือเต็มที่ `CUSTOM_RENDER_API_TH.md`
+Custom Render API 1.3 รองรับ world geometry 3D, native bone binding, bone rotation/scale, world light/fullbright, `rect`, `outline`, `polyline`, `render.update`, task handle, group, layer, opacity, `render.screen()` และ `render.stats()` ดูคู่มือเต็มที่ `CUSTOM_RENDER_API_TH.md`
 
 ## 5. Profiler
 

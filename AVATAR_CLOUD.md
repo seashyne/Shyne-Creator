@@ -1,8 +1,8 @@
 # Shyne Avatar Cloud
 
-Shyne Avatar Cloud มีสองส่วนที่แยกสิทธิ์กัน: Private Backup สำหรับเจ้าของบัญชี และ Public Share สำหรับผู้สร้างที่ตั้งใจเผยแพร่ Avatar ให้คนอื่นทดลองใช้
+Shyne Avatar Cloud 2.2 แยกข้อมูลเป็นสองส่วนชัดเจน: **Private Backup** สำหรับเจ้าของบัญชี และ **Public Share** สำหรับ Avatar ที่ผู้สร้างตั้งใจเผยแพร่เป็น ZIP
 
-## สำหรับผู้เล่น
+## Private Backup สำหรับผู้เล่น
 
 1. เปิด `Cloud` ใน Shyne Creator Settings
 2. เปิด Avatar Manager ด้วยปุ่ม `H` แล้วเข้า `Avatar Cloud`
@@ -24,19 +24,22 @@ Avatar ในเครื่องยังเป็นโฟลเดอร์ 
 
 Shyne session ฝั่งเครื่องอยู่ที่ `config/shyne-creator/cloud-session.json` และหมดอายุภายใน 30 วัน การ Sign out จะขอเพิกถอน session บน backend
 
-## สถาปัตยกรรม
-
-- D1: account, challenge, session, ownership และ version
-- R2: content-addressed chunks ที่ key `chunks/<sha256>` แต่ Worker ตรวจ owner ทุกครั้งก่อนอ่าน
-- Worker: ตรวจ Minecraft session, authorization, manifest, size และ hash
-- Minecraft server: skill, power, combat, profile และ peer Avatar state
-
-Cloud ล่มแล้ว LAN/Server gameplay ยังทำงานได้ Avatar ที่อยู่ในเครื่องและ cache ยังใช้งานได้
-
 ## Public Share
 
-ผู้สร้างเลือก Publish เองและกำหนด visibility, license กับ permission manifest ได้ ผู้ใช้คนอื่นเห็นเฉพาะรายการที่ Public ใน Discover และต้อง Sign in พร้อมอนุมัติสิทธิ์อันตรายก่อนใช้ ตัวไฟล์ `.sc` ถูกเข้ารหัส เซ็นกำกับ และใช้ lease อายุสั้นที่ผูกกับบัญชีและเครื่อง เมื่อผู้สร้าง Revoke ระบบหยุดออก lease ใหม่และ Avatar ที่กำลังใช้จะหยุดเมื่อ lease หมด
+ผู้สร้างกด Publish เองและกำหนด license กับ permission manifest ได้ Backend รับ ZIP จาก Shyne Creator แล้วตรวจโครงสร้าง ขนาด เส้นทางไฟล์ และ SHA-256 ก่อนเก็บ ผู้เล่นค้นหา metadata ได้ใน Discover แต่ต้อง Sign in และอนุมัติ permission ของ package hash นั้นก่อนดาวน์โหลดและเริ่ม runtime
 
-Public Share ช่วยป้องกันการแก้ไฟล์และแจกต่อแบบทั่วไป แต่ไม่รับประกันว่าจะกันการดึงข้อมูลจาก client ที่ถูกดัดแปลงได้ 100% เพราะเครื่องผู้เล่นต้องถอดรหัสข้อมูลในหน่วยความจำเพื่อเรนเดอร์ในที่สุด
+Public Share 2.2 ใช้ ZIP มาตรฐานผ่าน HTTPS โดยตรง ไม่ใช้ `.sc v1`, `.sc v2`, data key หรือ lease แบบกำหนดเอง Client จะตรวจ package hash ที่ได้รับจาก metadata อีกครั้งก่อนแตกไฟล์ และตัว extractor ยังบังคับจำนวนไฟล์ ขนาดรวม และเส้นทางปลอดภัย
 
-รายละเอียด HTTP อยู่ใน `CLOUD_API.md`
+เมื่อผู้สร้างกด Revoke ระบบลบ Public ZIP และปฏิเสธการดาวน์โหลดครั้งใหม่ โดยไม่กระทบ Private Backup การ Revoke ไม่สามารถลบสำเนาที่ผู้เล่นดาวน์โหลดหรือติดตั้งไปแล้วจากระยะไกล ผู้สร้างจึงควร Publish เฉพาะไฟล์ที่ยินยอมให้ผู้รับดาวน์โหลดเท่านั้น
+
+## สถาปัตยกรรม
+
+- D1: account, challenge, session, ownership, manifest, publication และ metadata
+- R2 Private: chunk แยก namespace ตามเจ้าของที่ `private/<owner-uuid>/chunks/<sha256>`
+- R2 Public: ZIP แต่ละ publication ที่ `public/<share-id>/<object-id>.zip`
+- Worker: ตรวจ Minecraft session, authorization, manifest, ZIP policy, size และ hash
+- Minecraft server: skill, power, combat, profile และ peer Avatar state
+
+Cloud ล่มแล้ว LAN/Server gameplay ยังทำงานได้ Avatar ที่อยู่ในเครื่องยังใช้งานได้ตามปกติ
+
+รายละเอียด HTTP อยู่ใน [CLOUD_API.md](CLOUD_API.md) และขอบเขต Public ZIP อยู่ใน [PUBLIC_SHARE.md](PUBLIC_SHARE.md)

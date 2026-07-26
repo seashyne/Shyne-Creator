@@ -1,8 +1,8 @@
-# Shyne Lua API 1.1 Example
+# Shyne Lua API 2.0 Example
 
 ตัวอย่างนี้สาธิต:
 
-- `api: "latest"` และ `requires`
+- `api: "2.0"` และ `requires`
 - `shyne.api.require(...)`
 - Vector math และ `vector.lerp`
 - `events.once(...)`

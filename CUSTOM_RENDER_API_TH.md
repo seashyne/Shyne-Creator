@@ -1,8 +1,8 @@
-# Shyne Custom Render API 1.1
+# Shyne Custom Render API 1.3
 
-เอกสารนี้ตรงกับ Shyne Creator `2.8.0-alpha-26.2`
+เอกสารนี้ตรงกับ Shyne Creator `2.8.4-alpha-26.2`
 
-Custom Render API 1.1 เป็นโมดูล render ภายใต้ Shyne Avatar Standard 2.0 Avatar ใหม่ใช้ผ่าน `api: "2.0"` หรือ `api: "latest"` และตรวจได้จาก `shyne.api.supports("render", ">=1.1")`, `render.api_version` หรือ `diagnostics.snapshot().custom_render_api_version`
+Custom Render API 1.3 เป็นโมดูล render ภายใต้ Shyne Avatar Standard 2.0 Avatar ใหม่ใช้ผ่าน `api: "2.0"` หรือ `api: "latest"` และตรวจได้จาก `shyne.api.supports("render", ">=1.3")`, `render.api_version` หรือ `diagnostics.snapshot().custom_render_api_version`
 
 ## Primitive
 
@@ -20,7 +20,7 @@ render.polyline("graph", {
 })
 ```
 
-ทุก task รองรับ `visible`, `z_index` หรือ `layer`, `opacity`, `world`, `max_distance` และ `group` ค่า `opacity` มีผลกับ text, line, rect และ outline ส่วน item, block และ sprite ใช้ alpha/tint ตาม renderer ของ Minecraft
+ทุก task รองรับ `visible`, `z_index` หรือ `layer`, `opacity`, `world`, `max_distance` และ `group` ค่า `opacity` มีผลกับ text, sprite, line, rect และ outline ส่วน item/block ใช้ material และ alpha ตาม item renderer ของ Minecraft
 
 ## อัปเดต task โดยไม่สร้างใหม่
 
@@ -52,7 +52,7 @@ end)
 
 Group รองรับ `x`, `y`, `z`, `scale`, `scale_x`, `scale_y`, `scale_z`, `opacity`, `visible`, `z_index` และ group ซ้อนกันได้สูงสุด 16 ชั้น ระบบตัดวงจร group อัตโนมัติ ควรอัปเดต group เฉพาะเมื่อค่ามีการเปลี่ยนเพื่อลดงานต่อเฟรม
 
-`render.screen()` คืน `width`, `height`, `ready` ตามขนาด GUI ล่าสุด และ `render.stats()` คืน `tasks`, `rendered`, `culled`, `task_limit`, `frame_limit`, `line_point_limit`
+`render.screen()` คืน `width`, `height`, `ready` ตามขนาด GUI ล่าสุด และ `render.stats()` คืน `tasks`, `rendered`, `culled`, `task_limit`, `frame_limit`, `line_point_limit`, `glyph_limit`
 
 ## World task
 
@@ -64,14 +64,44 @@ render.world("target", {
 })
 ```
 
-World task เป็นการ project ตำแหน่งโลกเข้าสู่ HUD ไม่ได้สร้าง entity หรือแก้ world และจะถูก cull เมื่ออยู่นอกจอหรือไกลเกิน `max_distance`
+World task เป็น geometry 3D ที่ส่งเข้า world renderer จริง มี depth test จึงถูกบังด้วย block/entity ได้ ไม่ได้สร้าง entity และไม่แก้ข้อมูล world ระบบ cull ด้วยระยะและ camera frustum ก่อนส่ง GPU ค่าเริ่มต้นรับแสง block/sky ณ ตำแหน่ง task; ใช้ `fullbright = true` หรือ `light = "fullbright"` เฉพาะงานที่ต้องเรืองแสง
+
+## Live bone attachment
+
+```lua
+render.sprite("ear_marker", {
+  texture = "namespace:textures/marker.png",
+  attach = "model.Head.EarLeft",
+  local_offset = vector.new(0, 8, 0), -- Blockbench pixels; ตาม rotation และ scale
+  width = 12, height = 12
+})
+
+render.item("held_charm", {
+  item = "minecraft:amethyst_shard",
+  attach = "model.Body.RightArm.RightHand",
+  local_offset = vector.new(0, 2, 0),
+  billboard = false, -- รับ rotation/scale ของ bone เต็มรูปแบบ
+  scale = 0.35
+})
+
+render.text("name", {
+  bone = "model.Head",
+  offset = vector.new(0, 0.35, 0), -- world units
+  text = "Shyne"
+})
+```
+
+Task ที่มี `attach` หรือ `bone` เก็บ native binding ไว้ใน Java แล้ว resolve จาก matrix ของ renderer ในเฟรมเดียวกัน จึงไม่ต้องเรียก Lua เพื่อคำนวณตำแหน่งทุกเฟรมและไม่ตาม bone ช้าหนึ่งเฟรม `offset` เป็น world-unit ส่วน `local_offset` เป็นพิกัด Blockbench pixel ที่รับ hierarchy และ animation ทั้งหมด สำหรับ line ใช้ `local_to` เป็นปลายใน coordinate space เดียวกัน
+
+`billboard = true` ให้หน้าของ task หันเข้ากล้อง; text/sprite ใช้ค่านี้โดยปริยาย ส่วน item/block ที่ผูก bone ใช้ `false` โดยปริยายเพื่อหมุนตามมือหรือกระดูก ตั้งค่าเองได้ทุกชนิด ถ้า renderer ยังไม่มี matrix ในเฟรมแรก task จะถูกข้ามอย่างปลอดภัยและเริ่มแสดงทันทีเมื่อ matrix พร้อม หาก avatar/bone หยุดถูกวาด snapshot จะหมดอายุภายใน 250 ms เพื่อไม่ให้ task ค้างอยู่ที่ pose เก่า
 
 ## Permission และงบประสิทธิภาพ
 
 - งาน HUD ต้องมี `hud_render`
 - งาน world-anchored ต้องมี `world_render`
 - สูงสุด 256 tasks ต่อ Avatar
-- วาดสูงสุด 128 tasks และ 4096 จุดเส้นต่อเฟรม
+- วาดสูงสุด 128 tasks ต่อ render pass (HUD และ world แยกกัน), 4096 จุดเส้น HUD และ 4096 glyph ต่อ pass
+- world line ยาวได้สูงสุด 1024 blocks และพิกัดผิดปกติจะถูก clamp ก่อนส่ง GPU
 - Public Avatar ต้องได้รับการอนุมัติ permission จากผู้ใช้
 - ใช้ `render.stats()` และ Avatar Profiler ตรวจ task ที่ถูก cull และเวลาวาด
 

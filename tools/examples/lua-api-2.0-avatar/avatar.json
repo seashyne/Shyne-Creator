@@ -1,5 +1,6 @@
 {
-  "api": "latest",
+  "standard": "2.0",
+  "api": "2.0",
   "requires": {
     "core": ">=1.1",
     "permissions": ">=1.1",
@@ -7,8 +8,8 @@
     "scheduler": ">=1.1",
     "vector": ">=1.1"
   },
-  "id": "shyne.lua_api_1_1_example",
-  "name": "Shyne Lua API 1.1 Example",
+  "id": "shyne.lua_api_2_0_example",
+  "name": "Shyne Lua API 2.0 Example",
   "version": "1.0.0",
   "replace_vanilla": false,
   "online_sync": false,

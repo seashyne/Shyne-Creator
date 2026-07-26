@@ -10,29 +10,23 @@ Standard 2.0 แบ่งวิธีทำงานเป็นสามระ�
 
 1. **Beginner — Zero-Lua:** ทำโมเดลและ animation ใน Blockbench แล้วกำหนด `profile` กับ `behavior` ใน `avatar.json`
 2. **Intermediate — Declarative:** ผูก animation เข้ากับสถานะผู้เล่น เช่น เดิน วิ่ง ว่ายน้ำ และหลับ พร้อมตั้ง blend และ blink โดยไม่เขียน event loop
-3. **Expert — Native Lua:** ใส่ `main` เฉพาะเมื่อต้องการ logic ที่ `behavior` อธิบายไม่ได้ เช่น procedural rig, interaction หรือเงื่อนไขเฉพาะ Avatar
+3. **Expert — Native Lua:** ใส่ `main` เมื่อต้องการอิสระเต็ม เช่น procedural rig, interaction, physics หรือเงื่อนไขเฉพาะ Avatar ใช้ Easy API เพื่อเริ่มสั้นแล้วผสม API รายละเอียดได้
 
-Lua เป็นส่วนเสริม ไม่ใช่ไฟล์บังคับของ Standard 2.0
+Lua เป็นความสามารถระดับหนึ่งของ Standard 2.0 แต่ไม่ใช่ไฟล์บังคับ งานง่ายไม่ต้องเขียน ส่วนงานซับซ้อนยังใช้ Shyne-native Lua ได้เต็มที่
 
-ผู้สร้างสามารถติดตั้ง [Shyne Standard 2.0 Blockbench Plugin](tools/blockbench/README_TH.md) เพื่อตั้ง profile, `parent_type`, role/tag และ animation state ผ่านหน้าต่าง Properties แล้ว export `avatar.json` โดยไม่แก้ JSON ด้วยมือ
+ผู้สร้างสามารถติดตั้ง [Shyne Standard 2.0 Blockbench Plugin](tools/blockbench/README_TH.md) เพื่อตั้ง profile, `parent_type`, role/tag และ animation state ผ่านหน้าต่าง Properties แล้ว export ZIP ที่รวม manifest, model, texture, icon, outfit และ Lua โดยไม่ต้องจัดโฟลเดอร์เอง
 
 ## Avatar แบบสั้นที่สุด
 
-ตัวอย่างหูกระต่ายหรือหางที่มี animation `EarWiggle` เล่นวนตลอด:
+ถ้า model ใช้ profile accessory, ไฟล์ชื่อ `model.bbmodel`, ตั้ง `parent_type` ถูก และใช้ชื่อ animation มาตรฐาน เช่น Idle/Walk/Swim/Blink เขียนเองเพียงชื่อก็พอ:
 
 ```json
 {
-  "standard": "2.0",
-  "name": "Bunny Ears",
-  "profile": "accessory",
-  "model": "model.bbmodel",
-  "behavior": {
-    "autoplay": ["EarWiggle"]
-  }
+  "name": "Bunny Ears"
 }
 ```
 
-ไม่ต้องสร้าง `script.lua` และไม่ต้องใส่ `main` ค่า `accessory` เป็นค่าเริ่มต้นที่ปลอดภัย: โมเดล Shyne แสดงแบบ overlay ร่วมกับตัวผู้เล่น Minecraft เดิม
+Shyne เติม `standard: 2.0`, ID จากชื่อโฟลเดอร์, `model.bbmodel`, profile `accessory`, blend และ Auto Animation ให้เอง ถ้า animation ชื่อเฉพาะอย่าง `EarWiggle` ต้องเล่นตลอด ให้ตั้ง `Shyne Ambient Autoplay` ใน Blockbench plugin หรือเพิ่ม `behavior.autoplay` ไม่ต้องสร้าง `script.lua` สำหรับกรณีนี้
 
 ใน Blockbench ให้ตั้ง `parent_type` ของ bone หลักเป็น `Head`, `Body`, `LeftArm`, `RightArm`, `LeftLeg` หรือ `RightLeg` เพื่อให้ส่วนเสริมตามส่วนร่างกายจริง Animation ของ bone จะซ้อนบน transform นั้นโดยอัตโนมัติ
 
@@ -42,7 +36,7 @@ Lua เป็นส่วนเสริม ไม่ใช่ไฟล์บั
 
 | ฟิลด์ | รูปแบบ | หน้าที่ |
 |---|---|---|
-| `standard` | string | ใช้ค่า `"2.0"` เพื่อเลือกสัญญา Standard 2.0 |
+| `standard` | string | ไม่ใส่ได้ โดยค่าเริ่มต้นคือ `"2.0"` |
 | `name` | string | ชื่อที่แสดงใน Avatar Library |
 | `id` | string | ID คงที่ของ Avatar; ถ้าไม่ใส่ Shyne สร้างจากชื่อโฟลเดอร์ |
 | `model` | string | ไฟล์ Blockbench; ค่าเริ่มต้นคือ `model.bbmodel` |
@@ -84,7 +78,7 @@ Lua เป็นส่วนเสริม ไม่ใช่ไฟล์บั
 
 Profile ไม่ได้เดาชื่อ bone แบบสุ่ม ควรตั้ง hierarchy, `parent_type`, role และชื่อ animation ใน Blockbench ให้ชัดเจนเสมอ
 
-ขอบเขตปัจจุบันของ `merling` คือ safe overlay และ aquatic animation aliases; profile นี้ยังไม่สร้าง special-form controller, physics chain หรือ armor system ให้เอง งานเหล่านั้นต้องกำหนดในโมเดลหรือเพิ่มด้วย Shyne-native Lua ตามความจำเป็น
+ขอบเขตปัจจุบันของ `merling` คือ safe overlay และ aquatic animation aliases; profile จะไม่เดาว่ากระดูกใดควรเป็น physics หรือ armor เอง แต่ Group ที่ตั้ง `Shyne Physics Preset` จะสร้าง native secondary-motion chain ได้ทุก profile งาน special-form, collision/IK และ armor mapping เฉพาะโมเดลยังต้องกำหนดใน Blockbench หรือเพิ่มด้วย Shyne-native Lua
 
 ## Declarative Behavior
 
@@ -220,7 +214,7 @@ Standard 2.0 รับแนวคิด “ย้าย asset ไม่ย้�
 
 `Destination` ต้องเป็น path ใหม่หรือ directory ว่าง และต้องไม่ใช่ directory เดียวกับ `Source` ตัวแปลงจะหยุดทันทีเมื่อพบไฟล์เดิม เพื่อป้องกัน `script.lua`, texture หรือ outfit จากงานเก่าค้างอยู่ในผลลัพธ์ Zero-Lua
 
-PNG ที่ไม่ได้ถูกอ้างจากโมเดลและมีขนาดเท่า texture หลักอาจถูกนำเข้าเป็น outfit โดยอัตโนมัติ แต่ชื่อที่สื่อว่าเป็น normal, emissive, specular, mask หรือ reference map จะถูกข้าม ควรตรวจรายการ `Outfits:` หลังแปลงทุกครั้ง เพราะชื่อไฟล์ที่ไม่สื่อความหมายยังแยกชนิด asset โดยอัตโนมัติไม่ได้
+PNG ที่ไม่ได้ถูกอ้างจากโมเดลและมีขนาดเท่า texture หลักอาจถูกนำเข้าเป็น outfit replacement โดยอัตโนมัติ จึงรักษาพิกเซลโปร่งใสของ alternate texture ได้ตรงต้นฉบับ แต่ชื่อที่สื่อว่าเป็น normal, emissive, specular, mask หรือ reference map จะถูกข้าม หากตั้งใจทำ alpha overlay ให้ตั้งชื่อ `name.overlay.png` ควรตรวจรายการ `Outfits:` หลังแปลงทุกครั้ง เพราะชื่อไฟล์ที่ไม่สื่อความหมายยังแยกชนิด asset โดยอัตโนมัติไม่ได้
 
 ## Checklist ก่อนแจก Avatar
 

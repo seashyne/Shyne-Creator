@@ -1,10 +1,10 @@
 # Shyne Blockbench Animation Standard
 
-เอกสารนี้ใช้กับ Shyne Creator `2.8.0-alpha-26.2` ซึ่งอ่าน `.bbmodel` ตามรูปแบบโปรเจกต์ Blockbench 5.1.5 โดยตรง และใช้ animation runtime เดียวกันบน Fabric กับ NeoForge
+เอกสารนี้ใช้กับ Shyne Creator `2.8.4-alpha-26.2` ซึ่งอ่าน `.bbmodel` ตามรูปแบบโปรเจกต์ Blockbench 5.1.5 โดยตรง และใช้ animation runtime เดียวกันบน Fabric กับ NeoForge
 
 ## รองรับแล้ว
 
-- Blockbench project format 5.0 และ migration แกน animation ของไฟล์ก่อน 5.0
+- Blockbench project format 4.x และ 5.x โดยอ่านแกน V4 ตรงตามไฟล์ และแปลง X ของ position กับ X/Y ของ rotation เฉพาะ V5 ให้ตรงกับ renderer/Figura V5
 - Bone hierarchy และ pivot ของ parent/child
 - Cube และ mesh element พร้อม face/UV ภายใต้ hierarchy เดียวกัน
 - ค่าเริ่มต้น `visibility` และ `export` ของ group/element; Lua visibility ที่สั่งภายหลังใช้ override ได้
@@ -45,6 +45,8 @@ model.animation.get("swim")
 - `math.sin`, `math.cos`, `math.tan`, `math.abs`, `math.pow`, `min`, `max`, `clamp` และ `lerp`
 
 ฟังก์ชันตรีโกณมิติของ animation ใช้องศาให้ตรงกับการ preview ของ Blockbench/Molang
+
+กฎแกนอิง `meta.format_version`: ไฟล์ 4.x เช่น Shark Tail 4.10 ต้องไม่ถูกกลับเครื่องหมายซ้ำ ส่วนไฟล์ 5.x ใช้ coordinate conversion ของ V5 กฎนี้ครอบคลุมทั้งค่าตัวเลข, expression และ Bezier handle
 
 Expression ที่แปลงมาจากแพ็กเก่าบางชุดอาจมี wrapper รูป `local t = require("...") return <expression>` Shyne รองรับเฉพาะรูปแบบนี้แบบจำกัด โดยตัด wrapper แล้วอ่าน `t.<name>` เป็น animation parameter `v.<name>` ใน expression engine ที่ปลอดภัย ระบบจะไม่เรียก `require`, ไม่โหลด Lua module ต้นทาง และยังปฏิเสธคำสั่ง Lua อื่นที่ไม่ใช่ expression คณิตศาสตร์ที่รองรับ
 

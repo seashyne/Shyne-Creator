@@ -1,4 +1,4 @@
--- Shyne Lua API Standard 1.1: auto API, capability, vector, scheduler and error example.
+-- Shyne Lua API Standard 2.0: capability, vector, scheduler and error example.
 shyne.api.require("scheduler", ">=1.1")
 
 local origin = vector.zero()

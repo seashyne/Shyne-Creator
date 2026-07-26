@@ -1,8 +1,8 @@
-# Shyne Avatar Cloud API v2.1
+# Shyne Avatar Cloud API v2.2
 
 Base URL: `https://shyne-avatar-cloud.jirayut-wh.workers.dev`
 
-API แยก Private Backup ออกจาก Public Share ชัดเจน ทุก endpoint ที่อ่านหรือแก้ไฟล์ต้องใช้ `Authorization: Bearer <token>` ส่วน metadata ใน Discover อ่านได้โดยไม่รับไฟล์ต้นฉบับหรือกุญแจถอดรหัส
+API แยก Private Backup ออกจาก Public Share ชัดเจน ทุก endpoint ที่อ่านหรือแก้ไฟล์ต้องใช้ `Authorization: Bearer <token>` ส่วน metadata ใน Discover อ่านได้โดยไม่ต้อง Sign in
 
 ## Authentication
 
@@ -14,14 +14,21 @@ API แยก Private Backup ออกจาก Public Share ชัดเจน 
 
 Minecraft access token จะไม่ถูกส่งไป Shyne Cloud
 
+## สถานะบริการ
+
+- `GET /healthz` — ตรวจว่า Worker ตอบสนอง
+- `GET /readyz` — ตรวจความพร้อมของบริการ
+- `GET /v1/status` — version, capability, permission contract และข้อจำกัดของบริการ
+
+Backend 2.2 ประกาศ `public_zip_v1` และ `public_permissions_v2` ไม่มี capability ของ `.sc` หรือ lease
+
 ## Private storage
 
-- `GET /v1/status` — สถานะบริการ
-- `GET /v1/me/avatars?q=<text>&limit=30&offset=0` — รายการของบัญชีปัจจุบัน
+- `GET /v1/me` — บัญชีปัจจุบัน
+- `GET /v1/me/avatars?q=<text>&limit=30&offset=0` — รายการสำรองของบัญชีปัจจุบัน
 - `GET /v1/avatars/<avatar_id>` — manifest ของบัญชีปัจจุบัน
 - `PATCH /v1/avatars/<avatar_id>` — เปลี่ยน name หรือ description
 - `DELETE /v1/avatars/<avatar_id>` — ลบข้อมูลสำรอง
-- `GET /v1/avatars` — รายการ Public Avatar สำหรับ Discover
 
 ## Backup protocol
 
@@ -46,7 +53,7 @@ Minecraft access token จะไม่ถูกส่งไป Shyne Cloud
 
 จากนั้นส่งก้อนด้วย `PUT /v1/uploads/<upload_id>/chunks/<sha256>` และจบด้วย `POST /v1/uploads/<upload_id>/complete`
 
-ข้อจำกัด: 512 KiB ต่อก้อน, 64 MiB ต่อ Avatar, 256 ไฟล์ และต้องมี `avatar.json`
+ข้อจำกัด Private Backup: 512 KiB ต่อก้อน, 64 MiB ต่อ Avatar, 256 ไฟล์ และต้องมี `avatar.json`
 
 ## Restore protocol
 
@@ -56,20 +63,40 @@ Minecraft access token จะไม่ถูกส่งไป Shyne Cloud
 4. ตรวจ size และ SHA-256 ทุกก้อน
 5. ประกอบใน temporary folder, validate แล้วจึงสลับเข้าโฟลเดอร์ใช้งาน
 
-Worker ตรวจว่าบัญชีเป็นเจ้าของ Avatar และ hash อยู่ใน manifest ปัจจุบันก่อนอ่าน R2 ทุกครั้ง
+Worker ตรวจว่าบัญชีเป็นเจ้าของ Avatar และ hash อยู่ใน manifest ปัจจุบันก่อนอ่าน R2 ทุกครั้ง Chunk ถูกแยก namespace ตามเจ้าของเพื่อไม่ให้ hash เดียวกันข้ามบัญชี
 
-## Public Share
+## Public Share ZIP
 
-- `GET /v1/discover` — ค้นหา metadata ของ Public Avatar
-- `GET /v1/shares/<share_id>` — อ่าน metadata, ผู้สร้าง, license, version และ permission
-- `PUT /v1/avatars/<avatar_id>/publication` — Publish ZIP ที่ผ่าน validator เป็น `.sc v2`
-- `DELETE /v1/avatars/<avatar_id>/publication` — Revoke และหยุดออก lease ใหม่
-- `GET /v1/shares/<share_id>/package` — รับแพ็กเกจ `.sc` ที่เข้ารหัสและเซ็นกำกับ
-- `POST /v1/shares/<share_id>/lease` — รับ lease 15 นาทีและ data key ที่ห่อด้วย X25519 สำหรับเครื่องนั้น
-- `GET /v1/shares/<share_id>/versions` — ประวัติเวอร์ชันและสถานะ revoke
-- `POST /v1/shares/<share_id>/reports` — Report Public Avatar
-- `PUT`/`DELETE /v1/creators/<creator_id>/block` — Block หรือปลด Block ผู้สร้าง
+- `GET /v1/discover?q=<text>&limit=30&offset=0` — ค้นหา metadata ของ Public Avatar
+- `GET /v1/avatars` — alias สำหรับรายการ Discover
+- `GET /v1/shares/<share_id>` — อ่าน metadata, owner, license, version, package hash, ขนาด และ permission
+- `PUT /v1/avatars/<avatar_id>/publication` — Publish ZIP ของ Avatar ใน Private Backup
+- `DELETE /v1/avatars/<avatar_id>/publication` — Revoke และลบ Public ZIP
+- `GET /v1/shares/<share_id>/package` — ดาวน์โหลด Public ZIP หลัง Sign in
 
-Permission contract รุ่น `public_permissions_v2` รองรับ `particle`, `sound`, `camera`, `microphone`, `command`, `hud_render` และ `world_render` รายชื่อจริงอ่านได้จาก `public_avatar_permissions` ใน `GET /v1/status` เพื่อไม่ให้ client กับ backend ใช้ whitelist คนละชุด
+ตัวอย่าง header สำหรับ Publish:
 
-Public Share ไม่เปิดเผย ZIP ต้นฉบับหรือกุญแจดิบ ตัว client ตรวจลายเซ็น Ed25519, package hash, lease, device identity และ permission ที่ผู้ใช้อนุมัติก่อนเริ่ม Lua runtime
+```http
+Content-Type: application/vnd.shyne.avatar+zip
+X-Shyne-Permissions: particle,sound,hud_render
+X-Shyne-License: CC-BY-4.0
+```
+
+Backend รับ Public ZIP สูงสุด 16 MiB ตรวจ ZIP policy และ SHA-256 แล้วตอบ `package_format: "zip-v1"` พร้อม `package_hash` การดาวน์โหลดตอบ `application/vnd.shyne.avatar+zip` และ `X-Shyne-Package-Hash`; Client ต้องเทียบ hash ก่อนติดตั้ง
+
+License ที่รองรับคือ `PERSONAL`, `CC0`, `CC-BY-4.0`, `CC-BY-NC-4.0` และ `CUSTOM`
+
+Permission contract `public_permissions_v2` รองรับ `particle`, `sound`, `camera`, `microphone`, `command`, `hud_render` และ `world_render` รายชื่อจริงอ่านได้จาก `public_avatar_permissions` ใน `GET /v1/status`
+
+Public Share 2.2 ไม่มี `.sc v1`, `.sc v2`, endpoint `/lease`, device key หรือ data key การ Revoke หยุดการดาวน์โหลดครั้งใหม่และลบ object บน Cloud แต่ไม่ลบสำเนาที่ดาวน์โหลดไปแล้วจากเครื่องผู้เล่น
+
+## Error response
+
+ข้อผิดพลาดตอบเป็น JSON พร้อม HTTP status ที่ตรงกับสาเหตุ:
+
+```json
+{
+  "error": "Public Avatar package is unavailable or was revoked",
+  "code": "package_not_found"
+}
+```

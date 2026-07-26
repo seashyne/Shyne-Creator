@@ -1,8 +1,8 @@
 # Shyne Native Lua API — Standard 2.0
 
-เอกสารนี้ตรงกับ Shyne Creator `2.8.0-alpha-26.2`
+เอกสารนี้ตรงกับ Shyne Creator `2.8.4-alpha-26.2`
 
-Lua เป็นส่วนเสริมสำหรับงานขั้นสูงของ Shyne Avatar Standard 2.0 เท่านั้น Avatar แบบ model-first ไม่ต้องมี `script.lua` หากต้องใช้ procedural rig หรือ logic เฉพาะ ให้ระบุ `main` และใช้ API ของ Shyne โดยตรง:
+Lua เป็นชั้นควบคุมหลักสำหรับงานอิสระและงานขั้นสูงของ Shyne Avatar Standard 2.0 ส่วน Avatar แบบ model-first ทั่วไปเริ่มได้โดยไม่ต้องมี `script.lua` หากต้องใช้ procedural rig, physics, UI หรือ logic เฉพาะ ให้ระบุ `main` และใช้ API ของ Shyne โดยตรง โดยไม่พึ่ง Figura:
 
 | กลุ่ม | ใช้ทำอะไร |
 |---|---|
@@ -42,7 +42,7 @@ Lua เป็นส่วนเสริมสำหรับงานขั้�
   "main": "script.lua",
   "api": "2.0",
   "requires": {
-    "render": ">=1.1",
+    "render": ">=1.3",
     "scheduler": "^1.1"
   }
 }
@@ -52,13 +52,51 @@ Lua เป็นส่วนเสริมสำหรับงานขั้�
 
 ```lua
 print(shyne.api.version, shyne.api.automatic)
-if shyne.api.supports("render", ">=1.1") then
+if shyne.api.supports("render", ">=1.3") then
   render.rect("panel", { x = 8, y = 8, width = 80, height = 24 })
 end
 shyne.api.require("scheduler", ">=1.1")
 ```
 
-โมดูลใน Standard 2.0 ได้แก่ `core`, `animation`, `behavior`, `diagnostics`, `input`, `minecraft`, `modules`, `network`, `permissions`, `render`, `scheduler`, `ui`, `vector` และ `rig`
+โมดูลใน Standard 2.0 ได้แก่ `core`, `animation`, `behavior`, `diagnostics`, `easy`, `events`, `input`, `minecraft`, `modules`, `network`, `permissions`, `render`, `scheduler`, `transform`, `ui`, `vector` และ `rig` โดยรอบนี้ `events` เป็น `2.0`, `render` เป็น `1.3` และ `transform` เป็น `1.0`
+
+## Easy API: เขียนสั้น แต่ไม่เสียความละเอียด
+
+โมดูล `easy` เป็นทางลัด Shyne-native เหนือ API เดิม ไม่ใช่ compatibility layer และไม่ตัดความสามารถระดับล่าง ใช้ `part`, `anim`, `on` หรือแบบ namespaced `shyne.part`, `shyne.anim`, `shyne.on` ได้:
+
+```lua
+local ears = part("Ears")
+
+anim("ear_wiggle", {
+  loop = true,
+  additive = true,
+  weight = 0.8,
+  play = true
+})
+
+on("tick", function()
+  ears:opacity(minecraft.player.in_water() and 0.7 or 1)
+end)
+```
+
+ตั้งค่าหลายอย่างพร้อมกันด้วย `shyne.setup`:
+
+```lua
+local avatar_parts = shyne.setup({
+  parts = {
+    Ears = { visible = true, rotation = vector.new(0, 0, 3) },
+    Glow = { emissive = true, opacity = 0.8 }
+  },
+  animations = {
+    ear_wiggle = { loop = true, additive = true, play = true }
+  },
+  events = {
+    avatar_unload = function() print("bye") end
+  }
+})
+```
+
+รองรับ `parts` (`visible`, `rotation`/`rot`, `position`/`pos`, `scale`, `color`, `opacity`, `emissive`, `vanilla_parent`), animation (`speed`, `weight`, `priority`, `loop`, fade, transition, mask, additive, play), event, action และ toggle นอกจากนี้มี `shyne.once`, `shyne.after`, `shyne.every`, `shyne.action` และ `shyne.toggle` สำหรับงานสั้นทั่วไป งาน Merling/SquAPI/IK/armor/physics ยังใช้ `rig` และ object API รายละเอียดเดิมร่วมกันได้
 
 ## Avatar: ตัวอย่างเริ่มต้น
 
@@ -137,9 +175,11 @@ local children = tail:children()
 print(tail:name(), parent and parent:name(), tail:world_position())
 ```
 
-`avatar.vanilla(part):position()`, `rotation()` และ `visible()` ใช้กับ `PLAYER`, `HEAD`, `BODY`, `LEFT_ARM`, `RIGHT_ARM`, `LEFT_LEG`, `RIGHT_LEG`, ชั้นผิว `HAT`/`JACKET`/`LEFT_SLEEVE`/`RIGHT_SLEEVE`/`LEFT_PANTS`/`RIGHT_PANTS`, `CAPE`, `ELYTRA`, `ARMOR`, `HELMET`, `CHESTPLATE`, `LEGGINGS`, `BOOTS`, `HELD_ITEMS`, `LEFT_ITEM`, `RIGHT_ITEM`, `MAIN_HAND`, `OFF_HAND` และ `HEAD_ITEM` ได้ ค่า visibility ถูกใช้แยกตาม UUID ทั้ง local/remote และ `PLAYER=false` จะเป็น master mask ของ vanilla layers ทั้งหมด โดย Shyne model layer ยังวาดตามปกติ
+`avatar.vanilla(part):position()`, `rotation()` และ `visible()` ใช้กับ `PLAYER`, `HEAD`, `BODY`, `LEFT_ARM`, `RIGHT_ARM`, `LEFT_LEG`, `RIGHT_LEG`, ชั้นผิว `HAT`/`JACKET`/`LEFT_SLEEVE`/`RIGHT_SLEEVE`/`LEFT_PANTS`/`RIGHT_PANTS`, `CAPE`, `ELYTRA`, `ARMOR`, `HELMET`, `CHESTPLATE`, `LEGGINGS`, `BOOTS`, `HELD_ITEMS`, `LEFT_ITEM`, `RIGHT_ITEM`, `MAIN_HAND`, `OFF_HAND` และ `HEAD_ITEM` ได้ ชื่อ layer จะ resolve ไปยัง pose หลักที่เกี่ยวข้อง และ `MAIN_HAND`/`OFF_HAND` ใช้ handedness จริงของผู้เล่น Getter `visible()` อ่าน effective render mask เดียวกับ renderer จึงเห็นผลของ `hide()` ทันที ค่า visibility ถูกใช้แยกตาม UUID ทั้ง local/remote และ `PLAYER=false` จะเป็น master mask ของ vanilla layers ทั้งหมด โดย Shyne model layer ยังวาดตามปกติ
 
-`model.part(...):parent()`, `children()`, `name()`, `world_position()` และ `world_rotation()` อ่าน hierarchy จากโมเดลที่กำลังใช้ โดย `world_position()`/`world_rotation()` สืบทอด rotation และ scale ของ parent bone รวมถึง transform ที่ Lua ตั้งไว้แล้ว
+`model.part(...):parent()`, `children()`, `name()`, `world_position()` และ `world_rotation()` อ่าน hierarchy จากโมเดลที่กำลังใช้ หลัง renderer วาดอย่างน้อยหนึ่งเฟรม `world_position()`, `world_rotation()`, `world_scale()` และ `world_matrix()` จะมาจาก matrix ที่ใช้วาดจริงหลังรวม Blockbench animation, layered animation, Lua transform, vanilla pose และ parent hierarchy แล้ว ตรวจได้ด้วย `part:transform_exact()`; เฟรมแรกก่อนมี snapshot จะใช้ค่าประมาณที่ปลอดภัย
+
+อ่านทั้งหมดครั้งเดียวได้ด้วย `part:world_transform()` ซึ่งคืน `{ position, rotation, scale, matrix, context, exact }`
 
 Avatar ที่เป็นส่วนเสริมและยังใช้ตัว Minecraft เดิม ให้ตั้ง `"profile": "accessory"` ใน `avatar.json` และใช้ `parent_type` ใน Blockbench เป็นวิธีหลัก หากต้องเปลี่ยน attachment ระหว่างเล่นจึงค่อยใช้ Lua:
 
@@ -211,11 +251,11 @@ ui.action({ id = "mode", title = "Mode", on_use = function() end,
 
 render.sprite("halo", {
   texture = "shyne_creator:textures/gui/shyne_creator_logo.png",
-  attach = "root.Head", width = 16, height = 16
+  attach = "root.Head", local_offset = vector.new(0, 4, 0), width = 16, height = 16
 })
 ```
 
-`storage.get(key, fallback)` และ `storage.set(key, value)` เก็บค่าเฉพาะเครื่อง แยกจาก `state.sync` และแยกตาม Avatar ID ส่วน `render.*` ที่ใส่ `attach` หรือ `bone` จะใช้ตำแหน่งโลกของ bone นั้นโดยอัตโนมัติ
+`storage.get(key, fallback)` และ `storage.set(key, value)` เก็บค่าเฉพาะเครื่อง แยกจาก `state.sync` และแยกตาม Avatar ID ส่วน `render.*` ที่ใส่ `attach` หรือ `bone` จะติดตาม bone ทุก render frame ใช้ `offset` เป็นระยะ world-unit หรือ `local_offset` เป็นระยะ Blockbench pixel ที่รับ rotation/scale จาก matrix ของ bone
 
 `script.lua` มีลำดับสูงกว่า animation ใน `.bbmodel` และ Auto Humanoid เฉพาะ channel ที่สคริปต์สั่ง ใช้ `reset()` เพื่อคืนการควบคุมให้ animation/Auto Humanoid
 
@@ -257,12 +297,21 @@ avatar.network.local_part("model.root.secret", true)
 avatar.network.local_vanilla("PLAYER", true)
 ```
 
+หาก `avatar.json` ระบุ `synced_schema` ค่าใน `state.sync` จะถูกตรวจชนิดและข้อจำกัดก่อนเขียนจริง ค่าที่ไม่ตรง schema ทำให้ callback นั้น error โดยไม่ส่ง network ใช้ `state.validate(key, value)` เมื่อต้องการตรวจล่วงหน้า และ `state.schema(path)` เพื่อเลือก schema ภายในโฟลเดอร์ Avatar ระหว่างขั้นตอนเริ่มต้น หาก schema ใช้ `additionalProperties: false` key ที่ไม่ประกาศจะไม่ผ่านและไม่หลุดเข้า snapshot
+
 ## Events
 
 ```lua
 events.on("entity_init", function(event) end)
 events.on("tick", function(event) end)
-events.on("render", function(event) end)
+events.on("world_render", function(event) end)
+events.on("render", function(event)
+  if event.context == events.context.FIRST_PERSON then
+    model.root.Head:hide()
+  end
+end)
+events.on("post_render", function(event) end)
+events.on("post_world_render", function(event) end)
 events.on("microphone", function(mic) end)
 events.on("avatar_unload", function(event) end)
 events.once("entity_init", function(event) end)
@@ -270,7 +319,21 @@ events.once("entity_init", function(event) end)
 
 ค่า `mic` มี `level`, `speaking`, `muted` และ `whispering` สามารถยกเลิก callback ด้วย `events.off("ชื่อ", callback)` หรือทั้งหมดด้วย `events.clear("ชื่อ")`
 
-ทุก event ส่ง table รูปแบบเดียวกัน โดยมี `type`, `time`, `tick`, `context`, `delta`, `sequence` และ `api` เป็นค่าพื้นฐาน Callback เรียงตามลำดับที่ลงทะเบียน และ error ของ callback หนึ่งจะถูกบันทึกใน `diagnostics.snapshot().runtime_errors` โดยไม่หยุด callback ตัวอื่น
+ทุก event ส่ง table รูปแบบเดียวกัน โดยมี `type`, `time`, `tick`, `context`, `delta`, `sequence` และ `api` เป็นค่าพื้นฐาน `render`/`post_render` ทำงานตาม FPS จริง ไม่ใช่ 20 Hz และเพิ่ม `partial_tick`, `frame_delta`, `first_person`, `screen`, `camera_position`, `camera_rotation` ค่า context ที่เสถียรอยู่ใน `events.context`: `FIRST_PERSON`, `MINECRAFT_GUI`, `SHYNE_GUI`, `RENDER`, `WORLD`, `OTHER` Callback เรียงตามลำดับที่ลงทะเบียน และ error ของ callback หนึ่งจะถูกบันทึกใน `diagnostics.snapshot().runtime_errors` โดยไม่หยุด callback ตัวอื่น
+
+## Matrix และพิกัด Bone
+
+```lua
+local ears = model.root.Head.Ears
+local transform = ears:world_transform()
+
+if transform.exact then
+  local tip = matrix4.transform_point(transform.matrix, vector.new(0, 8, 0)) -- Blockbench pixels
+  local local_again = matrix4.transform_point(matrix4.inverse(transform.matrix), tip)
+end
+```
+
+`matrix4` ใช้ column-major matrix 16 ค่าและมี `identity`, `copy`, `multiply`, `translation`, `scale`, `transform_point`, `transform_direction`, `position`, `inverse` ค่า matrix จาก bone เป็น world matrix สำหรับ world render และเหมาะกับ procedural attachment; `inverse()` คืน `nil` เมื่อ matrix กลับด้านไม่ได้
 
 ## Vector, Result และ Task
 
@@ -404,9 +467,9 @@ render.remove("icon")
 render.clear()
 ```
 
-รองรับ `text`, `item`, `block`, `sprite`, `line`, `rect`, `outline`, `polyline` และ world-anchored task ทุกชนิด Custom Render API 1.1 เพิ่ม task handle, group ซ้อนชั้น, `z_index`, `opacity`, responsive HUD ผ่าน `render.screen()` และข้อมูลงบผ่าน `render.stats()` ดูรายละเอียดและตัวอย่างเต็มใน `CUSTOM_RENDER_API_TH.md`
+รองรับ `text`, `item`, `block`, `sprite`, `line`, `rect`, `outline`, `polyline` และ world task 3D ทุกชนิด Custom Render API 1.3 เพิ่ม native bone binding ในเฟรมเดียวกัน, การสืบทอด rotation/scale ด้วย `billboard = false`, แสงโลก/`fullbright`, frustum culling และงบ glyph บนของเดิมจาก 1.2 ดูรายละเอียดและตัวอย่างเต็มใน `CUSTOM_RENDER_API_TH.md`
 
-เรียก ID เดิมหรือ `render.update` เพื่ออัปเดต task เดิม เก็บได้ 256 tasks แต่เรนเดอร์ไม่เกิน 128 tasks และ 4096 จุดของเส้นต่อเฟรม World task ถูก cull นอกจอและเกิน `max_distance` (เริ่มต้น 128 blocks) แล้วล้างอัตโนมัติเมื่อ unload การวาดใช้ตำแหน่งโลก project เข้าหน้าจอ จึงไม่เขียนข้อมูลลง world หรือส่ง network ต้องประกาศ permission `hud_render` หรือ `world_render` ตามชนิดงาน
+เรียก ID เดิมหรือ `render.update` เพื่ออัปเดต task เดิม เก็บได้ 256 tasks แต่เรนเดอร์ไม่เกิน 128 tasks ต่อ pass, 4096 จุดเส้น HUD และ 4096 glyph World task เป็น geometry แบบ depth-tested ใน world renderer ถูก cull นอก frustum หรือเกิน `max_distance` (เริ่มต้น 128 blocks) และรับแสงโลกจริงโดยปริยาย งานที่ผูก `attach`/`bone` resolve matrix ใน Java โดยไม่ต้องอัปเดตจาก Lua ทุกเฟรม การวาดไม่เขียนข้อมูลลง world และไม่ส่ง network ต้องประกาศ permission `hud_render` หรือ `world_render` ตามชนิดงาน
 
 เปิด `Shyne Settings → Advanced → Avatar Profiler` เพื่อดู Lua load/tick/render/event, model render, task render, FPS, frame time, heap, ขนาดอวตาร และการประเมิน FPS loss แบบ rolling 240 samples ปุ่ม Export JSON บันทึกรายงานไว้ใน `.minecraft/shyne-logs/profiler/` ดูขั้นตอนสร้างโปรเจกต์และเครื่องมือ validate เพิ่มเติมที่ `CREATOR_QUICKSTART_TH.md`
 

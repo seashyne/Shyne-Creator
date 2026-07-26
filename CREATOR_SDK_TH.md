@@ -1,6 +1,6 @@
 # Shyne Creator SDK
 
-เอกสารนี้ตรงกับ Shyne Creator `2.8.0-alpha-26.2`
+เอกสารนี้ตรงกับ Shyne Creator `2.8.4-alpha-26.2`
 
 เอกสารนี้เป็นจุดเริ่มต้นสำหรับมอดเสริมที่สร้าง Power, Skill และ Avatar โดยไม่ฝัง content ตัวอย่างไว้ใน Shyne Creator
 
@@ -74,7 +74,7 @@ function on_item_use(ctx)
 end
 ```
 
-Schema อยู่ที่ `src/main/resources/shyne_sdk/schemas` และคู่มือ API อยู่ที่ `SHYNE_LUA_API_TH.md` ส่วน bootstrap จริงอยู่ใน `src/main/resources/shyne_runtime/lua/shyne_avatar.lua`
+Schema อยู่ที่ `src/main/resources/shyne_sdk/schemas` และคู่มือ API อยู่ที่ `SHYNE_LUA_API_TH.md` ส่วน bootstrap ภายในถูกแบ่งไว้ที่ `src/main/resources/shyne_runtime/lua/avatar/` โดย `shyne_avatar.lua` เป็นเพียง index ผู้สร้าง Avatar ไม่ต้องโหลดโมดูลเหล่านี้เอง
 
 ## โครง Avatar
 
@@ -125,6 +125,19 @@ model.part("model.Wings"):vanilla_parent("BODY")
 - Avatar snapshot: model/texture/animation และ state ที่ schema อนุญาต
 - Microphone event: ข้อมูลระดับเสียงภายในเครื่อง ไม่ส่งเสียงดิบขึ้น Cloud
 - Cloud: ไฟล์ Avatar, metadata, owner UUID และ permissions เท่านั้น
+
+เมื่อกำหนด `"synced_schema": "synced.schema.json"` runtime จะอ่านและ compile schema ก่อนเปิด Avatar แล้วตรวจทุก `state.sync(key, value)` จริง รองรับชนิด `object`, `array`, `string`, `number`, `integer`, `boolean`, `null`, `enum`/`const`, ช่วงตัวเลข, ความยาว string/array, `properties`, `items` และ `additionalProperties` ไม่รองรับ `$ref` หรือ regex จากภายนอกเพื่อให้ตรวจได้แน่นอน หากตั้ง `additionalProperties: false` เฉพาะ key ใน `properties` เท่านั้นที่จะอยู่ใน network snapshot
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "ears_enabled": { "type": "boolean" },
+    "tail_strength": { "type": "number", "minimum": 0, "maximum": 1 }
+  }
+}
+```
 
 ## ก่อนเผยแพร่
 

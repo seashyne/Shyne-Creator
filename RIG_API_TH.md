@@ -1,8 +1,14 @@
 # Shyne Native Rig API 1.3
 
-เอกสารนี้ตรงกับ Shyne Creator `2.8.0-alpha-26.2` และใช้กับ Avatar ที่ระบุ `main` เพื่อเปิด native Lua พร้อมประกาศ `api: "2.0"` และ `"rig": ">=1.3"` ใน `requires`
+เอกสารนี้ตรงกับ Shyne Creator `2.8.4-alpha-26.2` และใช้กับ Avatar ที่ระบุ `main` เพื่อเปิด native Lua พร้อมประกาศ `api: "2.0"` และ `"rig": ">=1.3"` ใน `requires`
 
 Rig API เป็นระบบ native ของ Shyne สำหรับ avatar แบบ Merling/SquAPI-style โดยไม่ต้องใช้ Figura: มันทำ secondary motion, chain, cosmetic armor และ vanilla attachment ผ่าน Lua ปกติ
+
+## Physics Preset แบบไม่เขียน Lua
+
+ใน Blockbench ตั้ง `Shyne Physics Preset` ที่ Group root เป็น `Bunny Ears`, `Tail`, `Hair`, `Cloth` หรือ `Wings` Runtime จะสร้าง chain ให้ Group นั้นและลูกต่อเนื่องโดยอัตโนมัติ รับแรงเร่ง การหมุนตัว การลงพื้น ลม และสถานะอยู่ในน้ำ พร้อม angle cone ตามชนิด preset ทุกค่าถูกเขียนลง additive layer `shyne.physics` จึงไม่ทับ Blockbench animation หรือ `part:rot_add()` ของ Lua
+
+ตั้ง preset ใหม่ที่ Group ลูกเพื่อเริ่ม chain อิสระ หรือตั้ง `None` ที่ root เมื่อจะควบคุมเองด้วย API ด้านล่าง Native preset เหมาะกับงานทั่วไป ส่วน collision, impulse เฉพาะเหตุการณ์, IK และ tuning ราย segment ใช้ `rig.spring`, `rig.chain` หรือ constraint API
 
 ## Physics ที่ไม่ทับ animation
 
