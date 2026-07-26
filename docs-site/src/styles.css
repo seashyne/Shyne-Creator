@@ -239,10 +239,46 @@ body {
 .search-results button small { color:#9ba8ba; font-size:11px; line-height:1.5; }
 footer { color:#9eabbd; background:#09101a; border-color:#30394a; }
 footer p,footer a { font-size:11px; }
+.download-button {
+  height:38px;
+  padding:0 14px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#071018;
+  background:#67dcf5;
+  border:1px solid #8feaff;
+  font-size:13px;
+  font-weight:700;
+  transition:transform .18s,box-shadow .18s,background .18s;
+}
+.download-button:hover {
+  color:#061016;
+  background:#91eaff;
+  box-shadow:4px 4px 0 #214b5c;
+  transform:translate(-2px,-2px);
+}
+.hero-actions { flex-wrap:wrap; }
+.hero-actions .download-cta {
+  color:#09110b;
+  background:#b8f34c;
+  border:1px solid #d0ff76;
+  box-shadow:6px 6px 0 #394d18;
+}
+.hero-actions .download-cta:hover {
+  background:#caff61;
+  transform:translate(-2px,-2px);
+}
 
 @media(max-width:900px) {
   .doc-layout { max-width:900px; }
   .markdown-body { font-size:18px; }
+  .download-button {
+    width:38px;
+    padding:0;
+    justify-content:center;
+  }
+  .download-button span { display:none; }
 }
 @media(max-width:600px) {
   body { font-size:15px; }

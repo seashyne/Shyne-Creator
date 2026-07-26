@@ -10,6 +10,8 @@ import {
 } from 'lucide-react'
 import { docs, exampleDocs, fileToSlug, version, type DocIcon, type DocItem } from './content'
 
+const CURSEFORGE_URL = 'https://www.curseforge.com/minecraft/mc-mods/shyne-creator'
+
 const iconMap: Record<DocIcon, LucideIcon> = {
   book: BookOpen, download: Download, sparkles: Sparkles, box: Box, play: Play,
   layers: Layers, braces: Braces, palette: Palette, gamepad: Gamepad2, cloud: Cloud,
@@ -83,6 +85,7 @@ function AppShell() {
       </nav>
       <div className="header-actions">
         <button className="search-button" onClick={() => setSearchOpen(true)}><Search size={16}/><span>ค้นหาเอกสาร</span><kbd>⌘ K</kbd></button>
+        <a className="download-button" href={CURSEFORGE_URL} target="_blank" rel="noreferrer" aria-label="ดาวน์โหลด Shyne Creator จาก CurseForge"><Download size={17}/><span>ดาวน์โหลด</span></a>
         <a className="icon-button" href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer" aria-label="ซอร์สโค้ด Shyne Creator"><Code2 size={19}/></a>
         <button className="icon-button mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-label="เปิดเมนู">{menuOpen ? <X/> : <Menu/>}</button>
       </div>
@@ -144,7 +147,7 @@ function HomePage() {
         <p className="overline">OFFICIAL CREATOR DOCUMENTATION <i></i></p>
         <h1>รูปร่างใหม่<br/>ให้ตัวตนของคุณ<span>.</span></h1>
         <p className="lead">สร้าง Avatar, custom item, skill, power และระบบต่อสู้ด้วย Blockbench และ Lua พร้อมใช้งาน Multiplayer บน Fabric และ NeoForge</p>
-        <div className="hero-actions"><Link className="primary" to="/docs/first-avatar">เริ่มสร้าง Avatar <ArrowRight size={18}/></Link><Link className="secondary" to="/docs/standard-2"><BookOpen size={18}/> Standard 2.0</Link></div>
+        <div className="hero-actions"><a className="download-cta" href={CURSEFORGE_URL} target="_blank" rel="noreferrer"><Download size={18}/> ดาวน์โหลดจาก CurseForge</a><Link className="primary" to="/docs/first-avatar">เริ่มสร้าง Avatar <ArrowRight size={18}/></Link><Link className="secondary" to="/docs/standard-2"><BookOpen size={18}/> Standard 2.0</Link></div>
         <div className="compat"><span>VERSION</span><b>{version}</b><i></i><b>MINECRAFT 26.2</b><small>JAVA 25</small></div>
       </div>
       <div className="hero-visual" aria-hidden="true">
@@ -233,7 +236,7 @@ function CodeBlock({ children }: { children: ReactNode }) {
 }
 
 function Footer() {
-  return <footer><div><img src="shyne-icon.png" alt="Shyne Creator"/><span><b>SHYNE CREATOR</b><small>Create beyond the skin.</small></span></div><p>เอกสารสำหรับ Shyne Creator {version} · Minecraft 26.2 · MPL-2.0</p><div><a href="https://www.curseforge.com/minecraft/mc-mods/shyne-creator" target="_blank" rel="noreferrer">CurseForge</a><a href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer">GitHub</a></div></footer>
+  return <footer><div><img src="shyne-icon.png" alt="Shyne Creator"/><span><b>SHYNE CREATOR</b><small>Create beyond the skin.</small></span></div><p>เอกสารสำหรับ Shyne Creator {version} · Minecraft 26.2 · MPL-2.0</p><div><a href={CURSEFORGE_URL} target="_blank" rel="noreferrer">ดาวน์โหลดบน CurseForge</a><a href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer">GitHub</a></div></footer>
 }
 
 function extractHeadings(markdown: string) {
