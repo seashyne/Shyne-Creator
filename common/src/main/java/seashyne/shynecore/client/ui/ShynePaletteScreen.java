@@ -4,6 +4,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import seashyne.shynecore.client.avatar.AvatarAction;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
@@ -192,6 +193,26 @@ public class ShynePaletteScreen extends Screen {
     private void runAction(AvatarAction action) {
         action.callback().run();
         if (action.closeOnUse()) onClose();
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 1) {
+            int gap = 8;
+            for (int i = 0; i < visibleActions.size(); i++) {
+                AvatarAction action = visibleActions.get(i);
+                if (!action.hasSecondaryCallback()) continue;
+                int column = i % columns;
+                int row = i / columns;
+                int tileX = panelX + 16 + column * (tileWidth + gap);
+                int tileY = actionTop + row * 38;
+                if (event.x() >= tileX && event.x() < tileX + tileWidth && event.y() >= tileY && event.y() < tileY + 30) {
+                    action.secondaryCallback().run();
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(event, doubleClick);
     }
 
     private void openPage(int newPage) {

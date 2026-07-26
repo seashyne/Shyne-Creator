@@ -12,6 +12,7 @@ import net.minecraft.resources.Identifier;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.avatar.AvatarLoader;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
+import seashyne.shynecore.client.avatar.RemoteAvatarResourceBudget;
 import seashyne.shynecore.client.avatar.ShyneStatusClient;
 import seashyne.shynecore.client.config.ShyneClientSettings;
 
@@ -20,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 public class ShyneSettingsScreen extends Screen {
     private static final Identifier LOGO = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "textures/gui/shyne_creator_logo.png");
@@ -84,7 +86,10 @@ public class ShyneSettingsScreen extends Screen {
         int actionStart = rowY + settings.size() * 36 + (settings.isEmpty() ? 0 : 5);
         for (int i = 0; i < actions.size(); i++) {
             ScreenAction action = actions.get(i);
-            Button button = Button.builder(Component.translatable(action.nameKey), ignored -> action.run.run())
+            Button button = Button.builder(action.label.get(), pressed -> {
+                action.run.run();
+                pressed.setMessage(action.label.get());
+            })
                 .tooltip(Tooltip.create(Component.translatable(action.descriptionKey)))
                 .bounds(contentX, actionStart + i * 24, contentWidth, 20).build();
             button.active = action.enabled.getAsBoolean();
@@ -210,6 +215,13 @@ public class ShyneSettingsScreen extends Screen {
                 new ScreenAction("screen.shyne_core.profiler.title", "screen.shyne_core.profiler.tooltip", () -> openScreen(new AvatarProfilerScreen(this)), () -> true)
             );
             case AVATAR -> List.of(
+                new ScreenAction(
+                    "setting.shyne_core.remote_budget",
+                    "setting.shyne_core.remote_budget.desc",
+                    this::cycleRemoteAvatarBudget,
+                    () -> true,
+                    this::remoteAvatarBudgetLabel
+                ),
                 new ScreenAction("screen.shyne_core.avatars", "screen.shyne_core.avatars.tooltip", () -> openScreen(new AvatarManagerScreen(this)), () -> true),
                 new ScreenAction("screen.shyne_core.inputs.title", "screen.shyne_core.inputs.tooltip", () -> openScreen(new AvatarInputSettingsScreen(this)), () -> true),
                 new ScreenAction("screen.shyne_core.avatars.outfit", "screen.shyne_core.avatars.outfit.tooltip", () -> openScreen(new AvatarOutfitScreen(this)), () -> AvatarRuntime.active() != null),
@@ -222,6 +234,24 @@ public class ShyneSettingsScreen extends Screen {
                 new ScreenAction("screen.shyne_core.cloud.open", "screen.shyne_core.cloud.open.tooltip", () -> openScreen(new CloudAvatarLibraryScreen(this)), () -> ShyneClientSettings.cloudEnabled)
             );
         };
+    }
+
+    private void cycleRemoteAvatarBudget() {
+        RemoteAvatarResourceBudget.Preset current = RemoteAvatarResourceBudget.Preset.fromId(
+            ShyneClientSettings.remoteAvatarBudgetPreset
+        );
+        RemoteAvatarResourceBudget.Preset[] presets = RemoteAvatarResourceBudget.Preset.values();
+        RemoteAvatarResourceBudget.Preset next = presets[(current.ordinal() + 1) % presets.length];
+        ShyneClientSettings.setRemoteAvatarBudgetPreset(next.id());
+    }
+
+    private Component remoteAvatarBudgetLabel() {
+        RemoteAvatarResourceBudget.Preset preset = RemoteAvatarResourceBudget.Preset.fromId(
+            ShyneClientSettings.remoteAvatarBudgetPreset
+        );
+        return Component.translatable("setting.shyne_core.remote_budget")
+            .append(Component.literal(": "))
+            .append(Component.translatable("setting.shyne_core.remote_budget." + preset.id()));
     }
 
     private void openScreen(Screen screen) {
@@ -271,7 +301,17 @@ public class ShyneSettingsScreen extends Screen {
 
     private record Setting(String nameKey, String descriptionKey, BooleanSupplier getter, BooleanSetter setter) {}
 
-    private record ScreenAction(String nameKey, String descriptionKey, Runnable run, BooleanSupplier enabled) {}
+    private record ScreenAction(
+        String nameKey,
+        String descriptionKey,
+        Runnable run,
+        BooleanSupplier enabled,
+        Supplier<Component> label
+    ) {
+        private ScreenAction(String nameKey, String descriptionKey, Runnable run, BooleanSupplier enabled) {
+            this(nameKey, descriptionKey, run, enabled, () -> Component.translatable(nameKey));
+        }
+    }
 
     @FunctionalInterface
     private interface BooleanSetter {

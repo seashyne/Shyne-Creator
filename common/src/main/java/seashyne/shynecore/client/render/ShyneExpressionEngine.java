@@ -8,6 +8,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Small, deterministic expression engine used by animation keyframes.
@@ -20,6 +22,9 @@ public final class ShyneExpressionEngine {
     private static final int MAX_CACHED_EXPRESSIONS = 16_384;
     private static final Map<String, Compiled> CACHE = new ConcurrentHashMap<>();
     private static final Set<String> REPORTED = ConcurrentHashMap.newKeySet();
+    private static final Pattern LEGACY_FIGURA_PROVIDER = Pattern.compile(
+        "(?is)^\\s*local\\s+([a-z_][a-z0-9_]*)\\s*=\\s*require\\s*\\([^)]*\\)\\s*return\\s+(.+)$"
+    );
 
     private ShyneExpressionEngine() {}
 
@@ -47,6 +52,14 @@ public final class ShyneExpressionEngine {
 
     private static String normalize(String source) {
         String value = source == null || source.isBlank() ? "0" : source.trim();
+        // Figura expression providers commonly prepend a read-only Lua module binding.
+        // We never execute it: only the returned math expression is accepted, and the
+        // provider table becomes Shyne's safe animation-parameter namespace.
+        Matcher provider = LEGACY_FIGURA_PROVIDER.matcher(value);
+        if (provider.matches()) {
+            String variable = provider.group(1);
+            value = provider.group(2).trim().replaceAll("(?i)\\b" + Pattern.quote(variable) + "\\.", "v.");
+        }
         // Some legacy Blockbench expression providers use q(...) for the channel base.
         return value.replaceAll("(?i)q\\s*\\(\\s*\\.\\.\\.\\s*\\)", "base");
     }

@@ -9,6 +9,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -51,6 +52,8 @@ import static net.minecraft.commands.Commands.literal;
 public final class ShyneCommand {
     private static final float MIN_PLAYER_SCALE = 0.25f;
     private static final float MAX_PLAYER_SCALE = 4.0f;
+    private static final float NORMAL_PLAYER_HEIGHT_CM = 180.0f;
+    private static final float CM_PER_INCH = 2.54f;
 
     private ShyneCommand() {}
 
@@ -71,7 +74,7 @@ public final class ShyneCommand {
         ContentDiagnostics diagnostics
     ) {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            dispatcher.register(literal("shyne")
+            var shyneRoot = dispatcher.register(literal("shyne")
             .executes(ctx -> showHelp(ctx.getSource()))
             .then(literal("status").requires(ShyneCommand::isAdmin).executes(ctx -> {
                 feedback(ctx.getSource(), "mods=" + modLoader.getLoadedCount()
@@ -105,7 +108,6 @@ public final class ShyneCommand {
                 return Command.SINGLE_SUCCESS;
             }))
             .then(literal("reload").requires(ShyneCommand::isAdmin).executes(ctx -> reloadContent(ctx.getSource(), modLoader, skillRegistry, equipmentRuntime, itemRuntime, profileRuntime, diagnostics)))
-            .then(literal("reloand").requires(ShyneCommand::isAdmin).executes(ctx -> reloadContent(ctx.getSource(), modLoader, skillRegistry, equipmentRuntime, itemRuntime, profileRuntime, diagnostics)))
             .then(literal("setteam").requires(ShyneCommand::isAdmin).then(argument("entity", StringArgumentType.word()).then(argument("team", StringArgumentType.word()).executes(ctx -> {
                 Entity entity = resolveEntity(ctx.getSource(), StringArgumentType.getString(ctx, "entity"));
                 if (entity == null) return fail(ctx.getSource(), "Entity not found.");
@@ -130,7 +132,8 @@ public final class ShyneCommand {
                 feedback(ctx.getSource(), "Granted " + amount + " xp to " + player.getName().getString());
                 return Command.SINGLE_SUCCESS;
             }))))
-            .then(literal("unlockskill").requires(ShyneCommand::isAdmin).then(argument("player", StringArgumentType.word()).then(argument("skill_id", StringArgumentType.word()).executes(ctx -> {
+            .then(literal("unlockskill").requires(ShyneCommand::isAdmin).then(argument("player", StringArgumentType.word()).then(argument("skill_id", StringArgumentType.word())
+                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(skillRegistry.all().stream().map(SkillDefinition::skillId), builder)).executes(ctx -> {
                 ServerPlayer player = resolvePlayer(ctx.getSource(), StringArgumentType.getString(ctx, "player"));
                 if (player == null) return fail(ctx.getSource(), "Player not found.");
                 String skillId = StringArgumentType.getString(ctx, "skill_id");
@@ -138,7 +141,10 @@ public final class ShyneCommand {
                     ? success(ctx.getSource(), "Unlocked " + skillId + " for " + player.getName().getString())
                     : fail(ctx.getSource(), "Could not unlock " + skillId + ". Check skill points and prerequisites.");
             }))))
-            .then(literal("equipskill").requires(ShyneCommand::isAdmin).then(argument("player", StringArgumentType.word()).then(argument("slot", StringArgumentType.word()).then(argument("skill_id", StringArgumentType.word()).executes(ctx -> {
+            .then(literal("equipskill").requires(ShyneCommand::isAdmin).then(argument("player", StringArgumentType.word()).then(argument("slot", StringArgumentType.word())
+                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(new String[] {"primary", "secondary", "utility", "ultimate", "passive_1", "passive_2"}, builder))
+                .then(argument("skill_id", StringArgumentType.word())
+                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(skillRegistry.all().stream().map(SkillDefinition::skillId), builder)).executes(ctx -> {
                 ServerPlayer player = resolvePlayer(ctx.getSource(), StringArgumentType.getString(ctx, "player"));
                 if (player == null) return fail(ctx.getSource(), "Player not found.");
                 Optional<SkillSlot> slot = SkillSlot.tryParse(StringArgumentType.getString(ctx, "slot"));
@@ -148,7 +154,8 @@ public final class ShyneCommand {
                     ? success(ctx.getSource(), "Equipped " + skillId + " into " + slot.get().name().toLowerCase(Locale.ROOT))
                     : fail(ctx.getSource(), "Could not equip " + skillId + ". Unlock the skill first.");
             })))))
-            .then(literal("equipweapon").requires(ShyneCommand::isAdmin).then(argument("player", StringArgumentType.word()).then(argument("slot", StringArgumentType.word()).then(argument("weapon_id", StringArgumentType.word()).executes(ctx -> {
+            .then(literal("equipweapon").requires(ShyneCommand::isAdmin).then(argument("player", StringArgumentType.word()).then(argument("slot", StringArgumentType.word()).then(argument("weapon_id", StringArgumentType.word())
+                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(equipmentRuntime.allWeapons().stream().map(WeaponDefinition::weaponId), builder)).executes(ctx -> {
                 ServerPlayer player = resolvePlayer(ctx.getSource(), StringArgumentType.getString(ctx, "player"));
                 if (player == null) return fail(ctx.getSource(), "Player not found.");
                 String weaponId = StringArgumentType.getString(ctx, "weapon_id");
@@ -160,7 +167,8 @@ public final class ShyneCommand {
                 .executes(ctx -> giveItem(ctx.getSource(), itemRuntime, StringArgumentType.getString(ctx, "player"), StringArgumentType.getString(ctx, "item_id"), 1))
                 .then(argument("count", IntegerArgumentType.integer(1, 2304)).executes(ctx -> giveItem(ctx.getSource(), itemRuntime,
                     StringArgumentType.getString(ctx, "player"), StringArgumentType.getString(ctx, "item_id"), IntegerArgumentType.getInteger(ctx, "count")))))))
-            .then(literal("castskill").requires(ShyneCommand::isAdmin).then(argument("player", StringArgumentType.word()).then(argument("skill_id", StringArgumentType.word()).executes(ctx -> {
+            .then(literal("castskill").requires(ShyneCommand::isAdmin).then(argument("player", StringArgumentType.word()).then(argument("skill_id", StringArgumentType.word())
+                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(skillRegistry.all().stream().map(SkillDefinition::skillId), builder)).executes(ctx -> {
                 ServerPlayer player = resolvePlayer(ctx.getSource(), StringArgumentType.getString(ctx, "player"));
                 if (player == null) return fail(ctx.getSource(), "Player not found.");
                 String skillId = StringArgumentType.getString(ctx, "skill_id");
@@ -171,13 +179,16 @@ public final class ShyneCommand {
                     ? success(ctx.getSource(), "Cast " + skillId + " for " + player.getName().getString())
                     : fail(ctx.getSource(), "Could not cast " + skillId + ": " + status.name().toLowerCase(Locale.ROOT));
             }))))
-            .then(literal("attachmodel").requires(ShyneCommand::isAdmin).then(argument("entity", StringArgumentType.word()).then(argument("model_id", StringArgumentType.word()).then(argument("scale", FloatArgumentType.floatArg(0.01f, 20f)).executes(ctx ->
+            .then(literal("attachmodel").requires(ShyneCommand::isAdmin).then(argument("entity", StringArgumentType.word()).then(argument("model_id", StringArgumentType.word())
+                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(bbModelRegistry.all().stream().map(BbModelDefinition::modelId), builder)).then(argument("scale", FloatArgumentType.floatArg(0.01f, 20f)).executes(ctx ->
                 attachModel(ctx.getSource(), attachmentRuntime, bbModelRegistry, StringArgumentType.getString(ctx, "entity"), StringArgumentType.getString(ctx, "model_id"), FloatArgumentType.getFloat(ctx, "scale"))
             )))))
             .then(literal("detachmodel").requires(ShyneCommand::isAdmin).then(argument("entity", StringArgumentType.word()).executes(ctx ->
                 detachModel(ctx.getSource(), attachmentRuntime, StringArgumentType.getString(ctx, "entity"))
             )))
-            .then(literal("playanim").requires(ShyneCommand::isAdmin).then(argument("entity", StringArgumentType.word()).then(argument("model_id", StringArgumentType.word()).then(argument("animation", StringArgumentType.word()).executes(ctx ->
+            .then(literal("playanim").requires(ShyneCommand::isAdmin).then(argument("entity", StringArgumentType.word()).then(argument("model_id", StringArgumentType.word())
+                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(bbModelRegistry.all().stream().map(BbModelDefinition::modelId), builder)).then(argument("animation", StringArgumentType.word())
+                .suggests((ctx, builder) -> suggestAnimations(ctx.getArgument("model_id", String.class), bbModelRegistry, builder)).executes(ctx ->
                 playAnimation(ctx.getSource(), animationRuntime, bbModelRegistry, StringArgumentType.getString(ctx, "entity"), StringArgumentType.getString(ctx, "model_id"), StringArgumentType.getString(ctx, "animation"))
             )))))
             .then(literal("stopanim").requires(ShyneCommand::isAdmin).then(argument("entity", StringArgumentType.word()).executes(ctx ->
@@ -193,15 +204,22 @@ public final class ShyneCommand {
             .then(sizeCommand())
             .then(literal("help").executes(ctx -> showHelp(ctx.getSource())))
             );
-            dispatcher.register(literal("sjyne")
-                .executes(ctx -> showHelp(ctx.getSource()))
-                .then(sizeCommand())
-                .then(literal("help").executes(ctx -> showHelp(ctx.getSource()))));
+            dispatcher.register(literal("sjyne").redirect(shyneRoot));
         });
     }
 
     private static boolean isAdmin(CommandSourceStack source) {
         return Commands.LEVEL_ADMINS.check(source.permissions());
+    }
+
+    private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestAnimations(
+        String modelId, BbModelRegistry modelRegistry, com.mojang.brigadier.suggestion.SuggestionsBuilder builder
+    ) {
+        BbModelDefinition model = modelRegistry.get(modelId);
+        return SharedSuggestionProvider.suggest(
+            model == null ? java.util.stream.Stream.empty() : model.animations().stream().map(animation -> animation.name()),
+            builder
+        );
     }
 
     private static int showHelp(CommandSourceStack source) {
@@ -222,6 +240,17 @@ public final class ShyneCommand {
         return literal("size")
             .executes(ctx -> showPlayerScale(ctx.getSource(), ctx.getSource().getPlayerOrException()))
             .then(literal("reset").executes(ctx -> setPlayerScale(ctx.getSource(), ctx.getSource().getPlayerOrException(), 1.0f, true)))
+            .then(literal("cm")
+                .then(argument("height_cm", FloatArgumentType.floatArg(minHeightCm(), maxHeightCm())).executes(ctx ->
+                    setPlayerScale(ctx.getSource(), ctx.getSource().getPlayerOrException(), scaleFromCm(FloatArgumentType.getFloat(ctx, "height_cm")), false)
+                )))
+            .then(literal("foot")
+                .then(argument("feet", IntegerArgumentType.integer(1, 23))
+                    .then(argument("inches", FloatArgumentType.floatArg(0.0f, 11.99f)).executes(ctx ->
+                        setPlayerScale(ctx.getSource(), ctx.getSource().getPlayerOrException(), scaleFromFeet(
+                            IntegerArgumentType.getInteger(ctx, "feet"), FloatArgumentType.getFloat(ctx, "inches")
+                        ), false)
+                    ))))
             .then(argument("scale", FloatArgumentType.floatArg(MIN_PLAYER_SCALE, MAX_PLAYER_SCALE)).executes(ctx ->
                 setPlayerScale(ctx.getSource(), ctx.getSource().getPlayerOrException(), FloatArgumentType.getFloat(ctx, "scale"), false)
             ))
@@ -229,9 +258,36 @@ public final class ShyneCommand {
                 .then(literal("reset").executes(ctx ->
                     setPlayerScale(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"), 1.0f, true)
                 ))
+                .then(literal("cm")
+                    .then(argument("height_cm", FloatArgumentType.floatArg(minHeightCm(), maxHeightCm())).executes(ctx ->
+                        setPlayerScale(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"), scaleFromCm(FloatArgumentType.getFloat(ctx, "height_cm")), false)
+                    )))
+                .then(literal("foot")
+                    .then(argument("feet", IntegerArgumentType.integer(1, 23))
+                        .then(argument("inches", FloatArgumentType.floatArg(0.0f, 11.99f)).executes(ctx ->
+                            setPlayerScale(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"), scaleFromFeet(
+                                IntegerArgumentType.getInteger(ctx, "feet"), FloatArgumentType.getFloat(ctx, "inches")
+                            ), false)
+                        ))))
                 .then(argument("scale", FloatArgumentType.floatArg(MIN_PLAYER_SCALE, MAX_PLAYER_SCALE)).executes(ctx ->
                     setPlayerScale(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"), FloatArgumentType.getFloat(ctx, "scale"), false)
                 )));
+    }
+
+    private static float minHeightCm() {
+        return NORMAL_PLAYER_HEIGHT_CM * MIN_PLAYER_SCALE;
+    }
+
+    private static float maxHeightCm() {
+        return NORMAL_PLAYER_HEIGHT_CM * MAX_PLAYER_SCALE;
+    }
+
+    private static float scaleFromCm(float heightCm) {
+        return heightCm / NORMAL_PLAYER_HEIGHT_CM;
+    }
+
+    private static float scaleFromFeet(int feet, float inches) {
+        return scaleFromCm((feet * 12.0f + inches) * CM_PER_INCH);
     }
 
     private static int showPlayerScale(CommandSourceStack source, ServerPlayer player) {
@@ -247,6 +303,13 @@ public final class ShyneCommand {
     }
 
     private static int setPlayerScale(CommandSourceStack source, ServerPlayer player, float scale, boolean reset) {
+        if (!Float.isFinite(scale) || scale < MIN_PLAYER_SCALE || scale > MAX_PLAYER_SCALE) {
+            return fail(source, Component.translatable(
+                "command.shyne.size.out_of_range",
+                formatScale(minHeightCm()),
+                formatScale(maxHeightCm())
+            ));
+        }
         AttributeInstance attribute = player.getAttribute(Attributes.SCALE);
         if (attribute == null) return fail(source, Component.translatable("command.shyne.size.unavailable"));
         attribute.setBaseValue(scale);

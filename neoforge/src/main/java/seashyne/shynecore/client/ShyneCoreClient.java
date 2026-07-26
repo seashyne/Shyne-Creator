@@ -15,6 +15,7 @@ import seashyne.shynecore.client.render.AvatarRenderTasks;
 import seashyne.shynecore.client.ui.ShyneKeybinds;
 import seashyne.shynecore.client.ui.ShynePauseMenu;
 import seashyne.shynecore.client.ui.ShyneSettingsScreen;
+import seashyne.shynecore.client.ui.ShyneTitleMenu;
 
 @Mod(value = ShyneCore.MOD_ID, dist = Dist.CLIENT)
 public class ShyneCoreClient {
@@ -27,6 +28,7 @@ public class ShyneCoreClient {
         AvatarRenderTasks.init();
         ShyneKeybinds.init(modEventBus);
         ShynePauseMenu.init();
+        ShyneTitleMenu.init();
         container.registerExtensionPoint(IConfigScreenFactory.class, (mod, parent) -> new ShyneSettingsScreen(parent));
         ShyneCore.LOGGER.info("[ShyneCreator] Client initialized with renderer + animation sync + keybinds + avatar runtime.");
     }

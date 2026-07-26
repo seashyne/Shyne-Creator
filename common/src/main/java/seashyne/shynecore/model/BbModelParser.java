@@ -36,17 +36,19 @@ public final class BbModelParser {
             String primaryTexture = textures.isEmpty() ? null : textures.get(0).relativePath();
 
             Map<String, RawBone> rawBones = new LinkedHashMap<>();
+            Map<String, JsonObject> groupDefinitions = parseGroupDefinitions(root);
             if (root.has("outliner") && root.get("outliner").isJsonArray()) {
                 for (JsonElement entry : root.getAsJsonArray("outliner")) {
-                    collectRawBones(entry, null, null, rawBones);
+                    collectRawBones(entry, null, null, rawBones, groupDefinitions);
                 }
             }
 
-            Map<String, String> cubeParents = new HashMap<>();
+            Map<String, String> elementParents = new HashMap<>();
             for (RawBone bone : rawBones.values()) {
-                for (String cubeUuid : bone.childCubeUuids) cubeParents.put(cubeUuid, bone.uuid);
+                for (String elementUuid : bone.childElementUuids) elementParents.put(elementUuid, bone.uuid);
             }
-            List<BbCubeDefinition> cubes = parseCubes(root, cubeParents);
+            List<BbCubeDefinition> cubes = parseCubes(root, elementParents);
+            List<BbMeshDefinition> meshes = parseMeshes(root, elementParents);
             Map<String, Integer> cubeCountByParentUuid = new HashMap<>();
             for (BbCubeDefinition cube : cubes) {
                 if (cube.parentBoneUuid() != null) {
@@ -61,6 +63,10 @@ public final class BbModelParser {
                     raw.name,
                     raw.parentName,
                     raw.parentUuid,
+                    raw.parentType,
+                    raw.role,
+                    raw.tags,
+                    raw.physicsPreset,
                     cubeCountByParentUuid.getOrDefault(raw.uuid, 0),
                     raw.pivotX,
                     raw.pivotY,
@@ -68,11 +74,12 @@ public final class BbModelParser {
                     raw.rotationX,
                     raw.rotationY,
                     raw.rotationZ,
+                    raw.visible,
                     List.copyOf(raw.childBoneUuids)
                 ));
             }
 
-            List<BbAnimationDefinition> animations = parseAnimations(root, rawBones, usesLegacyAnimationCoordinates(root));
+            List<BbAnimationDefinition> animations = parseAnimations(root, rawBones, usesV5AnimationCoordinates(root));
             String modelId = sourceModId + ":" + stripExtension(path.getFileName().toString()).toLowerCase(Locale.ROOT);
 
             return new BbModelDefinition(
@@ -87,6 +94,7 @@ public final class BbModelParser {
                 List.copyOf(textures),
                 List.copyOf(bones),
                 List.copyOf(cubes),
+                List.copyOf(meshes),
                 List.copyOf(animations)
             );
         }
@@ -185,6 +193,7 @@ public final class BbModelParser {
             float inflate = obj.has("inflate") ? safeFloat(obj.get("inflate"), 0f) : 0f;
             int textureIndex = obj.has("texture") ? safeInt(obj.get("texture"), 0) : 0;
             boolean mirror = obj.has("mirror_uv") && obj.get("mirror_uv").getAsBoolean();
+            boolean visible = safeBoolean(obj.get("visibility"), true) && safeBoolean(obj.get("export"), true);
             String cubeUuid = obj.has("uuid") ? obj.get("uuid").getAsString() : null;
             String parentUuid = obj.has("parent") ? obj.get("parent").getAsString() : cubeParents.get(cubeUuid);
             cubes.add(new BbCubeDefinition(
@@ -197,7 +206,8 @@ public final class BbModelParser {
                 inflate,
                 parseFaces(obj.get("faces")),
                 textureIndex,
-                mirror
+                mirror,
+                visible
             ));
         }
         return cubes;
@@ -219,7 +229,78 @@ public final class BbModelParser {
         return faces;
     }
 
-    private static List<BbAnimationDefinition> parseAnimations(JsonObject root, Map<String, RawBone> bones, boolean legacyCoordinates) {
+    private static List<BbMeshDefinition> parseMeshes(JsonObject root, Map<String, String> elementParents) {
+        List<BbMeshDefinition> meshes = new ArrayList<>();
+        if (!root.has("elements") || !root.get("elements").isJsonArray()) return meshes;
+        for (JsonElement entry : root.getAsJsonArray("elements")) {
+            if (!entry.isJsonObject()) continue;
+            JsonObject obj = entry.getAsJsonObject();
+            if (!obj.has("type") || !"mesh".equalsIgnoreCase(raw(obj.get("type"), ""))) continue;
+
+            String uuid = raw(obj.get("uuid"), "mesh_" + meshes.size());
+            String parentUuid = obj.has("parent") ? raw(obj.get("parent"), null) : elementParents.get(uuid);
+            float[] origin = readVec3(obj.get("origin"), 0, 0, 0);
+            float[] rotation = readVec3(obj.get("rotation"), 0, 0, 0);
+            boolean visible = safeBoolean(obj.get("visibility"), true) && safeBoolean(obj.get("export"), true);
+            Map<String, BbMeshVertexDefinition> vertices = parseMeshVertices(obj.get("vertices"));
+            List<BbMeshFaceDefinition> faces = parseMeshFaces(obj.get("faces"), vertices);
+
+            meshes.add(new BbMeshDefinition(
+                uuid,
+                raw(obj.get("name"), "mesh_" + meshes.size()),
+                parentUuid,
+                origin[0], origin[1], origin[2],
+                rotation[0], rotation[1], rotation[2],
+                vertices,
+                faces,
+                visible
+            ));
+        }
+        return meshes;
+    }
+
+    private static Map<String, BbMeshVertexDefinition> parseMeshVertices(JsonElement vertexElement) {
+        Map<String, BbMeshVertexDefinition> vertices = new LinkedHashMap<>();
+        if (vertexElement == null || !vertexElement.isJsonObject()) return vertices;
+        for (Map.Entry<String, JsonElement> entry : vertexElement.getAsJsonObject().entrySet()) {
+            float[] position = readVec3(entry.getValue(), 0, 0, 0);
+            vertices.put(entry.getKey(), new BbMeshVertexDefinition(
+                entry.getKey(), position[0], position[1], position[2]
+            ));
+        }
+        return vertices;
+    }
+
+    private static List<BbMeshFaceDefinition> parseMeshFaces(
+        JsonElement faceElement,
+        Map<String, BbMeshVertexDefinition> vertices
+    ) {
+        List<BbMeshFaceDefinition> faces = new ArrayList<>();
+        if (faceElement == null || !faceElement.isJsonObject()) return faces;
+        for (Map.Entry<String, JsonElement> entry : faceElement.getAsJsonObject().entrySet()) {
+            if (!entry.getValue().isJsonObject()) continue;
+            JsonObject face = entry.getValue().getAsJsonObject();
+            List<String> vertexIds = readStringList(face.get("vertices"));
+            Map<String, BbMeshUvDefinition> uvByVertex = new LinkedHashMap<>();
+            JsonObject uv = face.has("uv") && face.get("uv").isJsonObject()
+                ? face.getAsJsonObject("uv") : null;
+            for (String vertexId : vertexIds) {
+                float[] value = uv == null ? new float[] {0f, 0f} : readVec2(uv.get(vertexId), 0f, 0f);
+                uvByVertex.put(vertexId, new BbMeshUvDefinition(value[0], value[1]));
+            }
+            // Single-texture Blockbench formats may omit the per-face reference;
+            // an explicit null/false still means that the polygon is untextured.
+            int textureIndex = face.has("texture") ? safeInt(face.get("texture"), -1) : 0;
+            boolean validVertices = vertexIds.size() >= 3 && vertexIds.stream().allMatch(vertices::containsKey);
+            faces.add(new BbMeshFaceDefinition(
+                entry.getKey(), vertexIds, uvByVertex, textureIndex,
+                validVertices && textureIndex >= 0
+            ));
+        }
+        return faces;
+    }
+
+    private static List<BbAnimationDefinition> parseAnimations(JsonObject root, Map<String, RawBone> bones, boolean convertV5Coordinates) {
         List<BbAnimationDefinition> animations = new ArrayList<>();
         if (!root.has("animations") || !root.get("animations").isJsonArray()) return animations;
         for (JsonElement entry : root.getAsJsonArray("animations")) {
@@ -242,8 +323,8 @@ public final class BbModelParser {
                     }
                     boneAnimations.put(boneUuid, new BbBoneAnimation(
                         boneUuid,
-                        parseAnimatorChannel(animator, "rotation", legacyCoordinates),
-                        parseAnimatorChannel(animator, "position", legacyCoordinates),
+                        parseAnimatorChannel(animator, "rotation", convertV5Coordinates),
+                        parseAnimatorChannel(animator, "position", convertV5Coordinates),
                         parseAnimatorChannel(animator, "scale", false),
                         animator.has("rotation_global") && animator.get("rotation_global").getAsBoolean(),
                         animator.has("quaternion_interpolation") && animator.get("quaternion_interpolation").getAsBoolean()
@@ -259,9 +340,9 @@ public final class BbModelParser {
      * Reads both grouped channel arrays and Blockbench's shared
      * {@code animator.keyframes[]} array, where each frame declares its channel.
      */
-    private static List<BbKeyframe> parseAnimatorChannel(JsonObject animator, String channel, boolean legacyCoordinates) {
+    private static List<BbKeyframe> parseAnimatorChannel(JsonObject animator, String channel, boolean convertV5Coordinates) {
         JsonElement nativeChannel = animator.get(channel);
-        if (nativeChannel != null && !nativeChannel.isJsonNull()) return parseKeyframes(nativeChannel, channel, legacyCoordinates);
+        if (nativeChannel != null && !nativeChannel.isJsonNull()) return parseKeyframes(nativeChannel, channel, convertV5Coordinates);
         if (!animator.has("keyframes") || !animator.get("keyframes").isJsonArray()) return List.of();
 
         JsonArray matching = new JsonArray();
@@ -272,10 +353,10 @@ public final class BbModelParser {
                 matching.add(frame);
             }
         }
-        return parseKeyframes(matching, channel, legacyCoordinates);
+        return parseKeyframes(matching, channel, convertV5Coordinates);
     }
 
-    private static List<BbKeyframe> parseKeyframes(JsonElement channelElement, String channel, boolean legacyCoordinates) {
+    private static List<BbKeyframe> parseKeyframes(JsonElement channelElement, String channel, boolean convertV5Coordinates) {
         List<BbKeyframe> frames = new ArrayList<>();
         if (channelElement == null || channelElement.isJsonNull()) return frames;
         if (channelElement.isJsonObject()) {
@@ -283,20 +364,20 @@ public final class BbModelParser {
                 float time = safeFloat(entry.getKey(), 0f);
                 if (!entry.getValue().isJsonObject()) continue;
                 JsonObject frame = entry.getValue().getAsJsonObject();
-                BbKeyframePoint[] points = migrateKeyframePoints(readKeyframePoints(frame), channel, legacyCoordinates);
+                BbKeyframePoint[] points = migrateKeyframePoints(readKeyframePoints(frame), channel, convertV5Coordinates);
                 String easing = frame.has("easing") ? frame.get("easing").getAsString()
                     : frame.has("interpolation") ? frame.get("interpolation").getAsString() : "linear";
-                frames.add(new BbKeyframe(time, points[0], points[1], easing, migrateBezier(readBezier(frame), channel, legacyCoordinates)));
+                frames.add(new BbKeyframe(time, points[0], points[1], easing, migrateBezier(readBezier(frame), channel, convertV5Coordinates)));
             }
         } else if (channelElement.isJsonArray()) {
             for (JsonElement item : channelElement.getAsJsonArray()) {
                 if (!item.isJsonObject()) continue;
                 JsonObject frame = item.getAsJsonObject();
                 float time = frame.has("time") ? safeFloat(frame.get("time"), 0f) : 0f;
-                BbKeyframePoint[] points = migrateKeyframePoints(readKeyframePoints(frame), channel, legacyCoordinates);
+                BbKeyframePoint[] points = migrateKeyframePoints(readKeyframePoints(frame), channel, convertV5Coordinates);
                 String easing = frame.has("easing") ? frame.get("easing").getAsString()
                     : frame.has("interpolation") ? frame.get("interpolation").getAsString() : "linear";
-                frames.add(new BbKeyframe(time, points[0], points[1], easing, migrateBezier(readBezier(frame), channel, legacyCoordinates)));
+                frames.add(new BbKeyframe(time, points[0], points[1], easing, migrateBezier(readBezier(frame), channel, convertV5Coordinates)));
             }
         }
         frames.sort(Comparator.comparing(BbKeyframe::time));
@@ -347,9 +428,13 @@ public final class BbModelParser {
         );
     }
 
-    /** Mirrors Blockbench 5.x's project migration for .bbmodel formats before 5.0. */
-    private static BbKeyframePoint[] migrateKeyframePoints(BbKeyframePoint[] points, String channel, boolean legacyCoordinates) {
-        if (!legacyCoordinates) return points;
+    /**
+     * Converts Blockbench 5.x animation coordinates to Shyne/Figura render
+     * coordinates. V4 files already store the values in render orientation and
+     * must not be migrated a second time.
+     */
+    private static BbKeyframePoint[] migrateKeyframePoints(BbKeyframePoint[] points, String channel, boolean convertV5Coordinates) {
+        if (!convertV5Coordinates) return points;
         boolean invertX = "position".equals(channel) || "rotation".equals(channel);
         boolean invertY = "rotation".equals(channel);
         if (!invertX && !invertY) return points;
@@ -365,8 +450,8 @@ public final class BbModelParser {
         return migrated;
     }
 
-    private static BbBezierData migrateBezier(BbBezierData value, String channel, boolean legacyCoordinates) {
-        if (!legacyCoordinates) return value;
+    private static BbBezierData migrateBezier(BbBezierData value, String channel, boolean convertV5Coordinates) {
+        if (!convertV5Coordinates) return value;
         float x = ("position".equals(channel) || "rotation".equals(channel)) ? -1f : 1f;
         float y = "rotation".equals(channel) ? -1f : 1f;
         return new BbBezierData(
@@ -391,24 +476,59 @@ public final class BbModelParser {
         }
     }
 
-    private static void collectRawBones(JsonElement entry, String parentUuid, String parentName, Map<String, RawBone> rawBones) {
+    private static Map<String, JsonObject> parseGroupDefinitions(JsonObject root) {
+        Map<String, JsonObject> definitions = new LinkedHashMap<>();
+        if (!root.has("groups") || !root.get("groups").isJsonArray()) return definitions;
+        for (JsonElement entry : root.getAsJsonArray("groups")) {
+            if (!entry.isJsonObject()) continue;
+            JsonObject group = entry.getAsJsonObject();
+            String uuid = raw(group.get("uuid"), "");
+            if (!uuid.isBlank()) definitions.put(uuid, group);
+        }
+        return definitions;
+    }
+
+    private static JsonElement groupProperty(JsonObject outline, JsonObject definition, String name) {
+        if (outline != null && outline.has(name)) return outline.get(name);
+        return definition == null ? null : definition.get(name);
+    }
+
+    private static void collectRawBones(
+        JsonElement entry,
+        String parentUuid,
+        String parentName,
+        Map<String, RawBone> rawBones,
+        Map<String, JsonObject> groupDefinitions
+    ) {
         if (!entry.isJsonObject()) return;
         JsonObject obj = entry.getAsJsonObject();
         String uuid = obj.has("uuid") ? obj.get("uuid").getAsString() : UUID.randomUUID().toString();
-        String name = obj.has("name") ? obj.get("name").getAsString() : "bone_" + rawBones.size();
-        float[] origin = readVec3(obj.get("origin"), 0, 0, 0);
-        float[] rotation = readVec3(obj.get("rotation"), 0, 0, 0);
-        RawBone bone = new RawBone(uuid, name, parentUuid, parentName, origin[0], origin[1], origin[2], rotation[0], rotation[1], rotation[2]);
+        JsonObject definition = groupDefinitions.get(uuid);
+        String name = raw(groupProperty(obj, definition, "name"), "bone_" + rawBones.size());
+        float[] origin = readVec3(groupProperty(obj, definition, "origin"), 0, 0, 0);
+        float[] rotation = readVec3(groupProperty(obj, definition, "rotation"), 0, 0, 0);
+        String parentType = raw(groupProperty(obj, definition, "parent_type"), "");
+        JsonElement roleElement = groupProperty(obj, definition, "shyne_role");
+        if (roleElement == null) roleElement = groupProperty(obj, definition, "role");
+        String role = raw(roleElement, "");
+        JsonElement tagsElement = groupProperty(obj, definition, "shyne_tags");
+        if (tagsElement == null) tagsElement = groupProperty(obj, definition, "tags");
+        List<String> tags = readStringList(tagsElement);
+        String physicsPreset = raw(groupProperty(obj, definition, "shyne_physics"), "none");
+        boolean visible = safeBoolean(groupProperty(obj, definition, "visibility"), true)
+            && safeBoolean(groupProperty(obj, definition, "export"), true);
+        RawBone bone = new RawBone(uuid, name, parentUuid, parentName, parentType, role, tags, physicsPreset, origin[0], origin[1], origin[2], rotation[0], rotation[1], rotation[2], visible);
         rawBones.put(uuid, bone);
         if (parentUuid != null && rawBones.containsKey(parentUuid)) {
             rawBones.get(parentUuid).childBoneUuids.add(uuid);
         }
-        if (obj.has("children") && obj.get("children").isJsonArray()) {
-            for (JsonElement child : obj.getAsJsonArray("children")) {
+        JsonElement children = groupProperty(obj, definition, "children");
+        if (children != null && children.isJsonArray()) {
+            for (JsonElement child : children.getAsJsonArray()) {
                 if (child.isJsonPrimitive() && child.getAsJsonPrimitive().isString()) {
-                    bone.childCubeUuids.add(child.getAsString());
+                    bone.childElementUuids.add(child.getAsString());
                 } else {
-                    collectRawBones(child, uuid, name, rawBones);
+                    collectRawBones(child, uuid, name, rawBones, groupDefinitions);
                 }
             }
         }
@@ -429,11 +549,11 @@ public final class BbModelParser {
         catch (RuntimeException ignored) { return 0; }
     }
 
-    private static boolean usesLegacyAnimationCoordinates(JsonObject root) {
+    private static boolean usesV5AnimationCoordinates(JsonObject root) {
         if (!root.has("meta") || !root.get("meta").isJsonObject()) return false;
         JsonObject meta = root.getAsJsonObject("meta");
         if (!meta.has("format_version")) return false;
-        try { return Double.parseDouble(meta.get("format_version").getAsString()) < 5.0; }
+        try { return Double.parseDouble(meta.get("format_version").getAsString()) >= 5.0; }
         catch (RuntimeException ignored) { return false; }
     }
 
@@ -447,6 +567,28 @@ public final class BbModelParser {
             if (arr.size() > 2) out[2] = safeFloat(arr.get(2), dz);
         }
         return out;
+    }
+
+    private static float[] readVec2(JsonElement el, float dx, float dy) {
+        float[] out = new float[] { dx, dy };
+        if (el == null || el.isJsonNull() || !el.isJsonArray()) return out;
+        JsonArray arr = el.getAsJsonArray();
+        if (arr.size() > 0) out[0] = safeFloat(arr.get(0), dx);
+        if (arr.size() > 1) out[1] = safeFloat(arr.get(1), dy);
+        return out;
+    }
+
+    private static List<String> readStringList(JsonElement element) {
+        if (element == null || element.isJsonNull()) return List.of();
+        List<String> result = new ArrayList<>();
+        if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
+            for (String value : element.getAsString().split(",")) if (!value.isBlank()) result.add(value.trim());
+        } else if (element.isJsonArray()) {
+            for (JsonElement value : element.getAsJsonArray()) {
+                if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isString() && !value.getAsString().isBlank()) result.add(value.getAsString().trim());
+            }
+        }
+        return List.copyOf(result);
     }
 
     private static float[] readVec4(JsonElement el, float a, float b, float c, float d) {
@@ -489,31 +631,46 @@ public final class BbModelParser {
         catch (Exception ignored) { return def; }
     }
 
+    private static boolean safeBoolean(JsonElement el, boolean def) {
+        try { return el == null || el.isJsonNull() ? def : el.getAsBoolean(); }
+        catch (Exception ignored) { return def; }
+    }
+
     private static final class RawBone {
         final String uuid;
         final String name;
         final String parentUuid;
         final String parentName;
+        final String parentType;
+        final String role;
+        final List<String> tags;
+        final String physicsPreset;
         final float pivotX;
         final float pivotY;
         final float pivotZ;
         final float rotationX;
         final float rotationY;
         final float rotationZ;
+        final boolean visible;
         final List<String> childBoneUuids = new ArrayList<>();
-        final List<String> childCubeUuids = new ArrayList<>();
+        final List<String> childElementUuids = new ArrayList<>();
 
-        RawBone(String uuid, String name, String parentUuid, String parentName, float pivotX, float pivotY, float pivotZ, float rotationX, float rotationY, float rotationZ) {
+        RawBone(String uuid, String name, String parentUuid, String parentName, String parentType, String role, List<String> tags, String physicsPreset, float pivotX, float pivotY, float pivotZ, float rotationX, float rotationY, float rotationZ, boolean visible) {
             this.uuid = uuid;
             this.name = name;
             this.parentUuid = parentUuid;
             this.parentName = parentName;
+            this.parentType = parentType == null ? "" : parentType;
+            this.role = role == null ? "" : role;
+            this.tags = tags == null ? List.of() : List.copyOf(tags);
+            this.physicsPreset = physicsPreset == null ? "none" : physicsPreset;
             this.pivotX = pivotX;
             this.pivotY = pivotY;
             this.pivotZ = pivotZ;
             this.rotationX = rotationX;
             this.rotationY = rotationY;
             this.rotationZ = rotationZ;
+            this.visible = visible;
         }
     }
 }

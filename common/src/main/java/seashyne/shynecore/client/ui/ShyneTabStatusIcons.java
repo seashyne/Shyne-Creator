@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
 import seashyne.shynecore.client.avatar.RemoteAvatarState;
+import seashyne.shynecore.client.config.ShyneClientSettings;
 import seashyne.shynecore.client.state.ClientAnimationState;
 import seashyne.shynecore.network.ShyneNetwork;
 
@@ -52,6 +53,15 @@ public final class ShyneTabStatusIcons {
         PRESENCE.clear();
     }
 
+    public static boolean isShynePlayer(UUID playerId) {
+        return playerId != null && PRESENCE.containsKey(playerId);
+    }
+
+    public static boolean hasShyneAvatar(UUID playerId) {
+        ShyneNetwork.NetPlayerPresence presence = playerId == null ? null : PRESENCE.get(playerId);
+        return presence != null && presence.avatarAvailable();
+    }
+
     public static Component decorate(PlayerInfo playerInfo, Component playerName) {
         if (playerInfo == null || playerName == null) return playerName;
         UUID playerId = playerInfo.getProfile().id();
@@ -66,8 +76,9 @@ public final class ShyneTabStatusIcons {
     private static String statusGlyph(UUID playerId, ShyneNetwork.NetPlayerPresence presence) {
         Minecraft minecraft = Minecraft.getInstance();
         PlayerSocialManager social = minecraft.getPlayerSocialManager();
-        if (social.isBlocked(playerId) || social.isHidden(playerId)) return BLOCKED;
         if (minecraft.player != null && playerId.equals(minecraft.player.getUUID())) return LOCAL_PLAYER;
+        if (social.isBlocked(playerId) || social.isHidden(playerId)
+            || ShyneClientSettings.isRemoteAvatarHidden(playerId)) return BLOCKED;
         if (!presence.avatarAvailable()) return SKIN_ONLY;
 
         RemoteAvatarState remoteAvatar = ClientAnimationState.getRemoteAvatar(playerId);

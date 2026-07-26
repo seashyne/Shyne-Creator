@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 public record AvatarManifest(
-    int apiVersion,
+    String standard,
     String id,
     String name,
     String version,
@@ -22,5 +22,10 @@ public record AvatarManifest(
     Set<AvatarPermission> permissions,
     String api,
     boolean automaticApi,
-    Map<String, String> apiRequirements
-) {}
+    Map<String, String> apiRequirements,
+    String profile,
+    AvatarBehavior behavior
+) {
+    public boolean hasScript() { return main != null && !main.isBlank(); }
+    public AvatarProfile parsedProfile() { return AvatarProfile.parse(profile); }
+}

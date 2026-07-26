@@ -1,6 +1,5 @@
 package seashyne.shynecore.client.avatar;
 
-import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -8,72 +7,55 @@ import java.util.Set;
 /**
  * Single source of truth for the Shyne Lua API contract.
  *
- * <p>Avatar authors may select a fixed standard such as {@code 1.1}, or use
+ * <p>Avatar authors use Standard {@code 2.0}, or the aliases
  * {@code latest}/{@code auto}. Module requirements are checked before any Lua
  * code runs so an Avatar never starts with a partially supported API.</p>
  */
 public final class ShyneApiStandard {
-    public static final String LATEST = "1.1";
-    public static final Set<String> SUPPORTED_STANDARDS = Set.of("1.0", LATEST);
+    public static final String LATEST = "2.0";
+    public static final Set<String> SUPPORTED_STANDARDS = Set.of(LATEST);
 
     private static final Map<String, String> MODULES = Map.ofEntries(
         Map.entry("animation", "1.1"),
         Map.entry("core", "1.1"),
         Map.entry("diagnostics", "1.1"),
+        Map.entry("easy", "1.0"),
+        Map.entry("events", "2.0"),
         Map.entry("input", "1.0"),
         Map.entry("minecraft", "1.0"),
         Map.entry("modules", "1.0"),
         Map.entry("network", "1.0"),
         Map.entry("permissions", "1.1"),
-        Map.entry("render", "1.1"),
+        Map.entry("render", "1.3"),
         Map.entry("scheduler", "1.1"),
         Map.entry("ui", "1.1"),
-        Map.entry("vector", "1.1")
+        Map.entry("transform", "1.0"),
+        Map.entry("vector", "1.1"),
+        Map.entry("rig", "1.3"),
+        Map.entry("behavior", "2.0")
     );
-    private static final Set<String> STANDARD_1_0_MODULES = Set.of(
-        "animation", "core", "diagnostics", "input", "minecraft", "modules", "network", "render", "ui", "vector"
-    );
-
     private ShyneApiStandard() {}
 
-    public static Selection select(String declaredApi, Integer legacyApiVersion) {
+    public static Selection select(String declaredApi) {
         String value = declaredApi == null ? "" : declaredApi.trim().toLowerCase(Locale.ROOT);
         boolean automatic = value.isBlank() || value.equals("latest") || value.equals("auto");
-
-        if (legacyApiVersion != null && legacyApiVersion != 1) {
-            throw new IllegalArgumentException(
-                "unsupported avatar api_version " + legacyApiVersion + "; expected 1"
-            );
-        }
-
-        // Explicit api_version: 1 keeps the historical 1.0 contract unless a
-        // compatible semantic "api" field is also supplied.
-        String standard = automatic
-            ? (legacyApiVersion == null ? LATEST : "1.0")
-            : normalizeVersion(value);
+        String standard = automatic ? LATEST : normalizeVersion(value);
         if (!SUPPORTED_STANDARDS.contains(standard)) {
             throw new IllegalArgumentException(
                 "unsupported Shyne Lua API " + standard + "; supported: " + SUPPORTED_STANDARDS
             );
         }
-        if (legacyApiVersion != null && major(standard) != legacyApiVersion) {
-            throw new IllegalArgumentException(
-                "api and api_version select different major versions"
-            );
-        }
-        return new Selection(standard, automatic && legacyApiVersion == null);
+        return new Selection(standard, automatic);
     }
 
     public static Map<String, String> modulesFor(String standard) {
         String selected = normalizeVersion(standard);
-        Map<String, String> result = new LinkedHashMap<>();
-        MODULES.forEach((module, version) -> {
-            // Modules inherited by 1.0 report the contract version they had then.
-            if (!selected.equals("1.0") || STANDARD_1_0_MODULES.contains(module)) {
-                result.put(module, selected.equals("1.0") ? "1.0" : version);
-            }
-        });
-        return Map.copyOf(result);
+        if (!SUPPORTED_STANDARDS.contains(selected)) {
+            throw new IllegalArgumentException(
+                "unsupported Shyne Lua API " + selected + "; supported: " + SUPPORTED_STANDARDS
+            );
+        }
+        return MODULES;
     }
 
     public static boolean supports(String standard, String module, String requirement) {

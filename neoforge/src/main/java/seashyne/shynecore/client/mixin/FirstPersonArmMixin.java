@@ -10,6 +10,7 @@ import net.minecraft.world.entity.HumanoidArm;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import seashyne.shynecore.client.avatar.AvatarRuntime;
 import seashyne.shynecore.client.render.BbModelEntityRenderer;
 
 @Mixin(ItemInHandRenderer.class)
@@ -22,8 +23,10 @@ public abstract class FirstPersonArmMixin {
         )
     )
     private void shyne$renderRightAvatarArm(AvatarRenderer renderer, PoseStack poseStack, SubmitNodeCollector collector, int light, Identifier texture, boolean sleeve, Avatar avatar) {
-        if (!BbModelEntityRenderer.renderFirstPersonArm(poseStack, collector, light, HumanoidArm.RIGHT)) {
-            renderer.renderRightHand(poseStack, collector, light, texture, sleeve, avatar);
+        if (!BbModelEntityRenderer.renderFirstPersonArm(poseStack, collector, light, HumanoidArm.RIGHT)
+            && AvatarRuntime.isVanillaPartVisible("RIGHT_ARM")) {
+            renderer.renderRightHand(poseStack, collector, light, texture,
+                sleeve && AvatarRuntime.isVanillaPartVisible("RIGHT_SLEEVE"), avatar);
         }
     }
 
@@ -35,8 +38,10 @@ public abstract class FirstPersonArmMixin {
         )
     )
     private void shyne$renderLeftAvatarArm(AvatarRenderer renderer, PoseStack poseStack, SubmitNodeCollector collector, int light, Identifier texture, boolean sleeve, Avatar avatar) {
-        if (!BbModelEntityRenderer.renderFirstPersonArm(poseStack, collector, light, HumanoidArm.LEFT)) {
-            renderer.renderLeftHand(poseStack, collector, light, texture, sleeve, avatar);
+        if (!BbModelEntityRenderer.renderFirstPersonArm(poseStack, collector, light, HumanoidArm.LEFT)
+            && AvatarRuntime.isVanillaPartVisible("LEFT_ARM")) {
+            renderer.renderLeftHand(poseStack, collector, light, texture,
+                sleeve && AvatarRuntime.isVanillaPartVisible("LEFT_SLEEVE"), avatar);
         }
     }
 }

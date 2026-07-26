@@ -37,7 +37,9 @@ public final class CloudAvatarLibraryScreen extends Screen {
     private CompletableFuture<?> activeRequest;
     private long requestGeneration;
     private Runnable retryAction;
+    private boolean retryIsSignIn;
     private boolean publicMode;
+    private Button accountButton;
 
     public CloudAvatarLibraryScreen(Screen parent) {
         super(Component.translatable("screen.shyne_core.cloud.title"));
@@ -71,11 +73,11 @@ public final class CloudAvatarLibraryScreen extends Screen {
             .bounds(panelX + panelWidth - 226, panelY + 43, 72, 20).build();
         searchButton.active = !loading;
         addRenderableWidget(searchButton);
-        Button account = Button.builder(Component.literal(ShyneCloudClient.signedIn() ? ShyneCloudClient.accountName() : Component.translatable("screen.shyne_core.cloud.signin").getString()), button -> signIn())
+        accountButton = Button.builder(Component.literal(ShyneCloudClient.signedIn() ? ShyneCloudClient.accountName() : Component.translatable("screen.shyne_core.cloud.signin").getString()), button -> signIn())
             .tooltip(Tooltip.create(Component.translatable(ShyneCloudClient.signedIn() ? "screen.shyne_core.cloud.signout.tooltip" : "screen.shyne_core.cloud.signin.tooltip")))
             .bounds(panelX + panelWidth - 140, panelY + 43, 126, 20).build();
-        account.active = !loading;
-        addRenderableWidget(account);
+        accountButton.active = !loading && (ShyneCloudClient.signedIn() || ShyneCloudClient.signInRetrySeconds() == 0);
+        addRenderableWidget(accountButton);
 
         int listX = panelX + 14;
         int listY = panelY + 76;
@@ -144,8 +146,10 @@ public final class CloudAvatarLibraryScreen extends Screen {
                 .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.cloud.cancel.tooltip")))
                 .bounds(panelX + panelWidth - 184, footerY, 86, 20).build());
         } else if (!loading && (operation.state() == ShyneCloudClient.State.ERROR || operation.state() == ShyneCloudClient.State.CANCELLED) && retryAction != null) {
-            addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.cloud.retry"), button -> retryOperation())
-                .bounds(panelX + panelWidth - 184, footerY, 86, 20).build());
+            Button retry = Button.builder(Component.translatable("screen.shyne_core.cloud.retry"), button -> retryOperation())
+                .bounds(panelX + panelWidth - 184, footerY, 86, 20).build();
+            retry.active = !retryIsSignIn || ShyneCloudClient.signInRetrySeconds() == 0;
+            addRenderableWidget(retry);
         }
         addRenderableWidget(Button.builder(Component.translatable("gui.back"), button -> onClose())
             .bounds(panelX + panelWidth - 94, footerY, 80, 20).build());
@@ -162,6 +166,7 @@ public final class CloudAvatarLibraryScreen extends Screen {
         searchText = search == null ? searchText : search.getValue();
         String query = searchText;
         retryAction = this::refresh;
+        retryIsSignIn = false;
         if (!publicMode && !ShyneCloudClient.signedIn()) {
             loading = false;
             items = List.of();
@@ -191,6 +196,7 @@ public final class CloudAvatarLibraryScreen extends Screen {
         }
         loading = true;
         retryAction = this::signIn;
+        retryIsSignIn = true;
         var request = ShyneCloudClient.signIn(Minecraft.getInstance());
         activeRequest = request;
         long requestId = ++requestGeneration;
@@ -234,6 +240,7 @@ public final class CloudAvatarLibraryScreen extends Screen {
     private void startDownload(ShyneCloudClient.CloudAvatar current) {
         loading = true;
         retryAction = this::downloadCurrent;
+        retryIsSignIn = false;
         activeRequest = publicMode ? ShyneCloudClient.usePublic(current, Minecraft.getInstance()) : ShyneCloudClient.download(current.id());
         long requestId = ++requestGeneration;
         activeRequest.whenComplete((result, error) -> completeOnUi(requestId, () -> {
@@ -250,6 +257,7 @@ public final class CloudAvatarLibraryScreen extends Screen {
         if (current == null) return;
         loading = true;
         retryAction = this::publishCurrent;
+        retryIsSignIn = false;
         if (current.published()) {
             activeRequest = ShyneCloudClient.unpublish(current.id());
         } else {
@@ -271,6 +279,7 @@ public final class CloudAvatarLibraryScreen extends Screen {
         if (active == null) return;
         loading = true;
         retryAction = this::uploadActive;
+        retryIsSignIn = false;
         var request = ShyneCloudClient.upload(active.rootDir());
         activeRequest = request;
         long requestId = ++requestGeneration;
@@ -306,6 +315,14 @@ public final class CloudAvatarLibraryScreen extends Screen {
             if (requestId != requestGeneration || client.gui.screen() != this) return;
             action.run();
         });
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (accountButton != null && !ShyneCloudClient.signedIn()) {
+            accountButton.active = !loading && ShyneCloudClient.signInRetrySeconds() == 0;
+        }
     }
 
     @Override

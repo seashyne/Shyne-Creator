@@ -1,6 +1,6 @@
 # Shyne Custom Render API 1.3
 
-เอกสารนี้ตรงกับ Shyne Creator `2.8.4-alpha-26.2`
+เอกสารนี้ตรงกับ Shyne Creator `2.9.0-alpha-26.2`
 
 Custom Render API 1.3 เป็นโมดูล render ภายใต้ Shyne Avatar Standard 2.0 Avatar ใหม่ใช้ผ่าน `api: "2.0"` หรือ `api: "latest"` และตรวจได้จาก `shyne.api.supports("render", ">=1.3")`, `render.api_version` หรือ `diagnostics.snapshot().custom_render_api_version`
 

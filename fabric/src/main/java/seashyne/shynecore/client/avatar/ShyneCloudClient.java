@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
@@ -36,11 +37,16 @@ public final class ShyneCloudClient {
     private static final AtomicReference<Operation> LAST = new AtomicReference<>(Operation.idle());
     private static final AtomicLong OPERATION_SEQUENCE = new AtomicLong();
     private static final AtomicLong ACTIVE_OPERATION = new AtomicLong();
+    private static final AtomicBoolean SIGN_IN_RUNNING = new AtomicBoolean();
+    private static final long SIGN_IN_RATE_LIMIT_COOLDOWN_MS = 60_000L;
+    private static final long PUBLIC_METADATA_CHECK_INTERVAL_MS = 5 * 60 * 1000L;
     private static volatile Session session = loadSession();
+    private static volatile long nextSignInAllowedAt;
     private static volatile String activePublicShare = "";
-    private static volatile long activePublicLeaseExpiresAt;
-    private static volatile long lastLeaseRefreshAttempt;
-    private static volatile boolean leaseRefreshRunning;
+    private static volatile String activePublicPackageHash = "";
+    private static volatile Set<AvatarPermission> activePublicPermissions = Set.of();
+    private static volatile long lastPublicMetadataCheck;
+    private static volatile boolean publicMetadataCheckRunning;
 
     private ShyneCloudClient() {}
 
@@ -56,10 +62,17 @@ public final class ShyneCloudClient {
     }
     public static boolean signedIn() { return session != null && session.expiresAt() > System.currentTimeMillis(); }
     public static String accountName() { return signedIn() ? session.username() : ""; }
+    public static long signInRetrySeconds() {
+        long remaining = nextSignInAllowedAt - System.currentTimeMillis();
+        return remaining <= 0 ? 0 : (remaining + 999L) / 1000L;
+    }
 
     public static CompletableFuture<Operation> signIn(Minecraft client) {
         if (!ShyneClientSettings.cloudEnabled) return failed("Cloud avatars are disabled in settings");
         if (client == null || client.getUser() == null) return failed("Minecraft account is unavailable");
+        long retrySeconds = signInRetrySeconds();
+        if (retrySeconds > 0) return failed("Cloud sign-in is cooling down; retry in " + retrySeconds + " seconds");
+        if (!SIGN_IN_RUNNING.compareAndSet(false, true)) return failed("Minecraft sign-in is already in progress");
         long operation = begin("Starting secure Minecraft sign-in…");
         String username = client.getUser().getName();
         JsonObject body = new JsonObject();
@@ -89,8 +102,17 @@ public final class ShyneCloudClient {
                 Session next = new Session(requiredString(result, "token"), result.get("expires_at").getAsLong(), requiredString(account, "uuid"), requiredString(account, "username"));
                 session = next;
                 saveSession(next);
+                nextSignInAllowedAt = 0L;
                 return remember(Operation.success("Signed in as " + next.username()));
-            }).exceptionally(ShyneCloudClient::failureOrCancelled);
+            }).exceptionally(ShyneCloudClient::failureOrCancelled)
+            .whenComplete((result, error) -> {
+                SIGN_IN_RUNNING.set(false);
+                String message = result == null ? safeMessage(error) : result.message();
+                if (isRateLimitFailure(message)) {
+                    nextSignInAllowedAt = System.currentTimeMillis() + SIGN_IN_RATE_LIMIT_COOLDOWN_MS;
+                    remember(Operation.failure("Cloud sign-in was temporarily limited; wait 60 seconds before retrying"));
+                }
+            });
     }
 
     public static void signOut() {
@@ -171,13 +193,13 @@ public final class ShyneCloudClient {
 
     public static CompletableFuture<Operation> publish(Path avatarRoot) {
         if (!signedIn()) return failed("Sign in before publishing an Avatar");
-        long operation = begin("Building secure .sc package…");
+        long operation = begin("Building Public Avatar ZIP…");
         return CompletableFuture.supplyAsync(() -> {
             try {
                 requireActive(operation);
                 AvatarManifest manifest = AvatarLoader.loadManifest(avatarRoot);
                 byte[] zip = ShyneSecureAvatar.createZip(avatarRoot);
-                progress(operation, "Encrypting and signing .sc in Shyne Cloud…", 0.55);
+                progress(operation, "Uploading validated Public Avatar ZIP…", 0.55);
                 return new PublicUpload(manifest.id().toLowerCase(Locale.ROOT), zip, manifest.permissions());
             } catch (Exception error) {
                 throw new CompletionFailure("Could not prepare Public Share", error);
@@ -194,7 +216,7 @@ public final class ShyneCloudClient {
         ))
             .thenApply(result -> {
                 requireActive(operation);
-                return remember(Operation.success("Published secure Public Share: " + requiredString(result, "share_id")));
+                return remember(Operation.success("Published Public Share: " + requiredString(result, "share_id")));
             }).exceptionally(ShyneCloudClient::failureOrCancelled);
     }
 
@@ -203,7 +225,7 @@ public final class ShyneCloudClient {
         if (!SAFE_ID.matcher(avatarId).matches()) return failed("Invalid Avatar id");
         long operation = begin("Revoking Public Share…");
         return sendJson("DELETE", "/v1/avatars/" + avatarId + "/publication", null, true)
-            .thenApply(result -> remember(Operation.success("Public Share revoked; new leases are blocked")))
+            .thenApply(result -> remember(Operation.success("Public Share revoked; new downloads are blocked")))
             .exceptionally(ShyneCloudClient::failureOrCancelled);
     }
 
@@ -218,40 +240,47 @@ public final class ShyneCloudClient {
 
     public static CompletableFuture<Operation> usePublic(CloudAvatar avatar, Minecraft client) {
         if (!signedIn()) return failed("Minecraft sign-in is required to use Public Share");
-        if (avatar == null || !SAFE_SHARE_ID.matcher(avatar.shareId()).matches()) return failed("Invalid Public Share metadata");
+        if (avatar == null
+            || !SAFE_SHARE_ID.matcher(avatar.shareId()).matches()
+            || !SAFE_ID.matcher(avatar.id()).matches()
+            || !SAFE_HASH.matcher(avatar.packageHash()).matches()) {
+            return failed("Invalid Public Share metadata");
+        }
         if (needsPermissionDecision(avatar)) {
             return failed("Review and approve this Public Avatar's permissions before use");
         }
         String shareId = avatar.shareId();
         Set<AvatarPermission> approved = ShyneClientSettings.approvedPublicPermissions(shareId, avatar.packageHash());
-        long operation = begin("Requesting secure Avatar lease…");
-        return requestLease(shareId).thenCompose(lease -> {
-            requireActive(operation);
-            if (!avatar.packageHash().isBlank() && !avatar.packageHash().equals(lease.packageHash())) {
-                throw new CompletionFailure("Public Avatar changed; review its permissions again", null);
-            }
-            if (!avatar.permissions().equals(lease.permissions())) {
-                throw new CompletionFailure("Public Avatar permission metadata changed; review it again", null);
-            }
-            progress(operation, "Downloading encrypted .sc package…", 0.35);
-            return downloadPackage(shareId).thenApply(container -> new PublicInstall(lease, container));
-        }).thenCompose(install -> CompletableFuture.supplyAsync(() -> {
+        long operation = begin("Downloading Public Avatar ZIP…");
+        return downloadPackage(shareId).thenCompose(zip -> CompletableFuture.supplyAsync(() -> {
             try {
                 requireActive(operation);
-                progress(operation, "Verifying and opening .sc package…", 0.72);
-                return ShyneSecureAvatar.installAndOpen(install.container(), install.lease(), approved);
+                progress(operation, "Verifying Public Avatar ZIP…", 0.72);
+                return ShyneSecureAvatar.installCloudZip(
+                    zip,
+                    shareId,
+                    avatar.id(),
+                    avatar.packageHash(),
+                    avatar.permissions(),
+                    approved,
+                    avatar.creatorId(),
+                    avatar.ownerName()
+                );
             } catch (Exception error) {
-                throw new CompletionFailure("Could not open secure Avatar", error);
+                throw new CompletionFailure("Could not open Public Avatar", error);
             }
         }).thenCompose(root -> onClientThread(client, () -> {
             try {
                 AvatarActivationResult activated = AvatarRuntime.activate(root, client);
                 if (!activated.success()) throw new IOException(activated.message());
                 activePublicShare = shareId;
-                activePublicLeaseExpiresAt = install.lease().expiresAt();
+                activePublicPackageHash = avatar.packageHash();
+                activePublicPermissions = Set.copyOf(avatar.permissions());
+                lastPublicMetadataCheck = System.currentTimeMillis();
+                publicMetadataCheckRunning = false;
                 ShyneClientSettings.selectedAvatarId = "@public:" + shareId;
                 ShyneClientSettings.save();
-                return remember(Operation.success("Secure Public Avatar is active"));
+                return remember(Operation.success("Public Avatar is active"));
             } catch (Exception error) {
                 ShyneSecureAvatar.releaseRuntime(root);
                 throw new CompletionFailure("Could not activate Public Avatar", error);
@@ -276,26 +305,45 @@ public final class ShyneCloudClient {
     public static void tick(Minecraft client) {
         if (activePublicShare.isBlank()) return;
         long now = System.currentTimeMillis();
-        if (now >= activePublicLeaseExpiresAt) {
-            clearActivePublic();
-            if (client != null) client.execute(() -> AvatarRuntime.deactivate(client));
-            remember(Operation.failure("Public Share lease expired or was revoked"));
-            return;
-        }
-        if (activePublicLeaseExpiresAt - now > 5 * 60 * 1000L || now - lastLeaseRefreshAttempt < 30_000L || leaseRefreshRunning) return;
-        lastLeaseRefreshAttempt = now;
-        leaseRefreshRunning = true;
+        if (publicMetadataCheckRunning || now - lastPublicMetadataCheck < PUBLIC_METADATA_CHECK_INTERVAL_MS) return;
+        lastPublicMetadataCheck = now;
+        publicMetadataCheckRunning = true;
         String shareId = activePublicShare;
-        requestLease(shareId).whenComplete((lease, error) -> {
-            leaseRefreshRunning = false;
-            if (error == null && lease != null && shareId.equals(activePublicShare)) activePublicLeaseExpiresAt = lease.expiresAt();
+        String packageHash = activePublicPackageHash;
+        Set<AvatarPermission> permissions = activePublicPermissions;
+        sendJson("GET", "/v1/shares/" + shareId, null, false)
+            .thenApply(ShyneCloudClient::parseAvatar)
+            .whenComplete((latest, error) -> {
+                publicMetadataCheckRunning = false;
+                if (!shareId.equals(activePublicShare) || !packageHash.equals(activePublicPackageHash)) return;
+                if (error != null) {
+                    int status = httpStatus(error);
+                    if (status == 404 || status == 410) {
+                        deactivatePublic(client, shareId, packageHash, "Public Share was revoked or removed");
+                    }
+                    return;
+                }
+                if (latest == null
+                    || !packageHash.equals(latest.packageHash())
+                    || !permissions.equals(latest.permissions())) {
+                    deactivatePublic(client, shareId, packageHash, "Public Avatar changed; review its permissions before using it again");
+                }
         });
     }
 
     public static void clearActivePublic() {
         activePublicShare = "";
-        activePublicLeaseExpiresAt = 0L;
-        leaseRefreshRunning = false;
+        activePublicPackageHash = "";
+        activePublicPermissions = Set.of();
+        lastPublicMetadataCheck = 0L;
+        publicMetadataCheckRunning = false;
+    }
+
+    private static void deactivatePublic(Minecraft client, String shareId, String packageHash, String message) {
+        if (!shareId.equals(activePublicShare) || !packageHash.equals(activePublicPackageHash)) return;
+        clearActivePublic();
+        if (client != null) client.execute(() -> AvatarRuntime.deactivate(client));
+        remember(Operation.failure(message));
     }
 
     private static UploadPlan buildUpload(Path root, long operation) throws Exception {
@@ -489,7 +537,7 @@ public final class ShyneCloudClient {
         try {
             HttpRequest.Builder builder = requestBuilder(path, authenticated)
                 .header("Accept", "application/json")
-                .header("Content-Type", "application/zip")
+                .header("Content-Type", "application/vnd.shyne.avatar+zip")
                 .method(method, HttpRequest.BodyPublishers.ofByteArray(body));
             if (headers != null) headers.forEach(builder::header);
             HttpRequest request = builder.build();
@@ -503,28 +551,18 @@ public final class ShyneCloudClient {
         }
     }
 
-    private static CompletableFuture<ShyneSecureAvatar.Lease> requestLease(String shareId) {
-        return sendJson("POST", "/v1/shares/" + shareId + "/lease", new JsonObject(), true).thenApply(json -> {
-            try {
-                ShyneSecureAvatar.Lease lease = ShyneSecureAvatar.verifyLease(
-                    requiredString(json, "lease"), requiredString(json, "signature"), requiredString(json, "data_key")
-                );
-                if (!shareId.equals(lease.shareId())) throw new IOException("Lease belongs to another Public Share");
-                return lease;
-            } catch (Exception error) {
-                throw new CompletionFailure("Secure lease verification failed", error);
-            }
-        });
-    }
-
     private static CompletableFuture<byte[]> downloadPackage(String shareId) {
         try {
             HttpRequest request = requestBuilder("/v1/shares/" + shareId + "/package", true)
-                .header("Accept", "application/vnd.shyne.secure-avatar").GET().build();
+                .header("Accept", "application/vnd.shyne.avatar+zip").GET().build();
             return HTTP.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()).thenApply(response -> {
                 requireSuccess(response);
-                if (response.body().length > ShyneSecureAvatar.MAX_PACKAGE_BYTES + 128 * 1024) {
-                    throw new CompletionFailure("Secure Avatar package is too large", null);
+                String contentType = response.headers().firstValue("Content-Type").orElse("").toLowerCase(Locale.ROOT);
+                if (!contentType.startsWith("application/vnd.shyne.avatar+zip")) {
+                    throw new CompletionFailure("Cloud returned an unexpected Public Avatar format", null);
+                }
+                if (response.body().length == 0 || response.body().length > ShyneSecureAvatar.MAX_PACKAGE_BYTES) {
+                    throw new CompletionFailure("Public Avatar ZIP size is invalid", null);
                 }
                 return response.body();
             });
@@ -609,7 +647,7 @@ public final class ShyneCloudClient {
             JsonObject error = GSON.fromJson(new String(response.body(), StandardCharsets.UTF_8), JsonObject.class);
             if (error != null && error.has("error")) message = error.get("error").getAsString();
         } catch (RuntimeException ignored) {}
-        throw new CompletionFailure(message, null);
+        throw new CompletionFailure(message, null, response.statusCode());
     }
 
     private static Session loadSession() {
@@ -683,17 +721,43 @@ public final class ShyneCloudClient {
             : remember(Operation.failure(safeMessage(error)));
     }
     private static String safeMessage(Throwable error) {
+        if (error == null) return "Cloud request failed";
         Throwable cause = error;
         while (cause.getCause() != null) cause = cause.getCause();
         return cause.getMessage() == null || cause.getMessage().isBlank() ? cause.getClass().getSimpleName() : cause.getMessage();
+    }
+
+    private static int httpStatus(Throwable error) {
+        Throwable current = error;
+        while (current != null) {
+            if (current instanceof CompletionFailure failure && failure.statusCode() > 0) return failure.statusCode();
+            current = current.getCause();
+        }
+        return 0;
+    }
+
+    private static boolean isRateLimitFailure(String message) {
+        if (message == null) return false;
+        String normalized = message.toLowerCase(Locale.ROOT);
+        return normalized.contains("rate limit")
+            || normalized.contains("ratelimiter")
+            || normalized.contains("too many request")
+            || normalized.contains("disallowed request");
     }
 
     private record Session(String token, long expiresAt, String uuid, String username) {}
     private record ChunkSource(String hash, byte[] bytes) {}
     private record UploadPlan(JsonObject request, LinkedHashMap<String, ChunkSource> chunks) {}
     private record PublicUpload(String avatarId, byte[] zip, Set<AvatarPermission> permissions) {}
-    private record PublicInstall(ShyneSecureAvatar.Lease lease, byte[] container) {}
-    private static final class CompletionFailure extends RuntimeException { CompletionFailure(String message, Throwable cause) { super(message, cause); } }
+    private static final class CompletionFailure extends RuntimeException {
+        private final int statusCode;
+        CompletionFailure(String message, Throwable cause) { this(message, cause, 0); }
+        CompletionFailure(String message, Throwable cause, int statusCode) {
+            super(message, cause);
+            this.statusCode = statusCode;
+        }
+        int statusCode() { return statusCode; }
+    }
 
     public record CloudPage(List<CloudAvatar> items, Integer nextOffset) {}
     public record CloudAvatar(

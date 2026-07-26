@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.Set;
 
 /**
@@ -35,6 +36,7 @@ public final class AvatarState {
     private boolean nameplateVisible = true;
     private String textureSyncMode = "manifest";
     private String syncedSchemaPath = "";
+    private AvatarSyncedSchema syncedSchema = AvatarSyncedSchema.allowAll();
     private final Map<String, Object> vars = new ConcurrentHashMap<>();
     private final Map<String, Object> syncedVars = new ConcurrentHashMap<>();
     private final Map<String, Double> animationParameters = new ConcurrentHashMap<>();
@@ -52,9 +54,12 @@ public final class AvatarState {
     private String selectedOutfitId = AvatarOutfitLoader.DEFAULT_OUTFIT;
     private byte[] selectedOutfitTexture = new byte[0];
     private UUID boundEntityId;
-    private volatile boolean syncedDirty;
-    private volatile boolean animationParametersDirty;
-    private volatile boolean snapshotDirty = true;
+    private final DirtyRevision syncedDirty = new DirtyRevision(false);
+    private final DirtyRevision animationParametersDirty = new DirtyRevision(false);
+    private final DirtyRevision snapshotDirty = new DirtyRevision(true);
+    // High-frequency transforms use a separate lane from manifest/visibility
+    // changes so networking can rate-limit pose traffic without delaying state.
+    private final DirtyRevision poseDirty = new DirtyRevision(false);
     private String currentAnimation = "";
     private long currentAnimationStartedAtMillis;
 
@@ -87,6 +92,18 @@ public final class AvatarState {
         vanillaVisibility.put("LEFT_PANTS", true);
         vanillaVisibility.put("RIGHT_PANTS", true);
         vanillaVisibility.put("CAPE", true);
+        vanillaVisibility.put("ELYTRA", true);
+        vanillaVisibility.put("ARMOR", true);
+        vanillaVisibility.put("HELMET", true);
+        vanillaVisibility.put("CHESTPLATE", true);
+        vanillaVisibility.put("LEGGINGS", true);
+        vanillaVisibility.put("BOOTS", true);
+        vanillaVisibility.put(VanillaVisibilityKeys.HELD_ITEMS, true);
+        vanillaVisibility.put(VanillaVisibilityKeys.LEFT_ITEM, true);
+        vanillaVisibility.put(VanillaVisibilityKeys.RIGHT_ITEM, true);
+        vanillaVisibility.put(VanillaVisibilityKeys.MAIN_HAND, true);
+        vanillaVisibility.put(VanillaVisibilityKeys.OFF_HAND, true);
+        vanillaVisibility.put(VanillaVisibilityKeys.HEAD_ITEM, true);
     }
 
     public String avatarId() { return avatarId; }
@@ -109,11 +126,11 @@ public final class AvatarState {
     }
     public Map<String, Object> vars() { return vars; }
     public boolean firstPersonMasking() { return firstPersonMasking; }
-    public void setFirstPersonMasking(boolean value) { this.firstPersonMasking = value; this.snapshotDirty = true; }
+    public void setFirstPersonMasking(boolean value) { this.firstPersonMasking = value; markSnapshotDirty(); }
     public boolean localCameraOnly() { return localCameraOnly; }
     public void setLocalCameraOnly(boolean value) { this.localCameraOnly = value; }
     public boolean hideHeadInFirstPerson() { return hideHeadInFirstPerson; }
-    public void setHideHeadInFirstPerson(boolean value) { this.hideHeadInFirstPerson = value; this.snapshotDirty = true; }
+    public void setHideHeadInFirstPerson(boolean value) { this.hideHeadInFirstPerson = value; markSnapshotDirty(); }
     public void setCameraOffset(float x, float y, float z) { cameraOffsetX=x; cameraOffsetY=y; cameraOffsetZ=z; }
     public void setCameraRotation(float x, float y, float z) { cameraRotationX=x; cameraRotationY=y; cameraRotationZ=z; }
     public float cameraOffsetX() { return cameraOffsetX; }
@@ -124,11 +141,23 @@ public final class AvatarState {
     public float cameraRotationZ() { return cameraRotationZ; }
     public String nameplateText() { return nameplateText; }
     public boolean nameplateVisible() { return nameplateVisible; }
-    public void setNameplate(String text, boolean visible) { nameplateText = text == null ? "" : text.substring(0, Math.min(128, text.length())); nameplateVisible = visible; snapshotDirty = true; }
+    public void setNameplate(String text, boolean visible) { nameplateText = text == null ? "" : text.substring(0, Math.min(128, text.length())); nameplateVisible = visible; markSnapshotDirty(); }
     public String textureSyncMode() { return textureSyncMode; }
-    public void setTextureSyncMode(String value) { this.textureSyncMode = value == null || value.isBlank() ? "manifest" : value; this.snapshotDirty = true; }
+    public void setTextureSyncMode(String value) { this.textureSyncMode = value == null || value.isBlank() ? "manifest" : value; markSnapshotDirty(); }
     public String syncedSchemaPath() { return syncedSchemaPath; }
     public void setSyncedSchemaPath(String value) { this.syncedSchemaPath = value == null ? "" : value; }
+    public void configureSyncedSchema(String path, AvatarSyncedSchema schema) {
+        this.syncedSchemaPath = path == null ? "" : path;
+        this.syncedSchema = schema == null ? AvatarSyncedSchema.allowAll() : schema;
+        this.syncPolicy.configureSyncedSchema(this.syncedSchema.declaredKeys(), this.syncedSchema.allowsAdditional());
+        boolean removed = syncedVars.entrySet().removeIf(entry -> !this.syncedSchema.accepts(entry.getKey(), entry.getValue()));
+        if (removed) {
+            markSyncedDirty();
+            markSnapshotDirty();
+        }
+    }
+    public boolean acceptsSyncedValue(String key, Object value) { return syncedSchema.accepts(key, value); }
+    public boolean acceptsSyncedValues(Map<String, Object> values) { return syncedSchema.accepts(values); }
     public Map<String, Object> syncedVars() { return syncedVars; }
     public Map<String, Double> animationParameters() { return animationParameters; }
     public void setAnimationParameter(String name, double value) {
@@ -136,17 +165,19 @@ public final class AvatarState {
         String key = normalizeAnimationParameter(name);
         double bounded = Math.max(-1_000_000.0, Math.min(1_000_000.0, value));
         Double previous = animationParameters.put(key, bounded);
-        if (previous == null || Math.abs(previous - bounded) > 0.0001) animationParametersDirty = true;
+        if (previous == null || Math.abs(previous - bounded) > 0.0001) animationParametersDirty.mark();
     }
     public double animationParameter(String name, double fallback) {
         if (name == null || name.isBlank()) return fallback;
         return animationParameters.getOrDefault(normalizeAnimationParameter(name), fallback);
     }
     public void clearAnimationParameter(String name) {
-        if (name != null && animationParameters.remove(normalizeAnimationParameter(name)) != null) animationParametersDirty = true;
+        if (name != null && animationParameters.remove(normalizeAnimationParameter(name)) != null) animationParametersDirty.mark();
     }
-    public boolean areAnimationParametersDirty() { return animationParametersDirty; }
-    public void clearAnimationParametersDirty() { animationParametersDirty = false; }
+    public boolean areAnimationParametersDirty() { return animationParametersDirty.isDirty(); }
+    public long captureAnimationParametersRevision() { return animationParametersDirty.capture(); }
+    public void acknowledgeAnimationParametersRevision(long revision) { animationParametersDirty.acknowledge(revision); }
+    public void clearAnimationParametersDirty() { animationParametersDirty.clear(); }
     public Map<String, AvatarPartState> parts() { return parts; }
     public Map<String, Boolean> vanillaVisibility() { return vanillaVisibility; }
     public List<AvatarAction> actions() { return actions; }
@@ -166,6 +197,27 @@ public final class AvatarState {
         }
     }
     public void markAnimationLayersDirty() { animationLayersDirty = true; }
+    public AvatarAnimationLayer representativeAnimationLayer(long nowMillis) {
+        return animationLayers.values().stream()
+            .filter(layer -> !layer.finished(nowMillis))
+            .filter(layer -> layer.looping() && !layer.additive() && layer.stoppingAtMillis() <= 0L)
+            .max(java.util.Comparator.comparingInt(AvatarAnimationLayer::priority)
+                .thenComparingLong(AvatarAnimationLayer::startedAtMillis))
+            .orElse(null);
+    }
+    public void refreshCurrentAnimationFromLayers(long nowMillis) {
+        AvatarAnimationLayer representative = representativeAnimationLayer(nowMillis);
+        if (representative == null) {
+            if (!currentAnimation.isEmpty()) clearCurrentAnimation();
+            return;
+        }
+        if (!representative.name().equalsIgnoreCase(currentAnimation)
+            || representative.startedAtMillis() != currentAnimationStartedAtMillis) {
+            currentAnimation = representative.name();
+            currentAnimationStartedAtMillis = representative.startedAtMillis();
+            markSnapshotDirty();
+        }
+    }
     public AvatarSyncPolicy syncPolicy() { return syncPolicy; }
     public List<AvatarOutfit> outfits() { return outfits; }
     public void setOutfits(List<AvatarOutfit> value) { this.outfits = value == null ? List.of() : List.copyOf(value); }
@@ -174,27 +226,53 @@ public final class AvatarState {
     public void selectOutfit(String outfitId, byte[] texture) {
         this.selectedOutfitId = outfitId == null || outfitId.isBlank() ? AvatarOutfitLoader.DEFAULT_OUTFIT : outfitId;
         this.selectedOutfitTexture = texture == null ? new byte[0] : texture.clone();
-        this.snapshotDirty = true;
+        markSnapshotDirty();
     }
     public UUID boundEntityId() { return boundEntityId; }
     public void bindEntity(UUID id) { this.boundEntityId = id; }
-    public boolean isSyncedDirty() { return syncedDirty; }
-    public void markSyncedDirty() { this.syncedDirty = true; }
-    public void clearSyncedDirty() { this.syncedDirty = false; }
-    public boolean isSnapshotDirty() { return snapshotDirty; }
-    public void markSnapshotDirty() { this.snapshotDirty = true; }
-    public void clearSnapshotDirty() { this.snapshotDirty = false; }
+    public boolean isSyncedDirty() { return syncedDirty.isDirty(); }
+    public void markSyncedDirty() { syncedDirty.mark(); }
+    public long captureSyncedRevision() { return syncedDirty.capture(); }
+    public void acknowledgeSyncedRevision(long revision) { syncedDirty.acknowledge(revision); }
+    public void clearSyncedDirty() { syncedDirty.clear(); }
+    public boolean isSnapshotDirty() { return snapshotDirty.isDirty(); }
+    public void markSnapshotDirty() { snapshotDirty.mark(); }
+    public long captureSnapshotRevision() { return snapshotDirty.capture(); }
+    public void acknowledgeSnapshotRevision(long revision) { snapshotDirty.acknowledge(revision); }
+    public void clearSnapshotDirty() { snapshotDirty.clear(); }
+    public boolean isPoseDirty() { return poseDirty.isDirty(); }
+    public void markPoseDirty() { poseDirty.mark(); }
+    public long capturePoseRevision() { return poseDirty.capture(); }
+    public void acknowledgePoseRevision(long revision) { poseDirty.acknowledge(revision); }
+    public void clearPoseDirty() { poseDirty.clear(); }
     public String currentAnimation() { return currentAnimation; }
     public long currentAnimationStartedAtMillis() { return currentAnimationStartedAtMillis; }
     public void setCurrentAnimation(String currentAnimation) {
         this.currentAnimation = currentAnimation == null ? "" : currentAnimation;
         this.currentAnimationStartedAtMillis = System.currentTimeMillis();
-        this.snapshotDirty = true;
+        markSnapshotDirty();
     }
     public void clearCurrentAnimation() {
         this.currentAnimation = "";
         this.currentAnimationStartedAtMillis = 0L;
-        this.snapshotDirty = true;
+        markSnapshotDirty();
+    }
+
+    private static final class DirtyRevision {
+        private final AtomicLong changed;
+        private final AtomicLong acknowledged = new AtomicLong();
+
+        private DirtyRevision(boolean initiallyDirty) {
+            changed = new AtomicLong(initiallyDirty ? 1L : 0L);
+        }
+
+        private long capture() { return changed.get(); }
+        private void mark() { changed.incrementAndGet(); }
+        private boolean isDirty() { return changed.get() != acknowledged.get(); }
+        private void clear() { acknowledge(capture()); }
+        private void acknowledge(long revision) {
+            acknowledged.getAndUpdate(current -> Math.max(current, revision));
+        }
     }
 
     private static String normalizeAnimationParameter(String value) {

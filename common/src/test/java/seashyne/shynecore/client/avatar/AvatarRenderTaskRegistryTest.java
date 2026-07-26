@@ -30,4 +30,15 @@ class AvatarRenderTaskRegistryTest {
         assertEquals(0x0055AAFF, RenderTaskMath.applyOpacity(0x8055AAFF, -1));
         assertFalse(RenderTaskMath.applyOpacity(0xFFFFFFFF, 0.25) == 0xFFFFFFFF);
     }
+
+    @Test
+    void worldLineIsCappedBeforeCreatingGpuVertices() {
+        double[] capped = RenderTaskMath.capLine(0, 64, 0, 30_000_000, 64, 0,
+            AvatarRenderTaskRegistry.MAX_WORLD_LINE_LENGTH);
+
+        assertEquals(AvatarRenderTaskRegistry.MAX_WORLD_LINE_LENGTH, capped[0], 0.0001);
+        assertEquals(64, capped[1], 0.0001);
+        assertEquals(0, capped[2], 0.0001);
+        assertTrue(Double.isFinite(capped[0]));
+    }
 }

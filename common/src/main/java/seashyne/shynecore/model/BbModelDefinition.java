@@ -18,13 +18,33 @@ public record BbModelDefinition(
     List<BbTextureDefinition> textures,
     List<BbBoneDefinition> bones,
     List<BbCubeDefinition> cubes,
+    List<BbMeshDefinition> meshes,
     List<BbAnimationDefinition> animations
 ) {
+    /** Source-compatible constructor for models created before mesh support. */
+    public BbModelDefinition(
+        String modelId, String sourceModId, String displayName, Path sourceFile,
+        int formatVersion, int textureWidth, int textureHeight, String primaryTextureRelativePath,
+        List<BbTextureDefinition> textures, List<BbBoneDefinition> bones,
+        List<BbCubeDefinition> cubes, List<BbAnimationDefinition> animations
+    ) {
+        this(modelId, sourceModId, displayName, sourceFile, formatVersion, textureWidth, textureHeight,
+            primaryTextureRelativePath, textures, bones, cubes, List.of(), animations);
+    }
+
+    public BbModelDefinition {
+        meshes = meshes == null ? List.of() : List.copyOf(meshes);
+    }
+
     public BbModelDefinition withModelId(String value) {
         return new BbModelDefinition(
             value, sourceModId, displayName, sourceFile, formatVersion, textureWidth, textureHeight,
-            primaryTextureRelativePath, textures, bones, cubes, animations
+            primaryTextureRelativePath, textures, bones, cubes, meshes, animations
         );
+    }
+
+    public boolean hasGeometry() {
+        return (cubes != null && !cubes.isEmpty()) || !meshes.isEmpty();
     }
 
     public boolean hasAnimation(String animationName) {
@@ -72,5 +92,10 @@ public record BbModelDefinition(
     public String cubePath(BbCubeDefinition cube) {
         if (cube == null) return "model";
         return (cube.parentBoneUuid() == null ? "model" : bonePath(cube.parentBoneUuid())) + "." + cube.name();
+    }
+
+    public String meshPath(BbMeshDefinition mesh) {
+        if (mesh == null) return "model";
+        return (mesh.parentBoneUuid() == null ? "model" : bonePath(mesh.parentBoneUuid())) + "." + mesh.name();
     }
 }

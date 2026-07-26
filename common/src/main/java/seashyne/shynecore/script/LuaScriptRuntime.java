@@ -77,16 +77,11 @@ public class LuaScriptRuntime {
         return environment.globals();
     }
 
-    private void loadBootstrap(Globals g) {
+    private void loadBootstrap(Globals g) throws java.io.IOException {
         try (InputStream in = getClass().getResourceAsStream("/shyne_runtime/lua/shyne_easy.lua")) {
-            if (in == null) {
-                ShyneCore.LOGGER.warn("[Lua] shyne_easy.lua bootstrap not found; Lua mods will use low-level API only.");
-                return;
-            }
+            if (in == null) throw new java.io.IOException("mandatory Lua bootstrap is missing: shyne_easy.lua");
             String bootstrap = new String(in.readAllBytes(), StandardCharsets.UTF_8);
             g.load(bootstrap, "shyne_easy.lua").call();
-        } catch (Exception e) {
-            ShyneCore.LOGGER.error("[Lua] Failed to load shyne_easy.lua: {}", e.getMessage(), e);
         }
     }
 

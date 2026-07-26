@@ -10,6 +10,7 @@ import seashyne.shynecore.client.render.BbModelEntityRenderer;
 import seashyne.shynecore.client.render.AvatarRenderTasks;
 import seashyne.shynecore.client.ui.ShyneKeybinds;
 import seashyne.shynecore.client.ui.ShynePauseMenu;
+import seashyne.shynecore.client.ui.ShyneTitleMenu;
 
 public class ShyneCoreClient implements ClientModInitializer {
     @Override
@@ -22,6 +23,7 @@ public class ShyneCoreClient implements ClientModInitializer {
         AvatarRenderTasks.init();
         ShyneKeybinds.init();
         ShynePauseMenu.init();
+        ShyneTitleMenu.init();
         ShyneCore.LOGGER.info("[ShyneCreator] Client initialized with renderer + animation sync + keybinds + avatar runtime.");
     }
 }

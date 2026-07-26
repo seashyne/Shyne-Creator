@@ -61,15 +61,55 @@ tasks.register('verifyLoaderParity') {
     }
 }
 
+tasks.register('verifyReleaseMetadata') {
+    group = 'verification'
+    description = 'Checks that release version and protocol references match the runtime.'
+    dependsOn 'verifyLoaderParity'
+    doLast {
+        def expectedVersion = project.mod_version.toString()
+        def versionFiles = [
+            file('VERSION.txt'),
+            file('README.md'),
+            file('docs-site/src/content.ts'),
+            file('tools/kit/README_INSTALL_TH.md')
+        ]
+        def staleVersionFiles = versionFiles.findAll { source ->
+            !source.exists() || !source.getText('UTF-8').contains(expectedVersion)
+        }
+        if (!staleVersionFiles.empty) {
+            throw new GradleException(
+                "Release version ${expectedVersion} is missing from: ${staleVersionFiles}"
+            )
+        }
+
+        def networkSource = file('fabric/src/main/java/seashyne/shynecore/network/ShyneNetwork.java')
+        def protocolMatch = networkSource.getText('UTF-8') =~ /PROTOCOL_VERSION\s*=\s*(\d+)/
+        if (!protocolMatch.find()) {
+            throw new GradleException("Could not read protocol version from ${networkSource}")
+        }
+        def expectedProtocol = protocolMatch.group(1)
+        def protocolDocs = [file('README.md'), file('MULTIPLAYER_TESTING.md')]
+        def staleProtocolFiles = protocolDocs.findAll { source ->
+            !source.getText('UTF-8').contains("protocol `${expectedProtocol}`") &&
+                !source.getText('UTF-8').contains("Protocol ปัจจุบันคือ ${expectedProtocol}")
+        }
+        if (!staleProtocolFiles.empty) {
+            throw new GradleException(
+                "Network protocol ${expectedProtocol} is missing from: ${staleProtocolFiles}"
+            )
+        }
+    }
+}
+
 tasks.register('buildAll') {
     group = 'build'
     description = 'Builds and verifies the Fabric and NeoForge distributions.'
-    dependsOn 'verifyLoaderParity', ':fabric:build', ':neoforge:build'
+    dependsOn 'verifyReleaseMetadata', ':fabric:build', ':neoforge:build'
 }
 
-tasks.register('collectReleaseJars', Copy) {
+tasks.register('collectReleaseJars', Sync) {
     group = 'distribution'
-    description = 'Builds both loaders and copies their release JARs into build/releases.'
+    description = 'Builds both loaders and stages only the current release JARs in build/releases.'
     dependsOn buildAll
     from(project(':fabric').layout.buildDirectory.dir('libs')) {
         include '*.jar'
@@ -80,6 +120,45 @@ tasks.register('collectReleaseJars', Copy) {
         exclude '*-sources.jar'
     }
     into layout.buildDirectory.dir('releases')
+}
+
+tasks.register('writeReleaseChecksums') {
+    group = 'distribution'
+    description = 'Writes SHA-256 checksums for the staged Fabric and NeoForge JARs.'
+    dependsOn 'collectReleaseJars'
+    def releaseDirectory = layout.buildDirectory.dir('releases')
+    inputs.files(provider {
+        fileTree(releaseDirectory) { include '*.jar' }
+    })
+    outputs.file(releaseDirectory.map { it.file('SHA256SUMS.txt') })
+    doLast {
+        def directory = releaseDirectory.get().asFile
+        def jars = fileTree(directory) { include '*.jar' }.files.sort { it.name }
+        if (jars.size() != 2) {
+            throw new GradleException("Expected exactly two release JARs, found ${jars*.name}")
+        }
+        def lines = jars.collect { jar ->
+            def digest = java.security.MessageDigest.getInstance('SHA-256')
+            jar.withInputStream { input ->
+                byte[] buffer = new byte[8192]
+                int read
+                while ((read = input.read(buffer)) != -1) {
+                    digest.update(buffer, 0, read)
+                }
+            }
+            "${digest.digest().encodeHex()}  ${jar.name}"
+        }
+        new File(directory, 'SHA256SUMS.txt').setText(
+            lines.join(System.lineSeparator()) + System.lineSeparator(),
+            'UTF-8'
+        )
+    }
+}
+
+tasks.register('releaseBundle') {
+    group = 'distribution'
+    description = 'Builds, verifies, stages and checksums a two-loader release.'
+    dependsOn 'writeReleaseChecksums'
 }
 
 tasks.named('build') {

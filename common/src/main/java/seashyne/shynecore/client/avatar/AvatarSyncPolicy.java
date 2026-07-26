@@ -8,6 +8,7 @@ import java.util.Set;
 public final class AvatarSyncPolicy {
     private boolean allowRemoteSnapshot = true;
     private boolean allowRemoteVars = true;
+    private boolean restrictSyncedVars;
     private final Set<String> syncedVarAllowlist = new LinkedHashSet<>();
     private final Set<String> localOnlyParts = new LinkedHashSet<>();
     private final Set<String> localOnlyVanillaParts = new LinkedHashSet<>();
@@ -24,6 +25,12 @@ public final class AvatarSyncPolicy {
         if (key != null && !key.isBlank()) syncedVarAllowlist.add(key);
     }
 
+    public void configureSyncedSchema(Set<String> declaredKeys, boolean allowAdditional) {
+        syncedVarAllowlist.clear();
+        if (declaredKeys != null) syncedVarAllowlist.addAll(declaredKeys);
+        restrictSyncedVars = !allowAdditional;
+    }
+
     public void setLocalOnlyPart(String path, boolean localOnly) {
         if (path == null || path.isBlank()) return;
         if (localOnly) localOnlyParts.add(path);
@@ -38,7 +45,7 @@ public final class AvatarSyncPolicy {
 
     public Map<String, Object> filterSyncedVars(Map<String, Object> source) {
         if (!allowRemoteVars || source == null || source.isEmpty()) return Map.of();
-        if (syncedVarAllowlist.isEmpty()) return Map.copyOf(source);
+        if (!restrictSyncedVars) return Map.copyOf(source);
         Map<String, Object> filtered = new LinkedHashMap<>();
         for (Map.Entry<String, Object> entry : source.entrySet()) {
             if (syncedVarAllowlist.contains(entry.getKey())) filtered.put(entry.getKey(), entry.getValue());

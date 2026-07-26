@@ -14,3 +14,5 @@ luac.out
 docs-site/node_modules/
 docs-site/dist/
 docs-site/*.tsbuildinfo
+__pycache__/
+*.pyc

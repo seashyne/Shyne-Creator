@@ -104,7 +104,7 @@ public final class AvatarValidator {
 
     private static void validateModel(Path root, BbModelDefinition model, AvatarManifest manifest, List<AvatarValidationReport.Issue> issues) throws IOException {
         if (model.bones().size() > ShyneClientSettings.avatarMaxBones) error(issues, "bone_limit", "Model exceeds the configured bone limit", manifest.model());
-        if (model.cubes().size() > ShyneClientSettings.avatarMaxCubes) error(issues, "cube_limit", "Model exceeds the configured cube limit", manifest.model());
+        if (model.cubes().size() + model.meshes().size() > ShyneClientSettings.avatarMaxCubes) error(issues, "cube_limit", "Model exceeds the configured render-element limit", manifest.model());
         if (model.animations().size() > ShyneClientSettings.avatarMaxAnimations) error(issues, "animation_limit", "Model exceeds the configured animation limit", manifest.model());
         if (model.textures().size() > ShyneClientSettings.avatarMaxTextures) error(issues, "texture_limit", "Model exceeds the configured texture limit", manifest.model());
         if (model.textureWidth() <= 0 || model.textureWidth() > ShyneClientSettings.avatarMaxTextureSize
@@ -115,6 +115,8 @@ public final class AvatarValidator {
         duplicateNames(model.bones().stream().map(bone -> bone.name()).toList(), "bone", issues, manifest.model());
         duplicateNames(model.animations().stream().map(animation -> animation.name()).toList(), "animation", issues, manifest.model());
         validateAnimationExpressions(model, manifest.model(), issues);
+        validateBehavior(model, manifest.behavior(), manifest.model(), issues);
+        validateFullBodyHumanoid(model, manifest, issues);
 
         Set<String> declared = new HashSet<>();
         if (manifest.textures() != null) for (String value : manifest.textures()) declared.add(normalize(value));
@@ -168,6 +170,135 @@ public final class AvatarValidator {
                 }
             }
         }
+    }
+
+    static void validateBehavior(BbModelDefinition model, AvatarBehavior behavior, String file, List<AvatarValidationReport.Issue> issues) {
+        if (behavior == null || !behavior.automatic()) return;
+        for (String animation : behavior.autoplay()) {
+            if (!model.hasAnimation(animation)) {
+                error(issues, "behavior_autoplay_missing", "Autoplay animation does not exist: " + animation, file);
+            }
+        }
+        behavior.animations().forEach((state, candidates) -> {
+            boolean found = candidates.stream().anyMatch(model::hasAnimation);
+            if (!found) {
+                error(issues, "behavior_state_missing", "Animation state '" + state + "' cannot resolve any of: " + String.join(", ", candidates), file);
+            } else {
+                candidates.stream().filter(name -> !model.hasAnimation(name)).forEach(name ->
+                    warning(issues, "behavior_state_fallback", "Animation state '" + state + "' will skip missing fallback: " + name, file)
+                );
+            }
+        });
+        AvatarBehavior.Blink blink = behavior.blink();
+        if (blink.configured() && blink.enabled()) {
+            boolean found = blink.animations().stream().anyMatch(model::hasAnimation);
+            if (!found) {
+                error(issues, "behavior_blink_missing", "Blink cannot resolve any animation: " + String.join(", ", blink.animations()), file);
+            } else {
+                blink.animations().stream().filter(name -> !model.hasAnimation(name)).forEach(name ->
+                    warning(issues, "behavior_blink_fallback", "Blink will skip missing fallback: " + name, file)
+                );
+            }
+        }
+    }
+
+    /**
+     * Full-body models without authored animation use Minecraft's live humanoid
+     * pose. That fallback is deterministic only when these six roots exist as
+     * top-level bones and are not switched into parent_type attachment mode.
+     */
+    static void validateFullBodyHumanoid(
+        BbModelDefinition model,
+        AvatarManifest manifest,
+        List<AvatarValidationReport.Issue> issues
+    ) {
+        if (manifest.parsedProfile() != AvatarProfile.FULL_BODY) return;
+
+        Map<String, seashyne.shynecore.model.BbBoneDefinition> roots = new LinkedHashMap<>();
+        for (var bone : model.bones()) {
+            String key = humanoidKey(bone.name());
+            if (!key.isEmpty() && !roots.containsKey(key)) roots.put(key, bone);
+        }
+
+        List<String> missing = new ArrayList<>();
+        for (String key : List.of("head", "body", "leftarm", "rightarm", "leftleg", "rightleg")) {
+            if (!roots.containsKey(key)) missing.add(humanoidLabel(key));
+        }
+        if (!missing.isEmpty()) {
+            warning(
+                issues,
+                "full_body_humanoid_missing",
+                "Full-body Minecraft pose needs top-level humanoid bones: " + String.join(", ", missing)
+                    + ". Zero authored animations is valid once the six roots exist.",
+                manifest.model()
+            );
+            return;
+        }
+
+        List<String> nested = new ArrayList<>();
+        List<String> attached = new ArrayList<>();
+        List<String> badPivots = new ArrayList<>();
+        for (Map.Entry<String, seashyne.shynecore.model.BbBoneDefinition> entry : roots.entrySet()) {
+            var bone = entry.getValue();
+            String label = humanoidLabel(entry.getKey());
+            if (bone.parentUuid() != null && !bone.parentUuid().isBlank()) nested.add(label);
+            if (bone.parentType() != null && !bone.parentType().isBlank()) attached.add(label);
+            if (!hasStandardHumanoidPivot(entry.getKey(), bone)) badPivots.add(label);
+        }
+        if (!nested.isEmpty()) {
+            warning(issues, "full_body_humanoid_nested",
+                "Humanoid pose bones must be sibling roots, not nested: " + String.join(", ", nested), manifest.model());
+        }
+        if (!attached.isEmpty()) {
+            warning(issues, "full_body_humanoid_parent_type",
+                "Remove parent_type from full-body pose roots; it is reserved for accessories: " + String.join(", ", attached), manifest.model());
+        }
+        if (!badPivots.isEmpty()) {
+            warning(issues, "full_body_humanoid_pivot",
+                "Humanoid roots use non-standard Minecraft pivots: " + String.join(", ", badPivots), manifest.model());
+        }
+    }
+
+    private static String humanoidKey(String value) {
+        String normalized = value == null ? "" : value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+        return switch (normalized) {
+            case "head" -> "head";
+            case "body", "torso" -> "body";
+            case "leftarm" -> "leftarm";
+            case "rightarm" -> "rightarm";
+            case "leftleg" -> "leftleg";
+            case "rightleg" -> "rightleg";
+            default -> "";
+        };
+    }
+
+    private static String humanoidLabel(String key) {
+        return switch (key) {
+            case "head" -> "Head";
+            case "body" -> "Body";
+            case "leftarm" -> "LeftArm";
+            case "rightarm" -> "RightArm";
+            case "leftleg" -> "LeftLeg";
+            case "rightleg" -> "RightLeg";
+            default -> key;
+        };
+    }
+
+    private static boolean hasStandardHumanoidPivot(String key, seashyne.shynecore.model.BbBoneDefinition bone) {
+        float expectedAbsX = switch (key) {
+            case "leftarm", "rightarm" -> 5f;
+            case "leftleg", "rightleg" -> 1.9f;
+            default -> 0f;
+        };
+        float expectedY = switch (key) {
+            case "head", "body" -> 24f;
+            case "leftarm", "rightarm" -> 22f;
+            case "leftleg", "rightleg" -> 12f;
+            default -> 0f;
+        };
+        return Math.abs(Math.abs(bone.pivotX()) - expectedAbsX) <= 0.25f
+            && Math.abs(bone.pivotY() - expectedY) <= 0.25f
+            && Math.abs(bone.pivotZ()) <= 0.25f;
     }
 
     private static void validatePng(Path file, String relative, List<AvatarValidationReport.Issue> issues) {

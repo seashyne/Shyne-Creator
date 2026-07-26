@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.8.4-alpha-26.2`
+- Shyne Creator: `2.9.0-alpha-26.2`
 - Minecraft: `26.2`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -33,7 +33,7 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 
 เครื่องมือตั้ง profile, attachment, role, animation state และ export manifest จาก Blockbench อยู่ที่ [Shyne Blockbench Plugin](tools/blockbench/README_TH.md)
 
-## 2.8.4-alpha Multiplayer Safety & Performance
+## 2.9.0-alpha Runtime, Outfit & Humanoid Standards
 
 - Remote Avatar ใช้การสมัครรับข้อมูลรายผู้เล่น ผู้ใช้ที่ Block จะหยุดรับ model, pose, synced vars และ animation ของคนนั้นจาก Server
 - จำกัดปริมาณข้อมูลตามจำนวน byte แยก full model ออกจาก pose update และไม่รวม snapshot ของผู้เล่นทั้งหมดไว้ใน packet เดียว

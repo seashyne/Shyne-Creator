@@ -7,6 +7,7 @@ import net.minecraft.resources.Identifier;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.avatar.AvatarOutfit;
 import seashyne.shynecore.client.avatar.AvatarOutfitLoader;
+import seashyne.shynecore.avatar.PngTextureValidator;
 import seashyne.shynecore.model.BbModelDefinition;
 import seashyne.shynecore.model.BbTextureDefinition;
 import seashyne.shynecore.network.ShyneNetwork;
@@ -22,6 +23,9 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Base64;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.Predicate;
 
 public final class BbModelTextures {
     private static final Identifier FALLBACK = Identifier.parse("minecraft:textures/block/white_wool.png");
@@ -67,14 +71,29 @@ public final class BbModelTextures {
         BbTextureDefinition texture = model.texture(0);
         int width = texture == null ? model.textureWidth() : texture.width();
         int height = texture == null ? model.textureHeight() : texture.height();
-        Path baseTexture = resolveTexturePath(model, 0);
-        byte[] bytes = AvatarOutfitLoader.compositedPng(outfit, baseTexture, width, height);
+        byte[] bytes;
+        if (outfit.mode() == AvatarOutfit.Mode.OVERLAY) {
+            Path baseTexture = resolveTexturePath(model, 0);
+            bytes = AvatarOutfitLoader.compositedPng(outfit, baseTexture, width, height);
+        } else {
+            bytes = AvatarOutfitLoader.scaledPng(outfit, width, height);
+        }
         installOverride(model.modelId(), 0, bytes, "Outfit " + outfit.name());
         return bytes;
     }
 
     public static void clearOutfit(String modelId) {
-        if (modelId != null) SYNCED.remove(syncedKey(modelId, 0));
+        if (modelId != null) removeSyncedMatching(key -> key.equals(syncedKey(modelId, 0)));
+    }
+
+    public static void clearSyncedModel(String modelId) {
+        if (modelId == null || modelId.isBlank()) return;
+        String prefix = modelId + "#";
+        removeSyncedMatching(key -> key.startsWith(prefix));
+    }
+
+    public static void clearRemoteSyncedTextures() {
+        removeSyncedMatching(key -> key.startsWith("remote:"));
     }
 
     public static ShyneNetwork.NetTextureDefinition outfitTexture(BbModelDefinition model, byte[] bytes) {
@@ -91,7 +110,7 @@ public final class BbModelTextures {
     public static void installSynced(ShyneNetwork.NetModelDefinition model) {
         if (model == null || model.modelId() == null || model.textures() == null || model.textures().isEmpty()) return;
         String keyPrefix = model.modelId() + "#";
-        SYNCED.keySet().removeIf(key -> key.startsWith(keyPrefix));
+        removeSyncedMatching(key -> key.startsWith(keyPrefix));
         for (int textureIndex = 0; textureIndex < model.textures().size(); textureIndex++) {
             installSyncedTexture(model, model.textures().get(textureIndex), textureIndex);
         }
@@ -107,6 +126,10 @@ public final class BbModelTextures {
         try {
             byte[] bytes = Base64.getDecoder().decode(texture.contentBase64());
             if (bytes.length <= 0 || bytes.length > ShyneNetwork.MAX_TEXTURE_BYTES) return;
+            if (!PngTextureValidator.matches(bytes, texture.width(), texture.height())) {
+                ShyneCore.LOGGER.warn("[AvatarTexture] Rejected PNG with invalid or mismatched IHDR for {} #{}", model.modelId(), textureIndex);
+                return;
+            }
             NativeImage image = NativeImage.read(new ByteArrayInputStream(bytes));
             String suffix = hash.isBlank() ? Integer.toUnsignedString(java.util.Arrays.hashCode(bytes), 36) : hash.substring(0, Math.min(16, hash.length()));
             Identifier id = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "synced/" + suffix + "_" + textureIndex);
@@ -124,7 +147,9 @@ public final class BbModelTextures {
         String suffix = hash.substring(0, Math.min(16, hash.length()));
         Identifier id = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "outfit/" + suffix + "_" + textureIndex);
         Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(() -> label, image));
-        SYNCED.put(syncedKey(modelId, textureIndex), new SyncedTexture(id, hash));
+        String key = syncedKey(modelId, textureIndex);
+        removeSyncedMatching(existing -> existing.equals(key));
+        SYNCED.put(key, new SyncedTexture(id, hash));
     }
 
     private static String sha256(byte[] bytes) {
@@ -151,6 +176,17 @@ public final class BbModelTextures {
 
     private static String syncedKey(String modelId, int textureIndex) {
         return modelId + "#" + Math.max(0, textureIndex);
+    }
+
+    private static void removeSyncedMatching(Predicate<String> predicate) {
+        Set<Identifier> removed = new HashSet<>();
+        for (Map.Entry<String, SyncedTexture> entry : SYNCED.entrySet()) {
+            if (predicate.test(entry.getKey()) && SYNCED.remove(entry.getKey(), entry.getValue())) removed.add(entry.getValue().id());
+        }
+        if (removed.isEmpty()) return;
+        removed.removeIf(id -> SYNCED.values().stream().anyMatch(texture -> texture.id().equals(id)));
+        var textureManager = Minecraft.getInstance().getTextureManager();
+        for (Identifier id : removed) textureManager.release(id);
     }
 
     private record CachedTexture(Identifier id, long modifiedAtMillis) {}

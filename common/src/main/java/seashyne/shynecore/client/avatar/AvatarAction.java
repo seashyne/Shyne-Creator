@@ -9,16 +9,21 @@ public final class AvatarAction {
     private final boolean localOnly;
     private final boolean closeOnUse;
     private final Runnable callback;
+    private final Runnable secondaryCallback;
 
     public AvatarAction(String title, String page, Runnable callback) {
-        this(title, title, "", page, "spark", false, true, callback);
+        this(title, title, "", page, "spark", false, true, callback, null);
     }
 
     public AvatarAction(String id, String title, String description, String page, boolean localOnly, boolean closeOnUse, Runnable callback) {
-        this(id, title, description, page, "", localOnly, closeOnUse, callback);
+        this(id, title, description, page, "", localOnly, closeOnUse, callback, null);
     }
 
     public AvatarAction(String id, String title, String description, String page, String icon, boolean localOnly, boolean closeOnUse, Runnable callback) {
+        this(id, title, description, page, icon, localOnly, closeOnUse, callback, null);
+    }
+
+    public AvatarAction(String id, String title, String description, String page, String icon, boolean localOnly, boolean closeOnUse, Runnable callback, Runnable secondaryCallback) {
         this.id = id == null || id.isBlank() ? title : id;
         this.title = title == null || title.isBlank() ? "Action" : title;
         this.description = description == null ? "" : description;
@@ -27,6 +32,7 @@ public final class AvatarAction {
         this.localOnly = localOnly;
         this.closeOnUse = closeOnUse;
         this.callback = callback == null ? () -> {} : callback;
+        this.secondaryCallback = secondaryCallback;
     }
 
     public String id() { return id; }
@@ -37,4 +43,6 @@ public final class AvatarAction {
     public boolean localOnly() { return localOnly; }
     public boolean closeOnUse() { return closeOnUse; }
     public Runnable callback() { return callback; }
+    public Runnable secondaryCallback() { return secondaryCallback; }
+    public boolean hasSecondaryCallback() { return secondaryCallback != null; }
 }

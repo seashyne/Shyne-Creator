@@ -33,16 +33,28 @@ import seashyne.shynecore.model.BbBoneDefinition;
 import seashyne.shynecore.model.BbBoneAnimation;
 import seashyne.shynecore.model.BbCubeDefinition;
 import seashyne.shynecore.model.BbFaceUvDefinition;
+import seashyne.shynecore.model.BbMeshDefinition;
+import seashyne.shynecore.model.BbMeshFaceDefinition;
+import seashyne.shynecore.model.BbMeshUvDefinition;
+import seashyne.shynecore.model.BbMeshVertexDefinition;
 import seashyne.shynecore.model.BbModelDefinition;
 import seashyne.shynecore.model.BbTextureDefinition;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Converts a parsed Blockbench model into vertices for the player render pass.
+ *
+ * <p>Transform order is intentional: vanilla parent rig, then the bone's
+ * Blockbench transform, then its children. Keeping that order here makes
+ * imported {@code parent_type} metadata compose with scripted physics.</p>
+ */
 public final class BbModelEntityRenderer {
     private static final float DEG_TO_RAD = (float) (Math.PI / 180.0);
 
@@ -76,16 +88,27 @@ public final class BbModelEntityRenderer {
             if (entity == null) return;
 
             UUID entityId = entity.getUUID();
+            if (client.player != null && !entityId.equals(client.player.getUUID())
+                && ShyneClientSettings.isRemoteAvatarHidden(entityId)) return;
             AttachedModelState attachment = ClientAnimationState.getAttachment(entityId);
             if (attachment == null || !attachment.visible()) return;
             BbModelDefinition model = ClientAnimationState.getModel(attachment.modelId());
-            if (model == null || model.cubes().isEmpty()) return;
+            if (model == null || !model.hasGeometry()) return;
 
             poseStack.pushPose();
             poseStack.translate(-attachment.offsetX(), -attachment.offsetY(), attachment.offsetZ());
             poseStack.scale(attachment.scale(), attachment.scale(), attachment.scale());
             VanillaPose vanillaPose = VanillaPose.capture(state, getParentModel());
+            ClientAnimationState.putVanillaTransforms(entityId, vanillaPose.snapshot());
             Map<String, BonePose> bonePoses = prepareBonePoses(model, entityId, vanillaPose);
+            // Publish during feature submission, before LevelRenderer's tail hook
+            // submits bone-bound render tasks. Publishing only inside the later
+            // custom-geometry callback made attachments trail by one frame.
+            Matrix4f modelToWorld = new Matrix4f(poseStack.last().pose())
+                .translate(0.0f, 1.5f, 0.0f)
+                .scale(1.0f / 16.0f, -1.0f / 16.0f, 1.0f / 16.0f);
+            publishBoneTransforms(model, entityId, modelToWorld, bonePoses);
+            Set<String> hiddenFirstPersonBones = hiddenFirstPersonBones(model);
             int textureCount = model.textures() == null || model.textures().isEmpty() ? 1 : model.textures().size();
             for (int textureIndex = 0; textureIndex < textureCount; textureIndex++) {
                 BbTextureDefinition definition = model.texture(textureIndex);
@@ -98,12 +121,12 @@ public final class BbModelEntityRenderer {
                 collector.order(1).submitCustomGeometry(
                     poseStack,
                     RenderTypes.entityCutout(texture),
-                    (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, null, 0f, 1f, 1f, 1f, false)
+                    (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, null, 0f, 1f, 1f, 1f, false, hiddenFirstPersonBones)
                 );
                 collector.order(2).submitCustomGeometry(
                     poseStack,
                     RenderTypes.entityTranslucent(texture),
-                    (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, null, 0f, 1f, 1f, 1f, true)
+                    (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, null, 0f, 1f, 1f, 1f, true, hiddenFirstPersonBones)
                 );
             }
             poseStack.popPose();
@@ -120,15 +143,20 @@ public final class BbModelEntityRenderer {
 
     /** Replaces Minecraft's first-person skin arm with the active Shyne avatar arm. */
     public static boolean renderFirstPersonArm(PoseStack poseStack, SubmitNodeCollector collector, int lightCoords, HumanoidArm arm) {
-        if (!AvatarRuntime.shouldHideLocalPlayer() || !AvatarRuntime.shouldMaskFirstPerson()) return false;
+        if (!ShyneClientSettings.renderAttachments) return false;
+        if (!AvatarRuntime.shouldMaskFirstPerson()) return false;
         Minecraft client = Minecraft.getInstance();
         AvatarState active = AvatarRuntime.active();
-        if (client.player == null || active == null) return true;
+        if (client.player == null || active == null) return false;
         BbModelDefinition model = ClientAnimationState.getModel(active.modelId());
-        if (model == null || model.cubes().isEmpty()) return true;
+        if (model == null || !model.hasGeometry()) return false;
 
-        BbBoneDefinition armBone = findHumanoidArm(model, arm);
-        if (armBone == null) return true;
+        BbBoneDefinition armBone = findFirstPersonArm(model, arm);
+        boolean dedicatedFirstPersonArm = armBone != null && isDedicatedFirstPersonArm(armBone);
+        // Overlay avatars only replace a first-person arm when the creator explicitly
+        // supplied a dedicated FP hierarchy.  This keeps ordinary accessory avatars
+        // from unexpectedly replacing the player's vanilla hand.
+        if (armBone == null || (!AvatarRuntime.shouldHideLocalPlayer() && !dedicatedFirstPersonArm)) return false;
 
         float canonicalPivotX = arm == HumanoidArm.RIGHT ? -5f : 5f;
         float modelOffsetX = canonicalPivotX - armBone.pivotX();
@@ -139,6 +167,9 @@ public final class BbModelEntityRenderer {
 
         UUID entityId = client.player.getUUID();
         Map<String, BonePose> bonePoses = prepareBonePoses(model, entityId, VanillaPose.EMPTY);
+        // Do not consume Minecraft's hand render when a script has hidden this
+        // tree or when the FP pivot is only an empty helper group.
+        if (!hasDrawableGeometry(model, entityId, armBone.uuid(), bonePoses)) return false;
         int textureCount = model.textures() == null || model.textures().isEmpty() ? 1 : model.textures().size();
         for (int textureIndex = 0; textureIndex < textureCount; textureIndex++) {
             BbTextureDefinition definition = model.texture(textureIndex);
@@ -151,12 +182,12 @@ public final class BbModelEntityRenderer {
             collector.order(1).submitCustomGeometry(
                 poseStack,
                 RenderTypes.entityCutout(texture),
-                (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, armBone.uuid(), modelOffsetX, scaleX, scaleY, scaleZ, false)
+                (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, armBone.uuid(), modelOffsetX, scaleX, scaleY, scaleZ, false, Set.of())
             );
             collector.order(2).submitCustomGeometry(
                 poseStack,
                 RenderTypes.entityTranslucent(texture),
-                (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, armBone.uuid(), modelOffsetX, scaleX, scaleY, scaleZ, true)
+                (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, armBone.uuid(), modelOffsetX, scaleX, scaleY, scaleZ, true, Set.of())
             );
         }
         return true;
@@ -178,7 +209,8 @@ public final class BbModelEntityRenderer {
         float subsetScaleX,
         float subsetScaleY,
         float subsetScaleZ,
-        boolean translucentPass
+        boolean translucentPass,
+        Set<String> hiddenBoneUuids
     ) {
         long profileStarted = System.nanoTime();
         Matrix4f modelToWorld = new Matrix4f(pose.pose())
@@ -194,12 +226,19 @@ public final class BbModelEntityRenderer {
             }
         }
 
+        if (targetTextureIndex == 0 && !translucentPass && onlyBoneUuid == null) {
+            publishBoneTransforms(model, entityId, modelToWorld, bonePoses);
+        }
+
         for (BbCubeDefinition cube : model.cubes()) {
             if (onlyBoneUuid != null && !belongsToBone(model, cube.parentBoneUuid(), onlyBoneUuid)) continue;
+            if (cube.parentBoneUuid() != null && hiddenBoneUuids.contains(cube.parentBoneUuid())) continue;
             BonePose bonePose = cube.parentBoneUuid() == null ? BonePose.IDENTITY : bonePoses.getOrDefault(cube.parentBoneUuid(), BonePose.IDENTITY);
             if (!bonePose.visible) continue;
             AvatarPartState cubePart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.cubePath(cube));
-            if (cubePart != null && !cubePart.visible()) continue;
+            boolean cubeVisible = cube.visible();
+            if (cubePart != null && cubePart.visibilityControlled()) cubeVisible = cubePart.visible();
+            if (!cubeVisible) continue;
 
             Matrix4f transform = new Matrix4f(modelToWorld).mul(bonePose.matrix);
             if (cubePart != null) transform.translate(cubePart.posX(), cubePart.posY(), cubePart.posZ());
@@ -220,10 +259,75 @@ public final class BbModelEntityRenderer {
             if (translucent != translucentPass) continue;
             emitCube(vertices, transform, cube, targetTextureIndex, textureCount, textureWidth, textureHeight, emissive ? 0x00F000F0 : lightCoords, colorArgb);
         }
+        for (BbMeshDefinition mesh : model.meshes()) {
+            if (onlyBoneUuid != null && !belongsToBone(model, mesh.parentBoneUuid(), onlyBoneUuid)) continue;
+            if (mesh.parentBoneUuid() != null && hiddenBoneUuids.contains(mesh.parentBoneUuid())) continue;
+            BonePose bonePose = mesh.parentBoneUuid() == null ? BonePose.IDENTITY : bonePoses.getOrDefault(mesh.parentBoneUuid(), BonePose.IDENTITY);
+            if (!bonePose.visible) continue;
+            AvatarPartState meshPart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.meshPath(mesh));
+            boolean meshVisible = mesh.visible();
+            if (meshPart != null && meshPart.visibilityControlled()) meshVisible = meshPart.visible();
+            if (!meshVisible) continue;
+
+            Matrix4f transform = new Matrix4f(modelToWorld).mul(bonePose.matrix);
+            if (meshPart != null) transform.translate(meshPart.posX(), meshPart.posY(), meshPart.posZ());
+            // Blockbench mesh vertices are local to the element origin. Unlike cube
+            // corners, they therefore do not need a matching translate(-origin).
+            transform.translate(mesh.originX(), mesh.originY(), mesh.originZ());
+            transform.rotateZYX(mesh.rotationZ() * DEG_TO_RAD, mesh.rotationY() * DEG_TO_RAD, mesh.rotationX() * DEG_TO_RAD);
+            if (meshPart != null) {
+                transform.rotateZYX(meshPart.rotZ() * DEG_TO_RAD, meshPart.rotY() * DEG_TO_RAD, meshPart.rotX() * DEG_TO_RAD);
+                transform.scale(meshPart.scaleX(), meshPart.scaleY(), meshPart.scaleZ());
+            }
+            int colorArgb = bonePose.colorArgb;
+            boolean emissive = bonePose.emissive;
+            if (meshPart != null && meshPart.renderControlled()) {
+                colorArgb = multiplyColor(colorArgb, meshPart.colorArgb());
+                emissive |= meshPart.emissive();
+            }
+            boolean translucent = ((colorArgb >>> 24) & 255) < 255;
+            if (translucent != translucentPass) continue;
+            emitMesh(vertices, transform, mesh, targetTextureIndex, textureCount, textureWidth, textureHeight,
+                emissive ? 0x00F000F0 : lightCoords, colorArgb);
+        }
         AvatarState profiled = AvatarRuntime.active();
         if (profiled != null && entityId.equals(profiled.boundEntityId())) {
             AvatarProfiler.record(AvatarProfiler.Category.MODEL_RENDER, System.nanoTime() - profileStarted);
         }
+    }
+
+    /** Captures the exact composed bone pose used by this render submission. */
+    private static void publishBoneTransforms(BbModelDefinition model, UUID entityId, Matrix4f modelToRender,
+                                              Map<String, BonePose> bonePoses) {
+        Minecraft client = Minecraft.getInstance();
+        AvatarState active = AvatarRuntime.active();
+        if (active == null || !entityId.equals(active.boundEntityId()) || !model.modelId().equals(active.modelId())) return;
+        String context = AvatarRenderContext.forEntity(client, entityId);
+        boolean worldSpace = AvatarRenderContext.worldSpace(context);
+        Matrix4f root = new Matrix4f(modelToRender);
+        if (worldSpace) {
+            var camera = client.gameRenderer.mainCamera().position();
+            root.m30(root.m30() + (float) camera.x);
+            root.m31(root.m31() + (float) camera.y);
+            root.m32(root.m32() + (float) camera.z);
+        }
+
+        Map<String, AvatarBoneTransformRegistry.BoneTransform> transforms = new LinkedHashMap<>();
+        for (BbBoneDefinition bone : model.bones()) {
+            BonePose pose = bonePoses.getOrDefault(bone.uuid(), BonePose.IDENTITY);
+            Matrix4f world = new Matrix4f(root).mul(pose.matrix);
+            Vector3f position = world.transformPosition(new Vector3f(bone.pivotX(), bone.pivotY(), bone.pivotZ()));
+            Vector3f scale = AvatarMatrixDecomposition.worldScale(world);
+            Vector3f rotation = AvatarMatrixDecomposition.worldRotationDegrees(world);
+            float[] values = world.get(new float[16]);
+            transforms.put(model.bonePath(bone.uuid()), new AvatarBoneTransformRegistry.BoneTransform(
+                values, position.x, position.y, position.z,
+                rotation.x, rotation.y, rotation.z,
+                scale.x, scale.y, scale.z,
+                pose.visible, worldSpace, context
+            ));
+        }
+        AvatarBoneTransformRegistry.publish(entityId, model.modelId(), context, transforms);
     }
 
     private static Map<String, BonePose> prepareBonePoses(BbModelDefinition model, UUID entityId, VanillaPose vanillaPose) {
@@ -280,7 +384,7 @@ public final class BbModelEntityRenderer {
                 ? BbModelAnimator.sampleBoneTransform(model, playback.animationName(), bone.uuid(), playback.startedAtMillis(), now, 0f, expressionContext)
                 : blendAnimationLayers(model, bone, layers, now, expressionContext);
 
-        AvatarPartState part = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), "model." + bone.name());
+        AvatarPartState part = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.bonePath(bone.uuid()));
         BbBoneAnimation activeBoneAnimation = activeAnimation == null ? null : activeAnimation.boneAnimations().get(bone.uuid());
         String bonePath = model.bonePath(bone.uuid());
         boolean layeredPosition = false;
@@ -299,6 +403,16 @@ public final class BbModelEntityRenderer {
         boolean luaControlsPosition = part != null && part.positionControlled();
         boolean luaControlsRotation = part != null && part.rotationControlled();
         boolean luaControlsScale = part != null && part.scaleControlled();
+        String vanillaAttachment = vanillaAttachmentKey(bone, part);
+        String vanillaAttachmentMode = part != null && part.vanillaParentControlled() ? part.vanillaAttachmentMode() : "full";
+        if (!vanillaAttachment.isEmpty()) {
+            // A parent_type is a coordinate-space parent, not an animation offset.
+            // Apply it before this bone's local Blockbench transform so head/limb pose
+            // and ear/tail animation compose instead of one channel replacing the other.
+            PartTransform attachment = vanillaPose.forParent(vanillaAttachment);
+            if (!"rotation".equals(vanillaAttachmentMode)) matrix.translate(attachment.x(), attachment.y(), attachment.z());
+            if (!"position".equals(vanillaAttachmentMode)) matrix.rotateZYX(attachment.zDegrees() * DEG_TO_RAD, attachment.yDegrees() * DEG_TO_RAD, attachment.xDegrees() * DEG_TO_RAD);
+        }
         Vector3f pivot = luaControlsPosition
             ? new Vector3f(bone.pivotX() + part.posX(), bone.pivotY() + part.posY(), bone.pivotZ() + part.posZ())
             : new Vector3f(animation.pivot());
@@ -308,20 +422,25 @@ public final class BbModelEntityRenderer {
         Vector3f scale = luaControlsScale
             ? new Vector3f(part.scaleX(), part.scaleY(), part.scaleZ())
             : new Vector3f(animation.scale());
-        PartTransform automaticPose = vanillaPose.forBone(model, bone);
+        PartTransform automaticPose = vanillaAttachment.isEmpty() ? vanillaPose.forAutomaticBone(model, bone) : PartTransform.ZERO;
         if (!luaControlsPosition && !modelControlsPosition) {
             pivot.add(automaticPose.x(), automaticPose.y(), automaticPose.z());
         }
         if (!luaControlsRotation && !modelControlsRotation) {
             rotation.add(automaticPose.xDegrees(), automaticPose.yDegrees(), automaticPose.zDegrees());
         }
+        if (part != null && part.additiveRotationControlled()) {
+            rotation.add(part.additiveRotX(), part.additiveRotY(), part.additiveRotZ());
+        }
+        boolean localVisible = bone.visible();
         if (part != null) {
-            visible &= part.visible();
+            if (part.visibilityControlled()) localVisible = part.visible();
             if (part.renderControlled()) {
                 colorArgb = multiplyColor(colorArgb, part.colorArgb());
                 emissive |= part.emissive();
             }
         }
+        visible &= localVisible;
 
         matrix.translate(pivot.x, pivot.y, pivot.z);
         matrix.rotateZYX(rotation.z * DEG_TO_RAD, rotation.y * DEG_TO_RAD, rotation.x * DEG_TO_RAD);
@@ -404,6 +523,23 @@ public final class BbModelEntityRenderer {
             maxY = Math.max(maxY, Math.max(cube.fromY(), cube.toY()));
             maxZ = Math.max(maxZ, Math.max(cube.fromZ(), cube.toZ()));
         }
+        for (BbMeshDefinition mesh : model.meshes()) {
+            if (!belongsToBone(model, mesh.parentBoneUuid(), boneUuid)) continue;
+            Matrix4f local = new Matrix4f()
+                .translate(mesh.originX(), mesh.originY(), mesh.originZ())
+                .rotateZYX(mesh.rotationZ() * DEG_TO_RAD, mesh.rotationY() * DEG_TO_RAD, mesh.rotationX() * DEG_TO_RAD);
+            Vector3f point = new Vector3f();
+            for (BbMeshVertexDefinition vertex : mesh.vertices().values()) {
+                point.set(vertex.x(), vertex.y(), vertex.z());
+                local.transformPosition(point);
+                minX = Math.min(minX, point.x);
+                minY = Math.min(minY, point.y);
+                minZ = Math.min(minZ, point.z);
+                maxX = Math.max(maxX, point.x);
+                maxY = Math.max(maxY, point.y);
+                maxZ = Math.max(maxZ, point.z);
+            }
+        }
         if (!Float.isFinite(minX)) return new float[] {0f, 0f, 0f, 4f, 12f, 4f};
         return new float[] {minX, minY, minZ, maxX, maxY, maxZ};
     }
@@ -433,10 +569,106 @@ public final class BbModelEntityRenderer {
         return arm == HumanoidArm.LEFT ? leftNamed : rightNamed;
     }
 
+    /**
+     * Converted Figura projects commonly keep a separate {@code LeftArmFP} or
+     * {@code RightArmFP} tree.  Prefer that authored first-person tree, then
+     * retain the ordinary-arm fallback for native Shyne avatars.
+     */
+    private static BbBoneDefinition findFirstPersonArm(BbModelDefinition model, HumanoidArm arm) {
+        BbBoneDefinition leftCandidate = null;
+        BbBoneDefinition rightCandidate = null;
+        for (BbBoneDefinition bone : model.bones()) {
+            if (isFirstPersonArmBone(bone, HumanoidArm.LEFT)) leftCandidate = bone;
+            if (isFirstPersonArmBone(bone, HumanoidArm.RIGHT)) rightCandidate = bone;
+        }
+        if (leftCandidate != null && rightCandidate != null && Math.abs(leftCandidate.pivotX() - rightCandidate.pivotX()) > 0.01f) {
+            // Match the normal arm resolver: Minecraft's physical right limb is
+            // negative model X.  This keeps imported viewer-labelled FP trees
+            // paired with the same hand as their standard-arm counterparts.
+            BbBoneDefinition spatialRight = leftCandidate.pivotX() < rightCandidate.pivotX() ? leftCandidate : rightCandidate;
+            BbBoneDefinition spatialLeft = spatialRight == leftCandidate ? rightCandidate : leftCandidate;
+            return arm == HumanoidArm.RIGHT ? spatialRight : spatialLeft;
+        }
+        BbBoneDefinition semanticCandidate = arm == HumanoidArm.LEFT ? leftCandidate : rightCandidate;
+        if (semanticCandidate != null) return semanticCandidate;
+        return findHumanoidArm(model, arm);
+    }
+
+    private static boolean isFirstPersonArmBone(BbBoneDefinition bone, HumanoidArm arm) {
+        if (bone == null) return false;
+        String side = arm == HumanoidArm.LEFT ? "left" : "right";
+        String name = normalizeBoneName(bone.name());
+        if (name.equals(side + "armfp") || name.equals(side + "armfirstperson") || name.equals("firstperson" + side + "arm")) return true;
+
+        String wantedRole = "firstperson" + side + "arm";
+        if (normalizeBoneName(bone.role()).equals(wantedRole)) return true;
+        for (String tag : bone.tags()) {
+            if (normalizeBoneName(tag).equals(wantedRole)) return true;
+        }
+        return false;
+    }
+
+    private static boolean isDedicatedFirstPersonArm(BbBoneDefinition bone) {
+        return isFirstPersonArmBone(bone, HumanoidArm.LEFT) || isFirstPersonArmBone(bone, HumanoidArm.RIGHT);
+    }
+
+    /**
+     * Suppresses authored first-person trees in regular player renders.  The
+     * hierarchy is filtered at cube time, so all child bones inherit the rule
+     * without Lua visibility bookkeeping.
+     */
+    private static Set<String> hiddenFirstPersonBones(BbModelDefinition model) {
+        Set<String> hidden = new HashSet<>();
+        for (BbBoneDefinition bone : model.bones()) {
+            if (isFirstPersonArmBone(bone, HumanoidArm.LEFT) || isFirstPersonArmBone(bone, HumanoidArm.RIGHT)) {
+                addBoneSubtree(model, bone.uuid(), hidden);
+            }
+        }
+        return hidden;
+    }
+
+    private static void addBoneSubtree(BbModelDefinition model, String rootUuid, Set<String> output) {
+        if (rootUuid == null) return;
+        java.util.ArrayDeque<String> pending = new java.util.ArrayDeque<>();
+        pending.add(rootUuid);
+        while (!pending.isEmpty()) {
+            String current = pending.removeFirst();
+            if (!output.add(current)) continue;
+            BbBoneDefinition bone = model.findBoneByUuid(current);
+            if (bone != null) pending.addAll(bone.childBoneUuids());
+        }
+    }
+
+    private static boolean hasDrawableGeometry(BbModelDefinition model, UUID entityId, String rootBoneUuid, Map<String, BonePose> bonePoses) {
+        for (BbCubeDefinition cube : model.cubes()) {
+            if (!belongsToBone(model, cube.parentBoneUuid(), rootBoneUuid)) continue;
+            BonePose bonePose = cube.parentBoneUuid() == null ? BonePose.IDENTITY : bonePoses.getOrDefault(cube.parentBoneUuid(), BonePose.IDENTITY);
+            if (!bonePose.visible) continue;
+            AvatarPartState cubePart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.cubePath(cube));
+            boolean cubeVisible = cube.visible();
+            if (cubePart != null && cubePart.visibilityControlled()) cubeVisible = cubePart.visible();
+            if (!cubeVisible) continue;
+            if (cube.faces().values().stream().anyMatch(BbFaceUvDefinition::enabled)) return true;
+        }
+        for (BbMeshDefinition mesh : model.meshes()) {
+            if (!belongsToBone(model, mesh.parentBoneUuid(), rootBoneUuid)) continue;
+            BonePose bonePose = mesh.parentBoneUuid() == null ? BonePose.IDENTITY : bonePoses.getOrDefault(mesh.parentBoneUuid(), BonePose.IDENTITY);
+            if (!bonePose.visible) continue;
+            AvatarPartState meshPart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.meshPath(mesh));
+            boolean meshVisible = mesh.visible();
+            if (meshPart != null && meshPart.visibilityControlled()) meshVisible = meshPart.visible();
+            if (!meshVisible) continue;
+            if (mesh.faces().stream().anyMatch(BbMeshFaceDefinition::enabled)) return true;
+        }
+        return false;
+    }
+
     private static String automaticPoseKey(BbModelDefinition model, BbBoneDefinition bone) {
         String name = normalizeBoneName(bone.name());
         boolean arm = name.equals("leftarm") || name.equals("rightarm");
         boolean leg = name.equals("leftleg") || name.equals("rightleg");
+        boolean vanillaPart = arm || leg || name.equals("head") || name.equals("body") || name.equals("torso");
+        if (vanillaPart && hasSameNamedDescendant(model, bone, name)) return "";
         if (!arm && !leg) return name;
 
         String oppositeName = name.startsWith("left")
@@ -453,6 +685,38 @@ public final class BbModelEntityRenderer {
         // stable source of truth for automatic Vanilla poses.
         String side = bone.pivotX() < opposite.pivotX() ? "right" : "left";
         return side + (arm ? "arm" : "leg");
+    }
+
+    /** Prevents container aliases such as Mothi's outer body/body pair receiving the pose twice. */
+    private static boolean hasSameNamedDescendant(BbModelDefinition model, BbBoneDefinition ancestor, String normalizedName) {
+        for (BbBoneDefinition candidate : model.bones()) {
+            if (candidate == ancestor || !normalizeBoneName(candidate.name()).equals(normalizedName)) continue;
+            String parentUuid = candidate.parentUuid();
+            while (parentUuid != null) {
+                if (parentUuid.equals(ancestor.uuid())) return true;
+                BbBoneDefinition parent = model.findBoneByUuid(parentUuid);
+                parentUuid = parent == null ? null : parent.parentUuid();
+            }
+        }
+        return false;
+    }
+
+    /** Reads Figura/Blockbench parent_type metadata, so accessories do not need Lua binding code. */
+    private static String normalizeVanillaParentType(String value) {
+        return switch (normalizeBoneName(value)) {
+            case "head", "hat", "helmet" -> "head";
+            case "body", "torso", "chestplate" -> "body";
+            case "leftarm", "leftsleeve" -> "leftarm";
+            case "rightarm", "rightsleeve" -> "rightarm";
+            case "leftleg", "leftpants" -> "leftleg";
+            case "rightleg", "rightpants" -> "rightleg";
+            default -> "";
+        };
+    }
+
+    private static String vanillaAttachmentKey(BbBoneDefinition bone, AvatarPartState part) {
+        if (part != null && part.vanillaParentControlled()) return normalizeVanillaParentType(part.vanillaParent());
+        return normalizeVanillaParentType(bone.parentType());
     }
 
     private static void emitCube(
@@ -488,6 +752,98 @@ public final class BbModelEntityRenderer {
             x1, y2, z2, x1, y2, z1, x2, y2, z1, x2, y2, z2);
         face(vertices, transform, normalMatrix, normal, cube.faces().get("down"), cube.textureIndex(), targetTextureIndex, textureCount, textureWidth, textureHeight, lightCoords, colorArgb, 0, -1, 0,
             x1, y1, z1, x1, y1, z2, x2, y1, z2, x2, y1, z1);
+    }
+
+    /**
+     * Emits each Blockbench polygon as a triangle fan. Entity render types use
+     * quad buffers, so every triangle is encoded as a quad with a duplicated
+     * final vertex; the second generated triangle is degenerate.
+     */
+    private static void emitMesh(
+        VertexConsumer vertices,
+        Matrix4f transform,
+        BbMeshDefinition mesh,
+        int targetTextureIndex,
+        int textureCount,
+        int textureWidth,
+        int textureHeight,
+        int lightCoords,
+        int colorArgb
+    ) {
+        Matrix3f normalMatrix = new Matrix3f(transform).invert().transpose();
+        Vector3f normal = new Vector3f();
+        for (BbMeshFaceDefinition face : mesh.faces()) {
+            if (!face.enabled() || face.vertexIds().size() < 3) continue;
+            int faceTextureIndex = face.textureIndex();
+            if (faceTextureIndex < 0 || faceTextureIndex >= textureCount) faceTextureIndex = 0;
+            if (faceTextureIndex != targetTextureIndex) continue;
+
+            List<String> ids = face.vertexIds();
+            BbMeshVertexDefinition first = mesh.vertex(ids.get(0));
+            if (first == null) continue;
+            // modelToWorld reflects the Blockbench Y axis. Reverse face winding
+            // around vertex zero so front-face culling remains identical to the
+            // Blockbench/Figura preview while preserving the authored diagonal.
+            for (int i = ids.size() - 1; i >= 2; i--) {
+                BbMeshVertexDefinition second = mesh.vertex(ids.get(i));
+                BbMeshVertexDefinition third = mesh.vertex(ids.get(i - 1));
+                if (second == null || third == null) continue;
+                meshTriangle(vertices, transform, normalMatrix, normal, first, second, third,
+                    face.uv(first.id()), face.uv(second.id()), face.uv(third.id()),
+                    textureWidth, textureHeight, lightCoords, colorArgb);
+            }
+        }
+    }
+
+    private static void meshTriangle(
+        VertexConsumer vertices,
+        Matrix4f transform,
+        Matrix3f normalMatrix,
+        Vector3f normal,
+        BbMeshVertexDefinition a,
+        BbMeshVertexDefinition b,
+        BbMeshVertexDefinition c,
+        BbMeshUvDefinition uvA,
+        BbMeshUvDefinition uvB,
+        BbMeshUvDefinition uvC,
+        int textureWidth,
+        int textureHeight,
+        int lightCoords,
+        int colorArgb
+    ) {
+        float abX = b.x() - a.x(), abY = b.y() - a.y(), abZ = b.z() - a.z();
+        float acX = c.x() - a.x(), acY = c.y() - a.y(), acZ = c.z() - a.z();
+        normal.set(
+            abY * acZ - abZ * acY,
+            abZ * acX - abX * acZ,
+            abX * acY - abY * acX
+        );
+        if (normal.lengthSquared() <= 1.0e-12f) return;
+        normalMatrix.transform(normal).normalize();
+
+        meshVertex(vertices, transform, normal, a, uvA, textureWidth, textureHeight, lightCoords, colorArgb);
+        meshVertex(vertices, transform, normal, b, uvB, textureWidth, textureHeight, lightCoords, colorArgb);
+        meshVertex(vertices, transform, normal, c, uvC, textureWidth, textureHeight, lightCoords, colorArgb);
+        meshVertex(vertices, transform, normal, c, uvC, textureWidth, textureHeight, lightCoords, colorArgb);
+    }
+
+    private static void meshVertex(
+        VertexConsumer vertices,
+        Matrix4f transform,
+        Vector3f normal,
+        BbMeshVertexDefinition vertex,
+        BbMeshUvDefinition uv,
+        int textureWidth,
+        int textureHeight,
+        int lightCoords,
+        int colorArgb
+    ) {
+        vertices.addVertex(transform, vertex.x(), vertex.y(), vertex.z())
+            .setColor(colorArgb)
+            .setUv(uv.u() / Math.max(1, textureWidth), uv.v() / Math.max(1, textureHeight))
+            .setOverlay(OverlayTexture.NO_OVERLAY)
+            .setLight(lightCoords)
+            .setNormal(normal.x, normal.y, normal.z);
     }
 
     private static void face(
@@ -551,7 +907,7 @@ public final class BbModelEntityRenderer {
                 float headY = state.isCrouching ? -4.2f : 0f;
                 float upperBodyY = state.isCrouching ? -3.2f : 0f;
                 float legZ = state.isCrouching ? 4f : 0f;
-                return new VanillaPose(Map.of(
+                return new VanillaPose(withHandAliases(Map.of(
                     "head", fromModelPart(playerModel.head, 0f, headY, 0f),
                     "body", fromModelPart(playerModel.body, 0f, upperBodyY, 0f),
                     "torso", fromModelPart(playerModel.body, 0f, upperBodyY, 0f),
@@ -559,7 +915,7 @@ public final class BbModelEntityRenderer {
                     "rightarm", fromModelPart(playerModel.rightArm, 0f, upperBodyY, 0f),
                     "leftleg", fromModelPart(playerModel.leftLeg, 0f, 0f, legZ),
                     "rightleg", fromModelPart(playerModel.rightLeg, 0f, 0f, legZ)
-                ));
+                ), state.mainArm));
             }
             float speedDivisor = Math.abs(state.speedValue) < 0.001f ? 1f : Math.abs(state.speedValue);
             float movement = clamp(Math.abs(state.walkAnimationSpeed) / speedDivisor, 0f, 1f);
@@ -610,7 +966,7 @@ public final class BbModelEntityRenderer {
             float legZ = state.isCrouching ? 4f : 0f;
             float crouchArmX = state.isCrouching ? -10f : 0f;
 
-            return new VanillaPose(Map.of(
+            return new VanillaPose(withHandAliases(Map.of(
                 "head", new PartTransform(0f, headY, 0f, -clamp(state.xRot, -80f, 80f), clamp(state.yRot, -80f, 80f), 0f),
                 "body", new PartTransform(0f, upperBodyY, 0f, bodyCrouch, 0f, 0f),
                 "torso", new PartTransform(0f, upperBodyY, 0f, bodyCrouch, 0f, 0f),
@@ -618,7 +974,17 @@ public final class BbModelEntityRenderer {
                 "rightarm", new PartTransform(0f, upperBodyY, 0f, rightArmX + crouchArmX, rightArmY, rightArmZ),
                 "leftleg", new PartTransform(0f, 0f, legZ, leftLegX, state.isPassenger ? 18f : 0f, state.isPassenger ? 4f : 0f),
                 "rightleg", new PartTransform(0f, 0f, legZ, rightLegX, state.isPassenger ? -18f : 0f, state.isPassenger ? -4f : 0f)
-            ));
+            ), state.mainArm));
+        }
+
+        private static Map<String, PartTransform> withHandAliases(Map<String, PartTransform> base, HumanoidArm mainArm) {
+            Map<String, PartTransform> result = new HashMap<>(base);
+            PartTransform left = base.getOrDefault("leftarm", PartTransform.ZERO);
+            PartTransform right = base.getOrDefault("rightarm", PartTransform.ZERO);
+            boolean leftHanded = mainArm == HumanoidArm.LEFT;
+            result.put("mainhand", leftHanded ? left : right);
+            result.put("offhand", leftHanded ? right : left);
+            return Map.copyOf(result);
         }
 
         private static float clamp(float value, float min, float max) {
@@ -635,8 +1001,22 @@ public final class BbModelEntityRenderer {
             );
         }
 
-        private PartTransform forBone(BbModelDefinition model, BbBoneDefinition bone) {
+        private PartTransform forAutomaticBone(BbModelDefinition model, BbBoneDefinition bone) {
             return parts.getOrDefault(automaticPoseKey(model, bone), PartTransform.ZERO);
+        }
+
+        private PartTransform forParent(String key) {
+            return parts.getOrDefault(key, PartTransform.ZERO);
+        }
+
+        private Map<String, seashyne.shynecore.client.state.VanillaPartTransform> snapshot() {
+            Map<String, seashyne.shynecore.client.state.VanillaPartTransform> result = new HashMap<>();
+            for (Map.Entry<String, PartTransform> entry : parts.entrySet()) {
+                PartTransform value = entry.getValue();
+                result.put(entry.getKey().toUpperCase(java.util.Locale.ROOT).replace("_", ""),
+                    new seashyne.shynecore.client.state.VanillaPartTransform(value.x(), value.y(), value.z(), value.xDegrees(), value.yDegrees(), value.zDegrees(), true));
+            }
+            return result;
         }
     }
 }

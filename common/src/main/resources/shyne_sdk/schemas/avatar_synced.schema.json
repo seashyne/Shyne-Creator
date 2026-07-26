@@ -1,6 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Shyne Avatar Synced Variables",
+  "description": "Template for values written with state.sync. Declare properties and set additionalProperties to false for a strict network allowlist.",
   "type": "object",
-  "additionalProperties": true
+  "additionalProperties": false,
+  "properties": {
+    "example_toggle": {
+      "type": "boolean",
+      "description": "Rename or remove this example key."
+    }
+  }
 }

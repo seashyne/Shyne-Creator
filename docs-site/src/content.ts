@@ -35,7 +35,7 @@ export type DocItem = {
 
 const installation = `# ติดตั้ง Shyne Creator
 
-Shyne Creator **2.8.4-alpha-26.2** รองรับ Minecraft **26.2** บน Fabric และ NeoForge โดยม็อดทั้งสอง Loader ใช้ Mod ID \`shyne_creator\`, Shyne API Standard และ network protocol ชุดเดียวกัน
+Shyne Creator **2.9.0-alpha-26.2** รองรับ Minecraft **26.2** บน Fabric และ NeoForge โดยม็อดทั้งสอง Loader ใช้ Mod ID \`shyne_creator\`, Shyne API Standard และ network protocol ชุดเดียวกัน
 
 > ไฟล์ Fabric และ NeoForge เป็นคนละไฟล์ ห้ามใส่ทั้งสองไฟล์ใน Minecraft instance เดียวกัน
 
@@ -52,13 +52,13 @@ Shyne Creator **2.8.4-alpha-26.2** รองรับ Minecraft **26.2** บน 
 ## ติดตั้งบน Fabric
 
 1. ติดตั้ง Fabric Loader สำหรับ Minecraft 26.2
-2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.8.4-alpha-26.2.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
+2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.9.0-alpha-26.2.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมแล้วตรวจว่าเมนู Shyne Creator ปรากฏขึ้น
 
 ## ติดตั้งบน NeoForge
 
 1. ติดตั้ง NeoForge สำหรับ Minecraft 26.2
-2. ใส่ไฟล์ \`shyne-creator-neoforge-2.8.4-alpha-26.2.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
+2. ใส่ไฟล์ \`shyne-creator-neoforge-2.9.0-alpha-26.2.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมด้วยโปรไฟล์ NeoForge
 
 ## โฟลเดอร์ Creator
@@ -112,4 +112,4 @@ export const fileToSlug: Record<string, string> = {
   'MULTIPLAYER_TESTING.md': 'multiplayer-testing', 'CREATOR_SDK_TH.md': 'creator-sdk', 'ARCHITECTURE_TH.md': 'architecture',
 }
 
-export const version = '2.8.4-alpha-26.2'
+export const version = '2.9.0-alpha-26.2'

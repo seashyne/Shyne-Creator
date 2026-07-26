@@ -7,9 +7,12 @@ import net.minecraft.world.entity.player.Player;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.animation.AnimationPlayback;
 import seashyne.shynecore.attachment.AttachedModelState;
+import seashyne.shynecore.avatar.AvatarAnimationClock;
 import seashyne.shynecore.client.network.ShyneClientNetworking;
 import seashyne.shynecore.client.config.ShyneClientSettings;
 import seashyne.shynecore.client.render.BbModelTextures;
+import seashyne.shynecore.client.render.AvatarBoneTransformRegistry;
+import seashyne.shynecore.client.render.AvatarRenderContext;
 import seashyne.shynecore.client.profiler.AvatarProfiler;
 import seashyne.shynecore.client.state.ClientAnimationState;
 import seashyne.shynecore.model.BbBoneDefinition;
@@ -24,10 +27,16 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public final class AvatarRuntime {
+    private static final int POSE_SNAPSHOT_INTERVAL_TICKS = 2;
+    private static final long MIN_SNAPSHOT_SEND_INTERVAL_NANOS = 80_000_000L;
     private static AvatarState active;
     private static AvatarManifest activeManifest;
     private static BbModelDefinition activeModel;
     private static ClientLuaAvatarRuntime script;
+    private static AvatarAutoAnimationController animationController;
+    private static AvatarPhysicsController physicsController;
+    private static Player physicsPlayer;
+    private static Object physicsLevel;
     private static volatile List<AvatarCatalogEntry> catalog = List.of();
     private static CompletableFuture<List<AvatarCatalogEntry>> catalogRefresh = CompletableFuture.completedFuture(List.of());
     private static long lastCatalogRefreshMillis;
@@ -35,6 +44,11 @@ public final class AvatarRuntime {
     private static int snapshotTicks;
     private static boolean snapshotAssetsSent;
     private static long forceModelSnapshotUntilMillis;
+    private static long lastSnapshotAttemptAtNanos;
+    private static long nextSnapshotTransportRevision;
+    private static final NavigableMap<Long, SentSnapshotRevision> awaitingSnapshotAcks = new TreeMap<>();
+    private static String pendingAvatarClearPlayerId;
+    private static long pendingAvatarClearRevision;
     private static ShyneMicrophoneState.Snapshot lastMicrophoneSnapshot;
     private static long lastMicrophoneEventNanos;
     private static AvatarActivationResult lastActivation = AvatarActivationResult.success("", "Ready");
@@ -45,33 +59,47 @@ public final class AvatarRuntime {
     public static void init() {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             snapshotAssetsSent = false;
+            lastSnapshotAttemptAtNanos = 0L;
+            nextSnapshotTransportRevision = 0L;
+            awaitingSnapshotAcks.clear();
+            pendingAvatarClearPlayerId = null;
+            pendingAvatarClearRevision = 0L;
             if (active != null) active.markSnapshotDirty();
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> snapshotAssetsSent = false);
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            snapshotAssetsSent = false;
+            lastSnapshotAttemptAtNanos = 0L;
+            nextSnapshotTransportRevision = 0L;
+            awaitingSnapshotAcks.clear();
+            pendingAvatarClearPlayerId = null;
+            pendingAvatarClearRevision = 0L;
+            AvatarBoneTransformRegistry.clear();
+        });
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null) return;
+            applySnapshotAcknowledgements(client.player.getUUID());
+            flushPendingAvatarClear();
             ShyneCloudClient.tick(client);
             if (!initialized) {
                 initialized = true;
                 activateFirstAvailable(client);
             }
+            tickAutomaticAnimations(client.player);
+            tickNativePhysics(client.player);
             if (script != null) {
                 script.tick(client);
                 dispatchMicrophoneEvent();
             }
             pruneAnimationLayers();
             renderHook();
-            if (active != null && active.isSyncedDirty()) {
-                ShyneClientNetworking.sendAvatarVars(active.avatarId(), active.syncPolicy().filterSyncedVars(active.syncedVars()));
-                active.clearSyncedDirty();
-            }
             if (active != null && activeManifest != null && activeManifest.onlineSync()) {
                 snapshotTicks++;
-                if (snapshotTicks >= 100 || active.isSnapshotDirty() || (snapshotTicks >= 5 && active.areAnimationParametersDirty())) {
-                    snapshotTicks = 0;
-                    sendLocalSnapshot(client);
-                    active.clearSnapshotDirty();
-                    active.clearAnimationParametersDirty();
+                if (snapshotTicks >= 100 || active.isSnapshotDirty()
+                    || (snapshotTicks >= POSE_SNAPSHOT_INTERVAL_TICKS && active.isPoseDirty())
+                    || (snapshotTicks >= 5 && active.areAnimationParametersDirty())) {
+                    if (sendLocalSnapshot(client)) {
+                        snapshotTicks = 0;
+                    }
                 }
             }
             syncAttachment(client);
@@ -98,12 +126,26 @@ public final class AvatarRuntime {
     public static boolean localNameplateVisible() { return active == null || active.nameplateVisible(); }
     public static boolean isVanillaPartVisible(String key) { return isVanillaPartVisible(null, key); }
     public static boolean isVanillaPartVisible(UUID playerId, String key) {
-        if (playerId != null) {
-            Boolean remote = ClientAnimationState.getRemoteVanillaVisibility(playerId, key);
-            if (remote != null) return remote;
+        String canonical = VanillaVisibilityKeys.normalize(key);
+        if (!ShyneClientSettings.renderAttachments) return true;
+        Minecraft client = Minecraft.getInstance();
+        UUID localId = client.player == null ? null : client.player.getUUID();
+        boolean localRequest = playerId == null || playerId.equals(localId)
+            || (active != null && playerId.equals(active.boundEntityId()));
+        if (localRequest) {
+            if (active == null) return true;
+            return resolvedVanillaVisibility(active.vanillaVisibility(), active.replaceVanilla(), canonical);
         }
-        if (active == null) return true;
-        return active.vanillaVisibility().getOrDefault(key, !shouldHideLocalPlayer());
+        if (ShyneClientSettings.isRemoteAvatarHidden(playerId)) return true;
+        RemoteAvatarState remote = ClientAnimationState.getRemoteAvatar(playerId);
+        if (remote == null) return true;
+        return resolvedVanillaVisibility(remote.vanillaVisibility(), remote.replaceVanilla(), canonical);
+    }
+
+    private static boolean resolvedVanillaVisibility(Map<String, Boolean> visibility, boolean replaceVanilla, String key) {
+        if (!VanillaVisibilityKeys.PLAYER.equals(key)
+            && !VanillaVisibilityKeys.isVisible(visibility, replaceVanilla, VanillaVisibilityKeys.PLAYER)) return false;
+        return VanillaVisibilityKeys.isVisible(visibility, replaceVanilla, key);
     }
 
     public static void activateFirstAvailable(Minecraft client) {
@@ -231,7 +273,7 @@ public final class AvatarRuntime {
         var manifest = AvatarLoader.loadManifest(root);
         String modelId = "avatar:" + manifest.id();
         Path modelPath = AvatarLoader.resolveAvatarFile(root, manifest.model());
-        Path scriptPath = AvatarLoader.resolveAvatarFile(root, manifest.main());
+        Path scriptPath = manifest.hasScript() ? AvatarLoader.resolveAvatarFile(root, manifest.main()) : null;
         BbModelDefinition model = BbModelParser.parse(modelPath, manifest.id()).withModelId(modelId);
         validateModel(model, root);
         validateDeclaredTextures(model, manifest);
@@ -261,16 +303,23 @@ public final class AvatarRuntime {
         nextState.setFirstPersonMasking(manifest.firstPersonMasking());
         nextState.setLocalCameraOnly(manifest.localCamera());
         nextState.setTextureSyncMode(manifest.textureSyncMode());
-        nextState.setSyncedSchemaPath(manifest.syncedSchema());
+        nextState.configureSyncedSchema(manifest.syncedSchema(), AvatarSyncedSchema.load(root, manifest.syncedSchema()));
         nextState.syncPolicy().setAllowRemoteSnapshot(manifest.onlineSync());
         nextState.syncPolicy().setAllowRemoteVars(manifest.onlineSync());
         nextState.bindEntity(client.player != null ? client.player.getUUID() : UUID.randomUUID());
         indexModelPaths(model, nextState);
-        ClientLuaAvatarRuntime nextScript = new ClientLuaAvatarRuntime(nextState, scriptPath);
-        if (!nextScript.load()) {
-            nextScript.dispose();
-            throw new IOException("Lua script failed to load; previous avatar was kept");
+        ClientLuaAvatarRuntime nextScript = null;
+        if (scriptPath != null) {
+            nextScript = new ClientLuaAvatarRuntime(nextState, model, scriptPath);
+            if (!nextScript.load()) {
+                nextScript.dispose();
+                throw new IOException("Lua script failed to load; previous avatar was kept");
+            }
         }
+        long animationSeed = manifest.id().hashCode();
+        if (client.player != null) animationSeed ^= client.player.getUUID().getMostSignificantBits() ^ client.player.getUUID().getLeastSignificantBits();
+        AvatarAutoAnimationController nextController = new AvatarAutoAnimationController(model, manifest.behavior(), animationSeed);
+        AvatarPhysicsController nextPhysicsController = new AvatarPhysicsController(model);
 
         Path previousRoot = active == null ? null : active.rootDir();
         cleanupActive();
@@ -280,20 +329,28 @@ public final class AvatarRuntime {
         activeManifest = manifest;
         activeModel = model;
         active = nextState;
+        if (manifest.onlineSync()) {
+            pendingAvatarClearPlayerId = null;
+            pendingAvatarClearRevision = 0L;
+        }
         script = nextScript;
+        animationController = nextController;
+        physicsController = nextPhysicsController;
         AvatarProfiler.activate(manifest.id(), root, model);
-        AvatarProfiler.record(AvatarProfiler.Category.LUA_LOAD, nextScript.loadElapsedNanos());
+        if (nextScript != null) AvatarProfiler.record(AvatarProfiler.Category.LUA_LOAD, nextScript.loadElapsedNanos());
         snapshotAssetsSent = false;
         snapshotTicks = 0;
         ClientAnimationState.putLocalModel(modelId, model);
+        publishAnimationPlayback(active, System.currentTimeMillis());
         String savedOutfit = ShyneClientSettings.selectedOutfit(manifest.id());
         if (!applyOutfit(savedOutfit, false)) {
             applyOutfit(AvatarOutfitLoader.DEFAULT_OUTFIT, true);
         }
-        script.entityInit(client);
+        if (script != null) script.entityInit(client);
         syncAttachment(client);
         active.markSnapshotDirty();
         if (manifest.onlineSync()) sendLocalSnapshot(client);
+        else if (client.player != null) requestAvatarClear(client.player.getStringUUID());
         if (!ShyneSecureAvatar.isRuntimePath(root)) {
             ShyneCloudClient.clearActivePublic();
             ShyneClientSettings.selectedAvatarId = manifest.id();
@@ -312,7 +369,7 @@ public final class AvatarRuntime {
         ShyneCloudClient.clearActivePublic();
         ShyneClientSettings.selectedAvatarId = VANILLA_SELECTION;
         ShyneClientSettings.save();
-        if (client != null && client.player != null) ShyneClientNetworking.sendAvatarClear(client.player.getStringUUID());
+        if (client != null && client.player != null) requestAvatarClear(client.player.getStringUUID());
         lastActivation = AvatarActivationResult.success(previous, "Using vanilla player model");
         ShyneCore.LOGGER.info("[AvatarRuntime] Deactivated avatar; using vanilla player model");
         return lastActivation;
@@ -330,15 +387,21 @@ public final class AvatarRuntime {
             ClientAnimationState.removeLocalAttachment(entityId);
             ClientAnimationState.clearAvatarPartStates(entityId, previous.modelId());
             ClientAnimationState.removeLocalModel(previous.modelId());
+            AvatarBoneTransformRegistry.clearEntity(entityId);
         }
         active = null;
         activeManifest = null;
         activeModel = null;
         script = null;
+        animationController = null;
+        physicsController = null;
+        physicsPlayer = null;
+        physicsLevel = null;
         lastMicrophoneSnapshot = null;
         lastMicrophoneEventNanos = 0L;
         snapshotAssetsSent = false;
         forceModelSnapshotUntilMillis = 0L;
+        awaitingSnapshotAcks.clear();
         snapshotTicks = 0;
         AvatarProfiler.clear();
     }
@@ -403,6 +466,7 @@ public final class AvatarRuntime {
     }
 
     private static void dispatchMicrophoneEvent() {
+        if (script == null) return;
         if (active != null && !active.permissionAllowed(AvatarPermission.MICROPHONE)) return;
         ShyneMicrophoneState.Snapshot current = ShyneMicrophoneState.snapshot();
         long now = System.nanoTime();
@@ -419,9 +483,48 @@ public final class AvatarRuntime {
         lastMicrophoneEventNanos = now;
     }
 
+    private static void tickAutomaticAnimations(Player player) {
+        if (animationController == null || player == null) return;
+        var velocity = player.getDeltaMovement();
+        boolean moving = Math.abs(velocity.x) + Math.abs(velocity.z) > 0.015;
+        var signals = new AvatarAutoAnimationController.Signals(
+            moving,
+            player.isSprinting(),
+            player.isCrouching(),
+            player.isSwimming(),
+            player.isInWater(),
+            player.isSleeping(),
+            player.isFallFlying(),
+            player.getVehicle() != null
+        );
+        AvatarAutoAnimationController.Update update = animationController.tick(signals);
+        for (String animation : update.stops()) stopAnimation(animation);
+        for (AvatarAutoAnimationController.Play play : update.plays()) {
+            playAnimation(
+                play.animation(), 1.0, 1.0, play.priority(), play.loop(),
+                play.fadeInTicks(), play.fadeOutTicks(), List.of(), play.additive(), play.transitionTicks()
+            );
+        }
+    }
+
+    private static void tickNativePhysics(Player player) {
+        if (physicsController == null || active == null || player == null || !physicsController.active()) return;
+        if (physicsPlayer != player || physicsLevel != player.level()) {
+            physicsController.reset();
+            physicsPlayer = player;
+            physicsLevel = player.level();
+        }
+        var velocity = player.getDeltaMovement();
+        physicsController.tick(new AvatarPhysicsController.Signals(
+            velocity.x, velocity.y, velocity.z,
+            player.yBodyRot, player.getXRot(), player.onGround(), player.isInWater(),
+            player.level().getGameTime()
+        ), active);
+    }
+
     private static void validateModel(BbModelDefinition model, Path avatarRoot) throws IOException {
         if (model.bones().size() > ShyneClientSettings.avatarMaxBones) throw new IOException("model has more than configured avatarMaxBones (" + ShyneClientSettings.avatarMaxBones + ")");
-        if (model.cubes().size() > ShyneClientSettings.avatarMaxCubes) throw new IOException("model has more than configured avatarMaxCubes (" + ShyneClientSettings.avatarMaxCubes + ")");
+        if (model.cubes().size() + model.meshes().size() > ShyneClientSettings.avatarMaxCubes) throw new IOException("model has more render elements than configured avatarMaxCubes (" + ShyneClientSettings.avatarMaxCubes + ")");
         if (model.animations().size() > ShyneClientSettings.avatarMaxAnimations) throw new IOException("model has more than configured avatarMaxAnimations (" + ShyneClientSettings.avatarMaxAnimations + ")");
         if (model.textures().size() > ShyneClientSettings.avatarMaxTextures) throw new IOException("model has more than configured avatarMaxTextures (" + ShyneClientSettings.avatarMaxTextures + ")");
         int maxTextureSize = ShyneClientSettings.avatarMaxTextureSize;
@@ -454,33 +557,41 @@ public final class AvatarRuntime {
     }
 
     private static void indexModelPaths(BbModelDefinition model, AvatarState state) {
-        Set<String> children = new HashSet<>();
+        Map<String, Integer> boneNames = new HashMap<>();
         for (BbBoneDefinition bone : model.bones()) {
-            children.addAll(bone.childBoneUuids());
-            state.aliasPath(bone.uuid(), "model." + bone.name());
+            boneNames.merge(bone.name().toLowerCase(Locale.ROOT), 1, Integer::sum);
         }
         for (BbBoneDefinition bone : model.bones()) {
-            if (!children.contains(bone.uuid())) {
-                aliasRecursive(model, state, bone, "model." + bone.name());
+            String path = model.bonePath(bone.uuid());
+            state.aliasPath(path, path);
+            state.aliasPath(path.toLowerCase(Locale.ROOT), path);
+            state.aliasPath(bone.uuid(), path);
+            if (boneNames.getOrDefault(bone.name().toLowerCase(Locale.ROOT), 0) == 1) {
+                state.aliasPath(bone.name(), path);
+                state.aliasPath("model." + bone.name(), path);
             }
         }
+        Map<String, Integer> elementNames = new HashMap<>();
+        for (var cube : model.cubes()) elementNames.merge(cube.name().toLowerCase(Locale.ROOT), 1, Integer::sum);
+        for (var mesh : model.meshes()) elementNames.merge(mesh.name().toLowerCase(Locale.ROOT), 1, Integer::sum);
         for (var cube : model.cubes()) {
             String cubePath = model.cubePath(cube);
             state.aliasPath(cubePath, cubePath);
-            state.aliasPath("models." + cubePath, cubePath);
-            state.aliasPath("model." + cube.name(), cubePath);
+            state.aliasPath(cubePath.toLowerCase(Locale.ROOT), cubePath);
+            if (elementNames.getOrDefault(cube.name().toLowerCase(Locale.ROOT), 0) == 1) {
+                state.aliasPath(cube.name(), cubePath);
+                state.aliasPath("model." + cube.name(), cubePath);
+            }
         }
-    }
-
-    private static void aliasRecursive(BbModelDefinition model, AvatarState state, BbBoneDefinition bone, String path) {
-        state.aliasPath(path, path);
-        state.aliasPath(bone.name(), path);
-        state.aliasPath("model." + bone.name(), path);
-        state.aliasPath(path.toLowerCase(), path);
-        state.aliasPath("models." + path, path);
-        for (String childId : bone.childBoneUuids()) {
-            BbBoneDefinition child = model.findBoneByUuid(childId);
-            if (child != null) aliasRecursive(model, state, child, path + "." + child.name());
+        for (var mesh : model.meshes()) {
+            String meshPath = model.meshPath(mesh);
+            state.aliasPath(meshPath, meshPath);
+            state.aliasPath(meshPath.toLowerCase(Locale.ROOT), meshPath);
+            state.aliasPath(mesh.uuid(), meshPath);
+            if (elementNames.getOrDefault(mesh.name().toLowerCase(Locale.ROOT), 0) == 1) {
+                state.aliasPath(mesh.name(), meshPath);
+                state.aliasPath("model." + mesh.name(), meshPath);
+            }
         }
     }
 
@@ -513,27 +624,27 @@ public final class AvatarRuntime {
                                      int fadeInTicks, int fadeOutTicks, List<String> mask, boolean additive, int transitionTicks) {
         if (active == null || active.boundEntityId() == null) return;
         if (animationName == null || animationName.isBlank()) return;
-        active.setCurrentAnimation(animationName);
         var definition = activeModel == null ? null : activeModel.findAnimation(animationName);
         double length = definition == null || definition.lengthSeconds() <= 0 ? 2.0 : definition.lengthSeconds();
         boolean looping = definition == null || definition.looping();
         if (loopOverride != null) looping = loopOverride;
         int transition = Math.max(0, Math.min(1200, transitionTicks));
+        long now = System.currentTimeMillis();
         if (transition > 0 && !additive) {
-            long now = System.currentTimeMillis();
             active.animationLayers().replaceAll((key, layer) ->
                 !layer.additive() && layer.priority() == priority && !key.equals(animationName.toLowerCase(Locale.ROOT))
                     ? layer.requestStop(now, transition) : layer);
         }
         active.animationLayers().put(animationName.toLowerCase(Locale.ROOT), new AvatarAnimationLayer(
-            animationName, System.currentTimeMillis(), length, looping,
+            animationName, now, length, looping,
             Math.max(0.01, Math.min(8.0, speed)), Math.max(0.0, Math.min(1.0, weight)),
             Math.max(-1000, Math.min(1000, priority)),
             Math.max(transition, Math.max(0, Math.min(1200, fadeInTicks))), Math.max(transition, Math.max(0, Math.min(1200, fadeOutTicks))),
             mask == null ? List.of() : List.copyOf(mask), additive, 0L
         ));
         active.markAnimationLayersDirty();
-        ClientAnimationState.putLocalPlayback(new AnimationPlayback(active.boundEntityId(), "local-player", active.modelId(), animationName, System.currentTimeMillis(), length, looping));
+        active.markSnapshotDirty();
+        refreshCurrentAnimationPlayback(now);
     }
 
     public static boolean isAnimationPlaying(String animationName) {
@@ -552,10 +663,8 @@ public final class AvatarRuntime {
         if (layer != null && layer.fadeOutTicks() > 0) active.animationLayers().put(key, layer.requestStop(System.currentTimeMillis()));
         else active.animationLayers().remove(key);
         active.markAnimationLayersDirty();
-        if (animationName.equalsIgnoreCase(active.currentAnimation())) {
-            active.clearCurrentAnimation();
-            if (active.boundEntityId() != null) ClientAnimationState.removeLocalPlayback(active.boundEntityId());
-        }
+        active.markSnapshotDirty();
+        refreshCurrentAnimationPlayback(System.currentTimeMillis());
     }
 
     private static void pruneAnimationLayers() {
@@ -563,7 +672,30 @@ public final class AvatarRuntime {
         long now = System.currentTimeMillis();
         if (active.animationLayers().entrySet().removeIf(entry -> entry.getValue().finished(now))) {
             active.markAnimationLayersDirty();
+            active.markSnapshotDirty();
+            refreshCurrentAnimationPlayback(now);
         }
+    }
+
+    private static void refreshCurrentAnimationPlayback(long now) {
+        if (active == null) return;
+        active.refreshCurrentAnimationFromLayers(now);
+        publishAnimationPlayback(active, now);
+    }
+
+    static void publishAnimationPlayback(AvatarState state, long now) {
+        if (state == null || active != state) return;
+        UUID entityId = state.boundEntityId();
+        if (entityId == null) return;
+        AvatarAnimationLayer representative = state.representativeAnimationLayer(now);
+        if (representative == null) {
+            ClientAnimationState.removeLocalPlayback(entityId);
+            return;
+        }
+        ClientAnimationState.putLocalPlayback(new AnimationPlayback(
+            entityId, "local-player", state.modelId(), representative.name(), representative.startedAtMillis(),
+            representative.lengthSeconds(), true
+        ));
     }
 
     public static void stopAnimation() {
@@ -589,8 +721,35 @@ public final class AvatarRuntime {
         return playEmote(emoteId);
     }
 
+    /** Keeps the network/render mirror current at tick rate. Frame events are dispatched separately. */
     public static void renderHook() {
-        if (script != null) script.render();
+        syncActivePartStates();
+    }
+
+    /** Called by {@code AvatarFrameMixin} at the real render-frame boundary. */
+    public static void renderFrameStart() {
+        Minecraft client = Minecraft.getInstance();
+        if (script == null) return;
+        float delta = client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        String context = AvatarRenderContext.current(client);
+        if (client.level != null) script.worldRender(delta);
+        script.render(delta, context);
+        // Render callbacks may change pose channels. Publish those changes before
+        // Minecraft extracts/submits this frame's avatar model.
+        syncActivePartStates();
+    }
+
+    /** Called after GUI/world submission so scripts can observe the completed frame. */
+    public static void renderFrameEnd() {
+        Minecraft client = Minecraft.getInstance();
+        if (script == null) return;
+        float delta = client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        String context = AvatarRenderContext.current(client);
+        script.postRender(delta, context);
+        if (client.level != null) script.postWorldRender(delta);
+    }
+
+    private static void syncActivePartStates() {
         if (active == null) return;
         if (activeModel != null && ClientAnimationState.getModel(active.modelId()) != activeModel) {
             ClientAnimationState.putLocalModel(active.modelId(), activeModel);
@@ -605,19 +764,97 @@ public final class AvatarRuntime {
         return buildLocalSnapshot(client, true);
     }
 
-    private static void sendLocalSnapshot(Minecraft client) {
+    private static boolean sendLocalSnapshot(Minecraft client) {
+        AvatarState sendingState = active;
+        if (sendingState == null) return false;
+        long nowNanos = System.nanoTime();
+        if (lastSnapshotAttemptAtNanos != 0L && nowNanos - lastSnapshotAttemptAtNanos < MIN_SNAPSHOT_SEND_INTERVAL_NANOS) return false;
+        long snapshotRevision = sendingState.captureSnapshotRevision();
+        long poseRevision = sendingState.capturePoseRevision();
+        long animationParametersRevision = sendingState.captureAnimationParametersRevision();
+        long syncedRevision = sendingState.captureSyncedRevision();
         boolean includeModel = !snapshotAssetsSent || System.currentTimeMillis() < forceModelSnapshotUntilMillis;
-        if (ShyneClientNetworking.sendAvatarSnapshot(buildLocalSnapshot(client, includeModel))) snapshotAssetsSent = true;
+        long transportRevision = nextTransportRevision();
+        lastSnapshotAttemptAtNanos = nowNanos;
+        boolean sent = ShyneClientNetworking.sendAvatarSnapshot(buildLocalSnapshot(client, includeModel), transportRevision);
+        if (sent) {
+            awaitingSnapshotAcks.put(transportRevision, new SentSnapshotRevision(
+                sendingState, snapshotRevision, poseRevision, animationParametersRevision, syncedRevision, includeModel
+            ));
+            while (awaitingSnapshotAcks.size() > 64) awaitingSnapshotAcks.pollFirstEntry();
+        }
+        return sent;
     }
+
+    private static void requestAvatarClear(String playerId) {
+        if (playerId == null || playerId.isBlank()) return;
+        if (!playerId.equals(pendingAvatarClearPlayerId)) {
+            pendingAvatarClearPlayerId = playerId;
+            pendingAvatarClearRevision = 0L;
+        }
+        flushPendingAvatarClear();
+    }
+
+    private static void flushPendingAvatarClear() {
+        String playerId = pendingAvatarClearPlayerId;
+        if (playerId == null || playerId.isBlank()) return;
+        long nowNanos = System.nanoTime();
+        if (lastSnapshotAttemptAtNanos != 0L && nowNanos - lastSnapshotAttemptAtNanos < MIN_SNAPSHOT_SEND_INTERVAL_NANOS) return;
+        long transportRevision = nextTransportRevision();
+        lastSnapshotAttemptAtNanos = nowNanos;
+        // Keep the first outstanding revision as the acknowledgement floor.
+        // Replacing it on every retry can make the clear chase newer ACKs
+        // forever when the network round trip is longer than the retry period.
+        if (ShyneClientNetworking.sendAvatarClear(playerId, transportRevision)
+            && pendingAvatarClearRevision == 0L) {
+            pendingAvatarClearRevision = transportRevision;
+        }
+    }
+
+    private static void applySnapshotAcknowledgements(UUID playerId) {
+        long acknowledged = ClientAnimationState.acknowledgedAvatarSnapshotRevision(playerId);
+        if (acknowledged <= 0L) return;
+        Iterator<Map.Entry<Long, SentSnapshotRevision>> iterator = awaitingSnapshotAcks.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<Long, SentSnapshotRevision> entry = iterator.next();
+            if (entry.getKey() > acknowledged) break;
+            SentSnapshotRevision sent = entry.getValue();
+            sent.state().acknowledgeSnapshotRevision(sent.snapshotRevision());
+            sent.state().acknowledgePoseRevision(sent.poseRevision());
+            sent.state().acknowledgeAnimationParametersRevision(sent.animationParametersRevision());
+            sent.state().acknowledgeSyncedRevision(sent.syncedRevision());
+            if (sent.includedModel() && sent.state() == active) snapshotAssetsSent = true;
+            iterator.remove();
+        }
+        if (pendingAvatarClearRevision > 0L && acknowledged >= pendingAvatarClearRevision) {
+            pendingAvatarClearPlayerId = null;
+            pendingAvatarClearRevision = 0L;
+        }
+    }
+
+    private static long nextTransportRevision() {
+        if (nextSnapshotTransportRevision == Long.MAX_VALUE) nextSnapshotTransportRevision = 0L;
+        return ++nextSnapshotTransportRevision;
+    }
+
+    private record SentSnapshotRevision(
+        AvatarState state,
+        long snapshotRevision,
+        long poseRevision,
+        long animationParametersRevision,
+        long syncedRevision,
+        boolean includedModel
+    ) {}
 
     private static ShyneNetwork.NetAvatarSnapshot buildLocalSnapshot(Minecraft client, boolean includeModel) {
         if (active == null || activeModel == null) return null;
+        long snapshotNowMillis = System.currentTimeMillis();
         String playerId = client.player == null ? UUID.randomUUID().toString() : client.player.getStringUUID();
         List<ShyneNetwork.NetAvatarPart> parts = new ArrayList<>();
         Map<String, AvatarPartState> visibleParts = active.syncPolicy().filterParts(active.parts());
         for (var entry : visibleParts.entrySet()) {
             AvatarPartState p = entry.getValue();
-            parts.add(new ShyneNetwork.NetAvatarPart(entry.getKey(), p.visible(), p.posX(), p.posY(), p.posZ(), p.rotX(), p.rotY(), p.rotZ(), p.scaleX(), p.scaleY(), p.scaleZ(), p.positionControlled(), p.rotationControlled(), p.scaleControlled(), p.colorArgb(), p.emissive()));
+            parts.add(new ShyneNetwork.NetAvatarPart(entry.getKey(), p.visible(), p.posX(), p.posY(), p.posZ(), p.rotX(), p.rotY(), p.rotZ(), p.scaleX(), p.scaleY(), p.scaleZ(), p.positionControlled(), p.rotationControlled(), p.scaleControlled(), p.additiveRotX(), p.additiveRotY(), p.additiveRotZ(), p.additiveRotationControlled(), p.colorArgb(), p.emissive(), p.vanillaParent(), p.vanillaParentControlled(), p.vanillaAttachmentMode()));
         }
         return new ShyneNetwork.NetAvatarSnapshot(
             playerId,
@@ -630,10 +867,10 @@ public final class AvatarRuntime {
             new LinkedHashMap<>(active.syncPolicy().filterVanillaVisibility(active.vanillaVisibility())),
             new LinkedHashMap<>(active.syncPolicy().filterSyncedVars(active.syncedVars())),
             active.currentAnimation(),
-            active.currentAnimationStartedAtMillis(),
+            active.currentAnimation().isBlank() ? 0L : AvatarAnimationClock.encodeAge(snapshotNowMillis, active.currentAnimationStartedAtMillis()),
             active.animationLayers().values().stream().map(layer -> new ShyneNetwork.NetAvatarAnimation(
-                layer.name(), layer.startedAtMillis(), layer.lengthSeconds(), layer.looping(), layer.speed(), layer.weight(), layer.priority(),
-                layer.fadeInTicks(), layer.fadeOutTicks(), layer.mask(), layer.additive(), layer.stoppingAtMillis()
+                layer.name(), AvatarAnimationClock.encodeAge(snapshotNowMillis, layer.startedAtMillis()), layer.lengthSeconds(), layer.looping(), layer.speed(), layer.weight(), layer.priority(),
+                layer.fadeInTicks(), layer.fadeOutTicks(), layer.mask(), layer.additive(), AvatarAnimationClock.encodeOptionalAge(snapshotNowMillis, layer.stoppingAtMillis())
             )).toList(),
             Map.copyOf(active.animationParameters()),
             active.nameplateText(),
@@ -654,10 +891,11 @@ public final class AvatarRuntime {
         return new ShyneNetwork.NetModelDefinition(
             m.modelId(), m.sourceModId(), m.displayName(), m.formatVersion(), m.textureWidth(), m.textureHeight(), m.primaryTextureRelativePath(),
             List.copyOf(textures),
-            m.bones().stream().map(b -> new ShyneNetwork.NetBoneDefinition(b.uuid(), b.name(), b.parentName(), b.parentUuid(), b.cubeCount(), b.pivotX(), b.pivotY(), b.pivotZ(), b.rotationX(), b.rotationY(), b.rotationZ(), b.childBoneUuids())).toList(),
+            m.bones().stream().map(b -> new ShyneNetwork.NetBoneDefinition(b.uuid(), b.name(), b.parentName(), b.parentUuid(), b.parentType(), b.role(), b.tags(), b.physicsPreset(), b.cubeCount(), b.pivotX(), b.pivotY(), b.pivotZ(), b.rotationX(), b.rotationY(), b.rotationZ(), b.visible(), b.childBoneUuids())).toList(),
             m.cubes().stream().map(c -> new ShyneNetwork.NetCubeDefinition(c.name(), c.parentBoneUuid(), c.fromX(), c.fromY(), c.fromZ(), c.toX(), c.toY(), c.toZ(), c.originX(), c.originY(), c.originZ(), c.rotationX(), c.rotationY(), c.rotationZ(), c.inflate(),
                 c.faces().entrySet().stream().collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> new ShyneNetwork.NetFaceUvDefinition(e.getValue().u1(), e.getValue().v1(), e.getValue().u2(), e.getValue().v2(), e.getValue().rotation(), e.getValue().textureIndex(), e.getValue().enabled()))),
-                c.textureIndex(), c.mirror())).toList(),
+                c.textureIndex(), c.mirror(), c.visible())).toList(),
+            m.meshes().stream().map(ShyneNetwork.NetMeshDefinition::from).toList(),
             m.animations().stream().map(a -> new ShyneNetwork.NetAnimationDefinition(a.name(), a.lengthSeconds(), a.looping(), a.animatorCount(),
                 a.boneAnimations().entrySet().stream().collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> {
                     var v = e.getValue();

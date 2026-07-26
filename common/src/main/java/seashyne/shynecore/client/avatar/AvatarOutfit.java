@@ -8,6 +8,12 @@ public record AvatarOutfit(
     Path path,
     int width,
     int height,
+    Mode mode,
     boolean valid,
     String problem
-) {}
+) {
+    public enum Mode {
+        REPLACE,
+        OVERLAY
+    }
+}

@@ -5,10 +5,16 @@
     "compatibilityLevel": "JAVA_25",
     "client": [
         "AvatarCameraMixin",
+        "AvatarFrameMixin",
+        "AvatarWorldRenderMixin",
         "AvatarNameplateMixin",
+        "CustomHeadLayerMaskMixin",
         "FirstPersonArmMixin",
+        "PlayerHeldItemLayerMaskMixin",
+        "PlayerModelPartMaskMixin",
         "PlayerModelMaskMixin",
-        "PlayerTabOverlayMixin"
+        "PlayerTabOverlayMixin",
+        "WingsLayerMaskMixin"
     ],
     "injectors": { "defaultRequire": 1 }
 }

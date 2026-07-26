@@ -21,7 +21,7 @@ import java.util.EnumSet;
 import java.util.regex.Pattern;
 
 public final class AvatarLoader {
-    public static final int AVATAR_API_VERSION = 1;
+    public static final int AVATAR_API_VERSION = 2;
     private static final Gson GSON = new Gson();
     private static final Pattern SAFE_ID = Pattern.compile("[a-z0-9][a-z0-9_.-]{0,63}");
     private static final long MAX_MANIFEST_BYTES = 256L * 1024L;
@@ -109,6 +109,10 @@ public final class AvatarLoader {
             throw new IOException("avatar.json is not valid JSON", malformed);
         }
         if (json == null) throw new IOException("avatar.json is empty");
+        String standard = json.has("standard") ? json.get("standard").getAsString().trim() : "2.0";
+        if (!"2.0".equals(standard)) {
+            throw new IOException("unsupported Shyne Avatar standard: " + standard + "; expected 2.0");
+        }
         List<String> declaredTextures = new ArrayList<>();
         if (json.has("textures") && json.get("textures").isJsonArray()) {
             for (var texture : json.getAsJsonArray("textures")) {
@@ -132,11 +136,13 @@ public final class AvatarLoader {
                 }
             }
         }
-        Integer legacyApiVersion = json.has("api_version") ? json.get("api_version").getAsInt() : null;
+        if (json.has("api_version")) {
+            throw new IOException("avatar api_version is not supported by Shyne Standard 2.0; use api \"2.0\"");
+        }
         String declaredApi = json.has("api") ? json.get("api").getAsString() : "";
         ShyneApiStandard.Selection apiSelection;
         try {
-            apiSelection = ShyneApiStandard.select(declaredApi, legacyApiVersion);
+            apiSelection = ShyneApiStandard.select(declaredApi);
         } catch (IllegalArgumentException unsupported) {
             throw new IOException(unsupported.getMessage(), unsupported);
         }
@@ -157,31 +163,48 @@ public final class AvatarLoader {
         } catch (IllegalArgumentException unsupported) {
             throw new IOException(unsupported.getMessage(), unsupported);
         }
+        AvatarProfile profile;
+        try {
+            profile = AvatarProfile.parse(json.has("profile") ? json.get("profile").getAsString() : "accessory");
+        } catch (IllegalArgumentException unsupported) {
+            throw new IOException(unsupported.getMessage(), unsupported);
+        }
+        AvatarBehavior behavior;
+        try {
+            behavior = AvatarBehavior.parse(json.get("behavior"));
+        } catch (IllegalArgumentException invalid) {
+            throw new IOException(invalid.getMessage(), invalid);
+        }
+        if (json.has("compatibility")) {
+            throw new IOException("avatar compatibility modes are not supported by Shyne Standard 2.0");
+        }
         AvatarManifest manifest = new AvatarManifest(
-            Integer.parseInt(apiSelection.version().split("\\.")[0]),
+            standard,
             json.has("id") ? json.get("id").getAsString() : defaultAvatarId(root),
             json.has("name") ? json.get("name").getAsString() : "",
             json.has("version") ? json.get("version").getAsString() : "1.0.0",
-            json.has("main") ? json.get("main").getAsString() : "script.lua",
+            json.has("main") ? json.get("main").getAsString() : "",
             json.has("model") ? json.get("model").getAsString() : "model.bbmodel",
-            !json.has("replace_vanilla") || json.get("replace_vanilla").getAsBoolean(),
+            json.has("replace_vanilla") ? json.get("replace_vanilla").getAsBoolean() : profile.replaceVanilla(),
             !json.has("online_sync") || json.get("online_sync").getAsBoolean(),
             json.has("description") ? json.get("description").getAsString() : "",
-            !json.has("first_person_masking") || json.get("first_person_masking").getAsBoolean(),
-            !json.has("local_camera") || json.get("local_camera").getAsBoolean(),
+            json.has("first_person_masking") ? json.get("first_person_masking").getAsBoolean() : profile.firstPersonMasking(),
+            json.has("local_camera") ? json.get("local_camera").getAsBoolean() : profile.localCamera(),
             json.has("texture_sync_mode") ? json.get("texture_sync_mode").getAsString() : "manifest",
             json.has("synced_schema") ? json.get("synced_schema").getAsString() : "",
             List.copyOf(declaredTextures),
             Set.copyOf(declaredPermissions),
             apiSelection.version(),
             apiSelection.automatic(),
-            Map.copyOf(apiRequirements)
+            Map.copyOf(apiRequirements),
+            profile.id(),
+            behavior
         );
         String normalizedId = manifest.id() == null ? "" : manifest.id().toLowerCase(Locale.ROOT);
         if (!SAFE_ID.matcher(normalizedId).matches()) throw new IOException("avatar id must match " + SAFE_ID.pattern());
         if (manifest.name() == null || manifest.name().isBlank()) throw new IOException("avatar name is required");
         if (manifest.name().length() > 96) throw new IOException("avatar name is too long");
-        requireFile(resolveContained(safeRoot, manifest.main()), MAX_SCRIPT_BYTES, "main script");
+        if (manifest.hasScript()) requireFile(resolveContained(safeRoot, manifest.main()), MAX_SCRIPT_BYTES, "main script");
         requireFile(resolveContained(safeRoot, manifest.model()), MAX_MODEL_BYTES, "model");
         for (String texture : manifest.textures()) {
             requireFile(resolveContained(safeRoot, texture), 8L * 1024L * 1024L, "texture");

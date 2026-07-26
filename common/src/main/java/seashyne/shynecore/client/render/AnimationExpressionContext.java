@@ -41,6 +41,7 @@ public record AnimationExpressionContext(
             case "swimming" -> swimming ? 1.0 : 0.0;
             case "strength", "tail_strength" -> firstParameter(1.0, "tail_strength", "strength");
             case "tail" -> firstParameter(wet ? 1.0 : 0.0, "tail", "wet");
+            case "normal" -> 1.0 - firstParameter(0.0, "shark");
             case "shark", "roll", "height" -> 0.0;
             case "pi" -> Math.PI;
             case "e" -> Math.E;

@@ -58,7 +58,7 @@ public final class AvatarOutfitLoader {
 
         List<AvatarOutfit> outfits = new ArrayList<>();
         Set<String> ids = new HashSet<>();
-        for (Path file : files) outfits.add(inspect(folder, file, ids));
+        for (int index = 0; index < files.size(); index++) outfits.add(inspect(folder, files.get(index), ids, index + 1));
         return List.copyOf(outfits);
     }
 
@@ -150,12 +150,13 @@ public final class AvatarOutfitLoader {
         }
     }
 
-    private static AvatarOutfit inspect(Path outfitFolder, Path file, Set<String> usedIds) {
+    private static AvatarOutfit inspect(Path outfitFolder, Path file, Set<String> usedIds, int displayIndex) {
         Path normalized = file.toAbsolutePath().normalize();
         String filename = normalized.getFileName().toString();
         String basename = filename.substring(0, filename.length() - 4);
         String id = uniqueId(safeId(basename), usedIds);
-        String name = displayName(basename);
+        String name = displayName(basename, displayIndex);
+        AvatarOutfit.Mode mode = outfitMode(basename);
         try {
             normalized = normalized.toRealPath();
             if (!normalized.startsWith(outfitFolder)) throw new IOException("file is outside the outfit folder");
@@ -164,10 +165,10 @@ public final class AvatarOutfitLoader {
             BufferedImage image = ImageIO.read(normalized.toFile());
             if (image == null) throw new IOException("file is not a readable PNG");
             requireSupportedDimensions(image.getWidth(), image.getHeight());
-            return new AvatarOutfit(id, name, normalized, image.getWidth(), image.getHeight(), true, "");
+            return new AvatarOutfit(id, name, normalized, image.getWidth(), image.getHeight(), mode, true, "");
         } catch (Exception error) {
             String problem = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
-            return new AvatarOutfit(id, name, normalized, 0, 0, false, problem);
+            return new AvatarOutfit(id, name, normalized, 0, 0, mode, false, problem);
         }
     }
 
@@ -254,8 +255,26 @@ public final class AvatarOutfitLoader {
         return candidate;
     }
 
-    private static String displayName(String value) {
-        String name = value.replace('_', ' ').replace('-', ' ').trim().replaceAll("\\s+", " ");
+    static String displayName(String value, int displayIndex) {
+        String clean = value.replaceFirst("(?i)(?:[._-](?:overlay|replace))$", "");
+        String name = clean.replace('_', ' ').replace('-', ' ').trim().replaceAll("\\s+", " ");
+        // Blockbench sometimes writes a generated numeric texture id (for
+        // example 1000012674.png) into an outfit folder. Keep that value as
+        // the stable file/id used for saving, but do not expose it as the
+        // player-facing wardrobe name.
+        if (name.matches("\\d{8,}")) return "Outfit " + Math.max(1, displayIndex);
         return name.isBlank() ? "Outfit" : name;
+    }
+
+    /**
+     * Plain PNG files are overlays by default so authors can drop outfit
+     * textures into the wardrobe without special filename suffixes. A complete
+     * texture replacement remains available through `.replace.png`,
+     * `_replace.png`, or `-replace.png`.
+     */
+    static AvatarOutfit.Mode outfitMode(String basename) {
+        return basename != null && basename.matches("(?i).*[._-]replace$")
+            ? AvatarOutfit.Mode.REPLACE
+            : AvatarOutfit.Mode.OVERLAY;
     }
 }
