@@ -11,7 +11,7 @@
 
 ## วิธีใช้แบบสั้น
 
-1. ตั้ง Project profile เป็น `Accessory`, `Full Body` หรือ `Merling`
+1. ตั้ง Project profile เป็น `Accessory`, `Full Body` หรือ `Custom`
 2. เลือก Group หลัก แล้วตั้ง `Shyne Vanilla Attachment` เช่น Head หรือ Body
 3. ตั้ง Animation State ให้ animation เช่น Idle, Walk, Sprint หรือ Swim
 4. Animation ที่เล่นซ้อนตลอดให้เปิด `Shyne Ambient Autoplay`; animation กระพริบตาให้เปิด `Shyne Blink`
@@ -20,6 +20,8 @@
 7. ใช้ `File → Export → Export Shyne Avatar Package (.zip)` เพื่อรับแพ็กที่พร้อมแตกลงโฟลเดอร์ `shyne-mods/avatars`
 
 ZIP จะมีโฟลเดอร์ชื่อ Avatar ID และรวม `avatar.json`, `model.bbmodel`, `textures/`, `avatar.png` และ `outfit/` ให้อัตโนมัติ Texture ทุกภาพยังคงอยู่ใน `textures/` เพื่อรักษา index และ UV ของ Blockbench ส่วน Avatar Icon และ Wardrobe Outfit จะถูกทำสำเนาไปยังตำแหน่งที่ Shyne runtime ใช้
+
+Wardrobe Outfit ชื่อ `.png` ธรรมดาจะซ้อนทับ texture เดิมแบบ alpha overlay หาก texture นั้นเป็นภาพชุดเต็มที่ต้องแทนของเดิมทั้งหมด ให้ตั้งชื่อก่อน export เป็น `name.replace.png`, `name_replace.png` หรือ `name-replace.png`
 
 หากต้องการเฉพาะ manifest ยังใช้ `File → Export → Export Shyne avatar.json` ได้
 
@@ -33,7 +35,7 @@ ZIP จะมีโฟลเดอร์ชื่อ Avatar ID และรว�
 }
 ```
 
-Shyne เติม Standard 2.0, ID จากชื่อโฟลเดอร์, model, profile และ animation controller ค่าเริ่มต้นให้เอง เมื่อเปลี่ยนเป็น Full Body/Merling ตั้ง state animation เอง หรือเปิด Lua plugin จะเพิ่มเฉพาะ field ที่จำเป็น หากต้องการเห็นทุกค่าให้เลือก `Explicit defaults`
+Shyne เติม Standard 2.0, ID จากชื่อโฟลเดอร์, model, profile และ animation controller ค่าเริ่มต้นให้เอง เมื่อเปลี่ยนเป็น Full Body/Custom ตั้ง state animation เอง หรือเปิด Lua plugin จะเพิ่มเฉพาะ field ที่จำเป็น หากต้องการเห็นทุกค่าให้เลือก `Explicit defaults`
 
 Avatar ทั่วไปไม่ต้องเปิด `Use Advanced Shyne Lua` และไม่ต้องมี `script.lua` แต่ Lua ยังเป็นความสามารถหลักสำหรับงานอิสระและ rig ซับซ้อน หากเปิดตัวเลือกนี้ plugin จะเพิ่ม `main` และ `api: "2.0"` แล้วถามให้เลือกไฟล์ `.lua` ตอน export ZIP ถ้าเลือกไฟล์เดียว plugin จะใช้ไฟล์นั้นเป็น main ตามชื่อ `Advanced Lua Main`; ถ้าเลือกหลายไฟล์ต้องมี main ตรงชื่อนี้ โมดูลใน exporter รุ่นนี้ใช้ชื่อไฟล์ระดับบนสุดที่ไม่ซ้ำกัน
 

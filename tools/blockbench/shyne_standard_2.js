@@ -71,7 +71,8 @@
 
   function buildManifest() {
     const name = String(projectValue('shyne_avatar_name', projectValue('name', 'Shyne Avatar')) || 'Shyne Avatar').trim();
-    const profile = String(projectValue('shyne_profile', 'accessory') || 'accessory');
+    const selectedProfile = String(projectValue('shyne_profile', 'accessory') || 'accessory').toLowerCase();
+    const profile = selectedProfile === 'merling' || selectedProfile === 'aquatic' ? 'custom' : selectedProfile;
     const explicit = String(projectValue('shyne_manifest_mode', 'compact')) === 'explicit';
     const configuredId = String(projectValue('shyne_avatar_id', '') || '').trim();
     const behavior = buildBehavior();
@@ -338,7 +339,7 @@
     registerProperty(projectType, 'enum', 'shyne_profile', {
       label: 'Shyne Profile',
       default: 'accessory',
-      options: { accessory: 'Accessory', full_body: 'Full Body', merling: 'Merling' }
+      options: { accessory: 'Accessory', full_body: 'Full Body', custom: 'Custom' }
     });
     registerProperty(projectType, 'number', 'shyne_blend_ticks', { label: 'Animation Blend Ticks', default: 5, min: 0, max: 1200 });
     registerProperty(projectType, 'boolean', 'shyne_use_lua', { label: 'Use Advanced Shyne Lua', default: false });

@@ -32,7 +32,7 @@ C:\Users\<ชื่อผู้ใช้>\curseforge\minecraft\Instances\<ชื
 |---|---|---|
 | `accessory` | เพิ่มของตกแต่งให้ตัวผู้เล่นเดิม | แนะนำ |
 | `full_body` | ใช้โมเดลของเราแทนรูปร่างทั้งตัว | ทำหลังจาก Accessory สำเร็จ |
-| `merling` | Avatar ใต้น้ำหรือรูปร่างเฉพาะทาง | ระดับต่อยอด |
+| `custom` | รูปร่างเฉพาะ เช่น aquatic, creature หรือ rig ที่ออกแบบเอง | ระดับต่อยอด |
 
 สำหรับ Accessory ไฟล์ `avatar.json` แบบสั้นที่สุดคือ:
 

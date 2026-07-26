@@ -96,7 +96,7 @@ local avatar_parts = shyne.setup({
 })
 ```
 
-รองรับ `parts` (`visible`, `rotation`/`rot`, `position`/`pos`, `scale`, `color`, `opacity`, `emissive`, `vanilla_parent`), animation (`speed`, `weight`, `priority`, `loop`, fade, transition, mask, additive, play), event, action และ toggle นอกจากนี้มี `shyne.once`, `shyne.after`, `shyne.every`, `shyne.action` และ `shyne.toggle` สำหรับงานสั้นทั่วไป งาน Merling/SquAPI/IK/armor/physics ยังใช้ `rig` และ object API รายละเอียดเดิมร่วมกันได้
+รองรับ `parts` (`visible`, `rotation`/`rot`, `position`/`pos`, `scale`, `color`, `opacity`, `emissive`, `vanilla_parent`), animation (`speed`, `weight`, `priority`, `loop`, fade, transition, mask, additive, play), event, action และ toggle นอกจากนี้มี `shyne.once`, `shyne.after`, `shyne.every`, `shyne.action` และ `shyne.toggle` สำหรับงานสั้นทั่วไป งาน custom/SquAPI/IK/armor/physics ยังใช้ `rig` และ object API รายละเอียดเดิมร่วมกันได้
 
 ## Avatar: ตัวอย่างเริ่มต้น
 
@@ -445,7 +445,7 @@ avatar.camera.configure({
   local_only = true
 })
 
-avatar.nameplate.configure({ text = "Merling", visible = true })
+avatar.nameplate.configure({ text = "Custom Avatar", visible = true })
 local report = diagnostics.snapshot()
 ```
 

@@ -61,7 +61,7 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 - ตัวแปลงใช้ `-VanillaMode Auto` เป็นค่าเริ่มต้น ตรวจ full-body replacement จาก manifest/สคริปต์ต้นทาง ค้นหา `.bbmodel` ในโฟลเดอร์ย่อย และถอด Base64 texture เป็นไฟล์ภายในแพ็กได้
 - ปรับ network protocol เป็น `12`; snapshot ใช้ revision ACK/retry, ตรวจ nested model/PNG ก่อน decode และ rebase เวลา animation แบบไม่อิงนาฬิกาของเครื่อง
 - แยก Lua Standard bootstrap เดิม 952 บรรทัดเป็น 7 โมดูลภายในขนาด 51–227 บรรทัด โดย host compile เป็น chunk เดียว ผู้สร้าง Avatar จึงไม่ต้อง `require` เพิ่ม
-- outfit เป็น full replacement ตามค่าเริ่มต้นเพื่อให้ alternate texture โปร่งใสตรงต้นฉบับ; ใช้ชื่อ `*.overlay.png` เมื่อต้องการ alpha-composite บน texture เดิม
+- outfit `.png` ธรรมดาเป็น alpha overlay ตามค่าเริ่มต้น; ใช้ `*.replace.png`, `*_replace.png` หรือ `*-replace.png` เมื่อต้องการแทน texture ทั้งภาพ โดยการสลับชุดไม่รีเซ็ต Lua หรือ animation state
 
 การแก้ชุดนี้เพิ่มความตรงกับโมเดลต้นทาง แต่ไม่รับรองว่า Avatar Figura ทุกแพ็กจะทำงานเหมือนเดิม 100%; API หรือ render context เฉพาะทางที่ยังไม่รองรับต้องย้ายเป็น Shyne-native เพิ่มเติม
 
@@ -69,7 +69,7 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 
 - อ่าน `parent_type` จาก Blockbench/Figura `.bbmodel` และผูก custom bone กับหัว ลำตัว แขน หรือขา Minecraft โดยอัตโนมัติ
 - `parent_type` เป็น parent transform จริง: pose หัว/แขนขาจะซ้อนก่อน local transform และ animation ของ bone จึงไม่ทำให้หูหรือของเสริมหลุดจากส่วนผู้เล่น
-- เพิ่ม Shyne Rig API 1.3: `rot_add()`, `rig.spring()`, `rig.chain()`, `rig.attach()` และ `rig.armor()` สำหรับ Merling/SquAPI-style avatar, armor cosmetic และ secondary motion
+- เพิ่ม Shyne Rig API 1.3: `rot_add()`, `rig.spring()`, `rig.chain()`, `rig.attach()` และ `rig.armor()` สำหรับ custom/SquAPI-style avatar, armor cosmetic และ secondary motion
 - เพิ่ม swept world probe สำหรับ collision block/entity, wind/impulse, cone constraint, two-bone IK, animation graph และ Elytra cosmetic
 - native `require("SquAPI")` และ `require("lib.SquAPI")` ใช้ BERP/bounce-object physics ที่เข้ากับ SquAPI สำหรับ tail, หูซ้าย/ขวาอิสระ, smooth head, limb, blink, taur, `hoverPoint`/`floatPoint` และ utility โดยไม่รัน Lua ของ Figura
 - `hoverPoint` ชน block/entity ผ่าน swept world probe, สะท้อนความเร็วแบบ visual-only และคำนวณกลับเข้า coordinate ของโมเดลทุก tick; ใช้ root group ระดับบนสุดสำหรับของลอย/companion เพื่อไม่รับ transform จากแขนหรือขา
@@ -147,6 +147,27 @@ neoforge/build/libs/shyne-creator-neoforge-<version>.jar
 ```
 
 อย่าใส่ JAR ทั้งสองตัวใน Minecraft instance เดียว ให้เลือกไฟล์ที่ตรงกับ Loader
+
+ติดตั้ง Build ปัจจุบันลง Instance สำหรับทดสอบด้วยสคริปต์มาตรฐาน โดยส่ง path ของ
+game directory หลักที่มีโฟลเดอร์ `mods` (ไม่ใช่ path ของ `mods` เอง):
+
+```powershell
+.\tools\install_local.ps1 `
+  -Loader fabric `
+  -GameDir 'C:\Users\<ชื่อผู้ใช้>\curseforge\minecraft\Instances\<ชื่อโปรไฟล์>'
+```
+
+ใช้ `-Loader neoforge` สำหรับ NeoForge หรือส่ง `-Jar <path>` เมื่อต้องการทดสอบ
+JAR ที่ระบุเอง ตัวติดตั้งจะตรวจ ZIP และ metadata, stage ไฟล์ก่อนสลับ JAR เดิม
+และตรวจ process `java`/`javaw` ที่มี `--gameDir` ตรงกับ Instance แบบ exact
+หาก Minecraft ของ Instance นั้นยังเปิดอยู่ สคริปต์จะหยุดพร้อมข้อความให้ปิดเกม
+โดยไม่ปิด process ให้และไม่แก้ JAR ที่ติดตั้งอยู่
+
+ตรวจ regression ของตัวติดตั้ง:
+
+```powershell
+.\tools\tests\install_local_regression.ps1
+```
 
 ## Development runtime
 

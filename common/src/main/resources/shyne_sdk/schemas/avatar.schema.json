@@ -6,21 +6,21 @@
     "name"
   ],
   "properties": {
-    "api_version": {
-      "type": "integer",
-      "const": 1,
-      "description": "Legacy compatibility field. Explicit value 1 selects the historical Standard 1.0 contract."
+    "standard": {
+      "type": "string",
+      "const": "2.0",
+      "default": "2.0",
+      "description": "Shyne model-first Avatar standard. Missing selects the current Standard 2.0."
     },
     "api": {
       "type": "string",
       "enum": [
         "auto",
         "latest",
-        "1.0",
-        "1.1"
+        "2.0"
       ],
       "default": "latest",
-      "description": "Semantic Shyne Lua API version. Missing, auto, and latest select the newest supported standard."
+      "description": "Shyne Lua API contract. Standard 2.0 is the only accepted version; missing, auto, and latest resolve to 2.0."
     },
     "requires": {
       "type": "object",
@@ -28,6 +28,79 @@
       "additionalProperties": {
         "type": "string"
       }
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "accessory",
+        "full_body",
+        "custom"
+      ],
+      "default": "accessory",
+      "description": "High-level render profile. Accessory and custom preserve the vanilla player by default; full_body replaces it."
+    },
+    "behavior": {
+      "description": "Script-free animation behavior. A string selects a preset; an object configures controller slots and layers.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["auto", "manual", "off"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "preset": {
+              "type": "string",
+              "enum": ["auto", "manual", "off"],
+              "default": "auto"
+            },
+            "autoplay": {
+              "type": "array",
+              "items": { "type": "string" },
+              "uniqueItems": true,
+              "default": []
+            },
+            "animations": {
+              "type": "object",
+              "properties": {
+                "idle": { "$ref": "#/$defs/animationNames" },
+                "walk": { "$ref": "#/$defs/animationNames" },
+                "sprint": { "$ref": "#/$defs/animationNames" },
+                "swim": { "$ref": "#/$defs/animationNames" },
+                "crouch": { "$ref": "#/$defs/animationNames" },
+                "sleep": { "$ref": "#/$defs/animationNames" },
+                "fly": { "$ref": "#/$defs/animationNames" },
+                "sit": { "$ref": "#/$defs/animationNames" }
+              },
+              "additionalProperties": false
+            },
+            "blend_ticks": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1200,
+              "default": 5
+            },
+            "blink": {
+              "oneOf": [
+                { "type": "boolean" },
+                { "type": "string" },
+                {
+                  "type": "object",
+                  "properties": {
+                    "enabled": { "type": "boolean", "default": true },
+                    "animation": { "$ref": "#/$defs/animationNames" },
+                    "min_ticks": { "type": "integer", "minimum": 1, "maximum": 72000, "default": 50 },
+                    "max_ticks": { "type": "integer", "minimum": 1, "maximum": 72000, "default": 110 }
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      ],
+      "default": { "preset": "auto" }
     },
     "id": {
       "type": "string",
@@ -41,7 +114,7 @@
     },
     "main": {
       "type": "string",
-      "default": "script.lua"
+      "description": "Optional native Lua entry point for advanced behavior. Omit for a Zero-Lua Avatar."
     },
     "model": {
       "type": "string",
@@ -53,18 +126,18 @@
     },
     "replace_vanilla": {
       "type": "boolean",
-      "default": true
+      "description": "Optional override for the selected profile's vanilla-model default."
     },
     "description": {
       "type": "string"
     },
     "first_person_masking": {
       "type": "boolean",
-      "default": true
+      "description": "Optional override for the selected profile's first-person default."
     },
     "local_camera": {
       "type": "boolean",
-      "default": true
+      "description": "Optional override for the selected profile's camera default."
     },
     "texture_sync_mode": {
       "type": "string",
@@ -103,6 +176,19 @@
       },
       "uniqueItems": true,
       "default": []
+    }
+  },
+  "$defs": {
+    "animationNames": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      ]
     }
   }
 }

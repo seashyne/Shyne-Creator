@@ -16,6 +16,8 @@ Lua เป็นความสามารถระดับหนึ่งข�
 
 ผู้สร้างสามารถติดตั้ง [Shyne Standard 2.0 Blockbench Plugin](tools/blockbench/README_TH.md) เพื่อตั้ง profile, `parent_type`, role/tag และ animation state ผ่านหน้าต่าง Properties แล้ว export ZIP ที่รวม manifest, model, texture, icon, outfit และ Lua โดยไม่ต้องจัดโฟลเดอร์เอง
 
+มาตรฐานตู้เสื้อผ้ากำหนดให้ไฟล์ `.png` ธรรมดาใน `outfit/` เป็น alpha overlay เสมอ หากต้องการแทน texture หลักทั้งภาพ ต้องระบุด้วยชื่อ `name.replace.png`, `name_replace.png` หรือ `name-replace.png` การสลับชุดเปลี่ยนเฉพาะ texture โดยไม่เริ่ม Lua หรือ animation controller ใหม่ รายละเอียดและตัวอย่างอยู่ใน [AVATAR_SYSTEM.md](AVATAR_SYSTEM.md#ตู้เสื้อผ้า-outfit)
+
 ## Avatar แบบสั้นที่สุด
 
 ถ้า model ใช้ profile accessory, ไฟล์ชื่อ `model.bbmodel`, ตั้ง `parent_type` ถูก และใช้ชื่อ animation มาตรฐาน เช่น Idle/Walk/Swim/Blink เขียนเองเพียงชื่อก็พอ:
@@ -40,7 +42,7 @@ Shyne เติม `standard: 2.0`, ID จากชื่อโฟลเดอ�
 | `name` | string | ชื่อที่แสดงใน Avatar Library |
 | `id` | string | ID คงที่ของ Avatar; ถ้าไม่ใส่ Shyne สร้างจากชื่อโฟลเดอร์ |
 | `model` | string | ไฟล์ Blockbench; ค่าเริ่มต้นคือ `model.bbmodel` |
-| `profile` | string | `accessory`, `full_body` หรือ `merling` |
+| `profile` | string | `accessory`, `full_body` หรือ `custom` |
 | `behavior` | object | controller พื้นฐาน, autoplay, state mapping, blend และ blink |
 | `main` | string | ไฟล์ Shyne-native Lua แบบ optional; ไม่ใส่เมื่อไม่ใช้ Lua |
 
@@ -66,19 +68,23 @@ Shyne เติม `standard: 2.0`, ID จากชื่อโฟลเดอ�
 "profile": "full_body"
 ```
 
+หากไม่มี animation ที่สร้างเอง โมเดลจะใช้ Minecraft pose อัตโนมัติ โดยต้องมี root bone พี่น้องกัน 6 ตัวชื่อ `Head`, `Body` (หรือ `Torso`), `LeftArm`, `RightArm`, `LeftLeg`, `RightLeg` และต้องไม่ตั้ง `parent_type` บน root เหล่านี้ จุดหมุนมาตรฐานคือหัว/ลำตัว `[0,24,0]`, แขน `[±5,22,0]` และขา `[±1.9,12,0]` ค่า `animations: []` จึงเป็นรูปแบบที่ถูกต้องสำหรับโมเดล skin ที่ต้องการใช้ท่าเดิน วิ่ง ก้ม นั่ง ว่ายน้ำ และโจมตีจาก Minecraft โดยตรง Validator จะเตือนเมื่อสัญญานี้ไม่ครบ และ Figura converter จะสร้าง rig ให้เฉพาะโมเดล skin ที่ตรวจองค์ประกอบได้ครบและไม่มี hierarchy/animation ที่ผู้สร้างทำไว้แล้ว
+
 ควรทดสอบมุมมองบุคคลที่หนึ่ง, armor, held item, Elytra, ท่านั่ง และท่านอนก่อนแจก Avatar
 
-### `merling`
+### `custom`
 
-ใช้กับ Avatar แนว aquatic ที่มีหาง ครีบ หรือ locomotion สำหรับว่ายน้ำ ค่าเริ่มต้นยังเป็น overlay เพื่อความปลอดภัย และรองรับ alias ของ animation แนว aquatic ใน preset อัตโนมัติ หากโมเดล Merling ถูกสร้างให้แทนผู้เล่นทั้งตัว ให้ประกาศ `replace_vanilla: true` อย่างชัดเจน
+ใช้กับ Avatar ที่มีรูปร่างหรือระบบเฉพาะ เช่น aquatic, creature, หางที่สลับรูปแบบ หรือ rig ที่ไม่เข้ากลุ่ม Accessory และ Full Body ค่าเริ่มต้นยังเป็น overlay เพื่อความปลอดภัย และ preset อัตโนมัติยังรู้จักชื่อ animation แนว aquatic หากโมเดลต้องแทนผู้เล่นทั้งตัว ให้ประกาศ `replace_vanilla: true` อย่างชัดเจน
 
 ```json
-"profile": "merling"
+"profile": "custom"
 ```
 
 Profile ไม่ได้เดาชื่อ bone แบบสุ่ม ควรตั้ง hierarchy, `parent_type`, role และชื่อ animation ใน Blockbench ให้ชัดเจนเสมอ
 
-ขอบเขตปัจจุบันของ `merling` คือ safe overlay และ aquatic animation aliases; profile จะไม่เดาว่ากระดูกใดควรเป็น physics หรือ armor เอง แต่ Group ที่ตั้ง `Shyne Physics Preset` จะสร้าง native secondary-motion chain ได้ทุก profile งาน special-form, collision/IK และ armor mapping เฉพาะโมเดลยังต้องกำหนดใน Blockbench หรือเพิ่มด้วย Shyne-native Lua
+ขอบเขตปัจจุบันของ `custom` คือ safe overlay สำหรับโมเดลเฉพาะทาง; profile จะไม่เดาว่ากระดูกใดควรเป็น physics หรือ armor เอง แต่ Group ที่ตั้ง `Shyne Physics Preset` จะสร้าง native secondary-motion chain ได้ทุก profile งาน special-form, collision/IK และ armor mapping เฉพาะโมเดลยังต้องกำหนดใน Blockbench หรือเพิ่มด้วย Shyne-native Lua
+
+ชื่อ `merling` เคยใช้กับ profile aquatic รุ่นเก่า Runtime และ Creator CLI ยังอ่านชื่อนี้เป็น alias ของ `custom` เพื่อไม่ให้ Avatar เดิมพัง แต่ manifest, schema, exporter และโปรเจกต์ใหม่ควรใช้ `custom` เท่านั้น
 
 ## Declarative Behavior
 
@@ -214,7 +220,7 @@ Standard 2.0 รับแนวคิด “ย้าย asset ไม่ย้�
 
 `Destination` ต้องเป็น path ใหม่หรือ directory ว่าง และต้องไม่ใช่ directory เดียวกับ `Source` ตัวแปลงจะหยุดทันทีเมื่อพบไฟล์เดิม เพื่อป้องกัน `script.lua`, texture หรือ outfit จากงานเก่าค้างอยู่ในผลลัพธ์ Zero-Lua
 
-PNG ที่ไม่ได้ถูกอ้างจากโมเดลและมีขนาดเท่า texture หลักอาจถูกนำเข้าเป็น outfit replacement โดยอัตโนมัติ จึงรักษาพิกเซลโปร่งใสของ alternate texture ได้ตรงต้นฉบับ แต่ชื่อที่สื่อว่าเป็น normal, emissive, specular, mask หรือ reference map จะถูกข้าม หากตั้งใจทำ alpha overlay ให้ตั้งชื่อ `name.overlay.png` ควรตรวจรายการ `Outfits:` หลังแปลงทุกครั้ง เพราะชื่อไฟล์ที่ไม่สื่อความหมายยังแยกชนิด asset โดยอัตโนมัติไม่ได้
+PNG ที่ไม่ได้ถูกอ้างจากโมเดลและมีขนาดเท่า texture หลักอาจถูกนำเข้าเป็น alternate texture อัตโนมัติ ตัวแปลงจะเติม `.replace.png` เพื่อรักษาความหมายว่าเป็นภาพทดแทนทั้งชุดตามต้นฉบับ แต่ชื่อที่สื่อว่าเป็น normal, emissive, specular, mask หรือ reference map จะถูกข้าม ไฟล์ที่ระบุ `.overlay.png` ไว้ชัดเจนจะคงเป็น overlay ควรตรวจรายการ `Outfits:` หลังแปลงทุกครั้ง เพราะชื่อไฟล์ที่ไม่สื่อความหมายยังแยกชนิด asset โดยอัตโนมัติไม่ได้
 
 ## Checklist ก่อนแจก Avatar
 

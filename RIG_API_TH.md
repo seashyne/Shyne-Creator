@@ -2,7 +2,7 @@
 
 เอกสารนี้ตรงกับ Shyne Creator `2.8.4-alpha-26.2` และใช้กับ Avatar ที่ระบุ `main` เพื่อเปิด native Lua พร้อมประกาศ `api: "2.0"` และ `"rig": ">=1.3"` ใน `requires`
 
-Rig API เป็นระบบ native ของ Shyne สำหรับ avatar แบบ Merling/SquAPI-style โดยไม่ต้องใช้ Figura: มันทำ secondary motion, chain, cosmetic armor และ vanilla attachment ผ่าน Lua ปกติ
+Rig API เป็นระบบ native ของ Shyne สำหรับ custom/SquAPI-style avatar โดยไม่ต้องใช้ Figura: มันทำ secondary motion, chain, cosmetic armor และ vanilla attachment ผ่าน Lua ปกติ
 
 ## Physics Preset แบบไม่เขียน Lua
 
@@ -127,10 +127,10 @@ companion.collisionBounce = 0.35
 
 `hoverPoint:new(element, elementOffset, springStrength, mass, resistance, rotationSpeed, rotateWithPlayer, doCollisions)` ใช้หน่วย world สำหรับ `elementOffset`; `pos`, `vel`/`velocity`, `enabled`, `reset()`, `setEnabled()`, `setCollisions()` และ `setCollisionRadius()` เปลี่ยนได้ระหว่างเล่น. เมื่อเปิด collision จะใช้ `minecraft.world.probe()` จึงชนได้ทั้ง block/entity แต่เป็นภาพของ Avatar เท่านั้น ไม่กระทบ hitbox, server หรือการเดินของผู้เล่น. วาง element ไว้ใน top-level Blockbench group เพื่อไม่ให้รับ transform ของ bone ที่เคลื่อนไหวอยู่.
 
-`squapi.floatPoint(element, x, y, z, stiffness, bouncy, ymin, maxradius)` รองรับสคริปต์ Merling/SquAPI รุ่นเก่าแล้ว โดย `x/y/z` ยังเป็น pixel offset ตาม API เดิม และใช้ `bounceObject` รุ่นเก่า ไม่ควรสลับไปใช้ค่าของ `hoverPoint` ตรง ๆ. `squapi.floatPointEnabled = false` หยุด update ของ FloatPoint ตามพฤติกรรมเดิม.
+`squapi.floatPoint(element, x, y, z, stiffness, bouncy, ymin, maxradius)` รองรับสคริปต์ aquatic/SquAPI รุ่นเก่าแล้ว โดย `x/y/z` ยังเป็น pixel offset ตาม API เดิม และใช้ `bounceObject` รุ่นเก่า ไม่ควรสลับไปใช้ค่าของ `hoverPoint` ตรง ๆ. `squapi.floatPointEnabled = false` หยุด update ของ FloatPoint ตามพฤติกรรมเดิม.
 
 `animateTexture` ยังไม่มี เพราะต้องใช้ UV mutation ที่ Shyne renderer ยังไม่มี equivalent จริง. รวมถึง `fixPortrait` ของ `smoothHead` จะรับ argument ได้แต่ไม่สร้าง portrait copy เพราะ GUI portrait transform ยังไม่พร้อม.
 
-## Merling
+## ตัวอย่าง Custom Aquatic
 
-ตัวแปลง Figura profile `Merling` สร้าง controller native ที่มี form/locomotion อยู่แล้วใน `tools/templates/merling_native.lua`; รุ่นนี้เพิ่ม tail chain physics ให้ template นั้นด้วย. พฤติกรรมที่ต้องอาศัย module Figura เฉพาะทางยังต้องเขียนด้วย Rig API หรือย้าย logic มาเป็น Shyne Lua ก่อน
+ไฟล์ `tools/templates/custom_native.lua` เป็นตัวอย่าง controller สำหรับโมเดลที่สลับขาและหางตามสถานะในน้ำ พร้อม locomotion และ tail chain physics นำไปปรับชื่อ bone/animation ให้ตรงกับโมเดลได้ พฤติกรรมที่ต้องอาศัย module Figura เฉพาะทางยังต้องเขียนด้วย Rig API หรือย้าย logic มาเป็น Shyne Lua ก่อน

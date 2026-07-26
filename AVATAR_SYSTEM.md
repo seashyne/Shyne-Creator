@@ -29,13 +29,15 @@ Shyne Creator ไม่แถมและไม่แตกไฟล์ Avatar �
 
 การควบคุมโมเดลเรียงลำดับเป็น `Lua override (ถ้ามี) > animation ที่ behavior เลือก > Auto Humanoid` ค่าที่ Lua สั่งด้วย `part:pos`, `part:rot` หรือ `part:scale` จะเป็นค่าหลักของ channel นั้น แม้กำหนดเป็นศูนย์ ส่วน animation ที่กำลังเล่นจะควบคุมเฉพาะ channel ที่มี keyframe และ Auto Humanoid จะทำงานเฉพาะส่วนที่ทั้ง Lua และ animation ไม่ได้ควบคุม กลุ่มกระดูกชื่อ `Head`, `Body`/`Torso`, `LeftArm`, `RightArm`, `LeftLeg` และ `RightLeg` จึงยังเดิน วิ่ง มอง หมอบ และแกว่งแขนขาได้อัตโนมัติเมื่อผู้สร้างไม่ได้เขียนท่าของส่วนนั้นเอง ใช้ `part:reset()` เมื่อต้องการคืนส่วนนั้นให้ animation หรือ Auto Humanoid ควบคุมต่อ
 
+สำหรับ `profile: "full_body"` ทั้งหกกลุ่มต้องเป็น root ระดับเดียวกัน ไม่ซ้อนอยู่ใต้ `Body` และไม่ตั้ง `parent_type` เพราะ metadata นั้นเป็น attachment mode สำหรับของเสริม จุดหมุนอ้างอิงคือ `Head/Body = [0,24,0]`, แขน `x=±5,y=22,z=0` และขา `x=±1.9,y=12,z=0` ซ้าย/ขวาอาจตั้งชื่อตามมุมมองของ editor ได้ เพราะ renderer ตรวจตำแหน่ง X ของคู่แขนขาอีกชั้นหนึ่ง
+
 ## Avatar แบบ Overlay และ Auto Parent
 
 Standard 2.0 ใช้ profile เป็นค่าหลัก:
 
 - `profile: "full_body"` สำหรับโมเดลที่แทนทั้งตัวผู้เล่น
 - `profile: "accessory"` สำหรับของเสริมที่แสดงทับบน player model เดิม เช่น หูกระต่าย หาง ปีก หมวก หรือของติดแขน และเป็นค่าเริ่มต้นเมื่อไม่ระบุ
-- `profile: "merling"` สำหรับส่วนเสริม aquatic แบบ overlay
+- `profile: "custom"` สำหรับรูปร่างหรือระบบเฉพาะ เช่น aquatic, creature และ rig ที่ออกแบบเอง โดยค่าเริ่มต้นยังเป็น overlay ที่ปลอดภัย
 
 `replace_vanilla` ยังใช้เป็น override เฉพาะโมเดลที่ต้องผสมพฤติกรรมต่างจาก profile ได้
 
@@ -135,14 +137,16 @@ Avatar Library ทำงานแบบ transactional:
 
 เปิด `Esc > อวตาร` เลือกอวตารให้เป็นตัวที่ใช้อยู่ แล้วกด `ชุด` เพื่อเปิดหน้าตู้เสื้อผ้า ปุ่ม `ชุดเริ่มต้น` จะกลับไปใช้ texture เดิมจาก `model.bbmodel` หากไม่มีไฟล์ในโฟลเดอร์ ระบบจะแสดงชุดเริ่มต้นเพียงรายการเดียว
 
-ชุดเสริมเป็น texture ทดแทนลำดับแรกของโมเดลแบบเต็มภาพโดยค่าเริ่มต้น พิกเซลโปร่งใสจึงยังโปร่งใสจริงและไม่เผยสีจากชุดเดิม เหมาะกับ alternate texture ที่ export จาก Blockbench/Figura หากต้องการวาดเป็น layer ทับ texture เดิม ให้เติม `.overlay`, `_overlay` หรือ `-overlay` ท้ายชื่อก่อน `.png` เช่น `glow.overlay.png` ส่วน texture ลำดับอื่น เช่น ปาก ตา หรือเอฟเฟกต์ ไม่ถูกเปลี่ยน ภาพที่มีความละเอียดต่างจาก texture หลักจะถูกปรับด้วย nearest-neighbor เพื่อรักษาพิกเซลอาร์ต สำหรับ skin แบบเก่า 2:1 ระบบจะสร้างแขนและขาซ้ายใน layout ใหม่ให้อัตโนมัติก่อนปรับเข้ากับ UV ของโมเดล หาก PNG ที่เลือกใหญ่เกินเพดาน Multiplayer ระบบจะลดความละเอียดภาพที่ส่งโดยยังคง UV เดิม ตัวเลือกถูกจำแยกตามอวตาร และเมื่อเปิด `online_sync` ผู้เล่นอื่นที่ใช้ Shyne Creator รุ่นเดียวกันจะเห็นชุดที่เลือกด้วย
+ไฟล์ `.png` ธรรมดาใน `outfit/` เป็น **alpha overlay** โดยค่าเริ่มต้น: ระบบวาดพิกเซลชุดทับ texture ลำดับแรกของโมเดล และคง texture เดิมไว้ตรงพื้นที่โปร่งใส จึงเหมาะกับชุด เสื้อคลุม ลาย หรือเครื่องประดับที่ต้องการเพิ่มลงบนตัวละคร หากต้องการแทน texture ทั้งภาพอย่างชัดเจน ให้เติม `.replace`, `_replace` หรือ `-replace` ท้ายชื่อก่อน `.png` เช่น `formal.replace.png`, `formal_replace.png` หรือ `formal-replace.png` ส่วน suffix เหล่านี้ไม่แสดงในชื่อชุดบนหน้าตู้เสื้อผ้า และ texture ลำดับอื่น เช่น ปาก ตา หรือเอฟเฟกต์ ไม่ถูกเปลี่ยน
+
+การเลือกชุดเปลี่ยนเฉพาะ texture override และสถานะที่ใช้ซิงก์เท่านั้น ระบบไม่สร้าง Avatar ใหม่ ไม่โหลด `script.lua` ซ้ำ และไม่รีเซ็ต animation, bone transform, Lua variables หรือ controller ที่กำลังทำงาน ภาพที่มีความละเอียดต่างจาก texture หลักจะถูกปรับด้วย nearest-neighbor เพื่อรักษาพิกเซลอาร์ต สำหรับ skin แบบเก่า 2:1 ระบบจะสร้างแขนและขาซ้ายใน layout ใหม่ให้อัตโนมัติก่อนปรับเข้ากับ UV ของโมเดล หาก PNG ที่เลือกใหญ่เกินเพดาน Multiplayer ระบบจะลดความละเอียดภาพที่ส่งโดยยังคง UV เดิม ตัวเลือกถูกจำแยกตามอวตาร และเมื่อเปิด `online_sync` ผู้เล่นอื่นที่ใช้ Shyne Creator รุ่นเดียวกันจะเห็นชุดที่เลือกด้วย
 
 ```text
 .minecraft/shyne-mods/avatars/my_avatar/outfit/
-├─ school_uniform.png   # 64×64
-├─ classic.png          # 64×32 แบบเก่า
-├─ formal_hd.png        # 1024×1024 replacement
-└─ glow.overlay.png     # alpha overlay บน texture เดิม
+├─ school_uniform.png    # 64×64 alpha overlay
+├─ classic.png           # 64×32 แบบเก่าและเป็น alpha overlay
+├─ formal_hd.replace.png # 1024×1024 full replacement
+└─ winter_replace.png    # full replacement อีกรูปแบบชื่อ
 ```
 
 ## Client API สำหรับม็อดเสริม
