@@ -152,8 +152,7 @@ function HomePage() {
       </div>
       <div className="hero-visual" aria-hidden="true">
         <div className="orbit orbit-one"></div><div className="orbit orbit-two"></div>
-        <img className="hero-logo" src="shyne-logo.png" alt="" />
-        <div className="voxel-head"><div className="face"><i/><i/></div><div className="ear left"/><div className="ear right"/></div>
+        <div className="logo-stage"><span className="logo-glow"></span><img className="hero-brand-logo" src="shyne-logo.png" alt="" /></div>
         <span className="tag tag-model">MODEL<br/><b>READY</b></span><span className="tag tag-zero">ZERO<br/><b>LUA</b></span>
       </div>
     </section>
