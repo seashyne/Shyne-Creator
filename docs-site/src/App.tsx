@@ -21,17 +21,6 @@ const iconMap: Record<DocIcon, LucideIcon> = {
 
 const categories = ['เริ่มต้น', 'สร้าง Avatar', 'API และระบบ', 'เผยแพร่และพัฒนา'] as const
 
-const avatarCode = `{
-  "standard": "2.0",
-  "name": "My Avatar",
-  "profile": "accessory",
-  "model": "model.bbmodel",
-  "behavior": {
-    "preset": "auto",
-    "autoplay": ["Idle"]
-  }
-}`
-
 function Brand() {
   return <Link className="brand" to="/" aria-label="Shyne Creator หน้าหลัก">
     <img src="shyne-icon.png" alt="" />
@@ -132,23 +121,20 @@ function DocsSidebar({ open }: { open: boolean }) {
 }
 
 function HomePage() {
-  const [copied, setCopied] = useState(false)
-  const copyCode = async () => {
-    await navigator.clipboard.writeText(avatarCode); setCopied(true); window.setTimeout(() => setCopied(false), 1400)
-  }
   const paths = [
-    { icon: Box, eyebrow: 'MODEL FIRST', title: 'สร้างด้วย Blockbench', text: 'เริ่มจากโมเดลและแอนิเมชัน งานทั่วไปไม่ต้องเขียน Lua', color: 'lime', href: '/docs/first-avatar' },
-    { icon: Braces, eyebrow: 'SCRIPTABLE', title: 'ต่อยอดด้วย Lua', text: 'ควบคุม procedural rig, interaction และ logic ขั้นสูง', color: 'violet', href: '/docs/lua-api' },
-    { icon: Zap, eyebrow: 'MULTI-LOADER', title: 'Fabric + NeoForge', text: 'ใช้มาตรฐานเดียวกันบน Minecraft 26.2 ทั้งสอง Loader', color: 'cyan', href: '/docs/installation' },
+    { icon: Gamepad2, eyebrow: 'PLAYER START', title: 'ใช้ Avatar', text: 'ติดตั้ง เปิดคลัง ดาวน์โหลดหรือเพิ่ม Avatar แล้วเลือกใช้ในเกม', color: 'cyan', href: '/docs/player-quickstart' },
+    { icon: Box, eyebrow: 'MODEL FIRST', title: 'สร้างด้วย Blockbench', text: 'รู้จักหน้าจอ ทำโมเดล ใส่ Texture และ Export โดยไม่ต้องเขียน Lua', color: 'lime', href: '/docs/blockbench-plugin' },
+    { icon: Wrench, eyebrow: 'SERVER & PACKS', title: 'สร้าง Content Pack', text: 'ต่อยอด skill, item และระบบเกมสำหรับโลกหรือเซิร์ฟเวอร์', color: 'violet', href: '/docs/creator-sdk' },
   ]
   return <>
-    <div className="announcement"><span>NEW</span> Shyne Creator {version} พร้อม Standard 2.0 <Link to="/docs/overview">ดูรายละเอียด <ArrowRight size={14}/></Link></div>
+    <div className="announcement"><span>เริ่มที่นี่</span> ติดตั้งแล้วแต่ยังใช้ไม่เป็น? <Link to="/docs/player-quickstart">เปิดคู่มือ 1 นาที <ArrowRight size={14}/></Link></div>
     <section className="hero">
       <div className="hero-copy">
-        <p className="overline">OFFICIAL CREATOR DOCUMENTATION <i></i></p>
-        <h1>รูปร่างใหม่<br/>ให้ตัวตนของคุณ<span>.</span></h1>
-        <p className="lead">สร้าง Avatar, custom item, skill, power และระบบต่อสู้ด้วย Blockbench และ Lua พร้อมใช้งาน Multiplayer บน Fabric และ NeoForge</p>
-        <div className="hero-actions"><a className="download-cta" href={CURSEFORGE_URL} target="_blank" rel="noreferrer"><Download size={18}/> ดาวน์โหลดจาก CurseForge</a><Link className="primary" to="/docs/first-avatar">เริ่มสร้าง Avatar <ArrowRight size={18}/></Link><Link className="secondary" to="/docs/standard-2"><BookOpen size={18}/> Standard 2.0</Link></div>
+        <p className="overline">PLAYER & CREATOR DOCUMENTATION <i></i></p>
+        <h1>ติดตั้งแล้ว<br/>เริ่มใช้ได้เลย<span>.</span></h1>
+        <p className="lead">Shyne Creator เป็นระบบสำหรับใช้ Avatar และ Content Pack ตัวม็อดไม่แถม Avatar หรือสกิลมาให้—ติดตั้งแล้วกด H เพื่อเริ่มเลือก Avatar แรกของคุณ</p>
+        <div className="hero-actions"><Link className="primary" to="/docs/player-quickstart">เริ่มใช้ Shyne <ArrowRight size={18}/></Link><a className="download-cta" href={CURSEFORGE_URL} target="_blank" rel="noreferrer"><Download size={18}/> ดาวน์โหลด</a><Link className="secondary" to="/docs/installation"><BookOpen size={18}/> วิธีติดตั้ง</Link></div>
+        <div className="hero-note"><Check size={16}/><span>เห็นตัวละคร Minecraft ปกติหลังติดตั้งถือว่าถูกต้อง—ขั้นต่อไปคือเพิ่ม Avatar</span></div>
         <div className="compat"><span>VERSION</span><b>{version}</b><i></i><b>MINECRAFT 26.2</b><small>JAVA 25</small></div>
       </div>
       <div className="hero-visual">
@@ -162,11 +148,15 @@ function HomePage() {
       </Link>)}</div>
     </section>
     <section className="quickstart">
-      <div className="quick-copy"><p className="overline">YOUR FIRST AVATAR <i></i></p><h2>เริ่มต้นใน<br/><span>สามขั้นตอน</span></h2>
-        <ol><li><b>01</b><div><strong>สร้างโปรเจกต์</strong><p>สร้างโฟลเดอร์ Avatar และเปิดโมเดลด้วย Blockbench</p></div></li><li><b>02</b><div><strong>กำหนดพฤติกรรม</strong><p>เลือก profile และ animation ใน avatar.json</p></div></li><li><b>03</b><div><strong>ตรวจแล้วเข้าเกม</strong><p>Validate แพ็กก่อนนำไปใช้กับ Shyne Creator</p></div></li></ol>
-        <Link className="text-link" to="/docs/first-avatar">อ่าน Quickstart ฉบับเต็ม <ArrowRight size={15}/></Link>
+      <div className="quick-copy"><p className="overline">AFTER INSTALLATION <i></i></p><h2>จากดาวน์โหลด<br/><span>ไปถึง Avatar แรก</span></h2>
+        <ol><li><b>01</b><div><strong>เปิดคลัง Avatar</strong><p>เข้าโลกแล้วกด H หรือเลือก Esc → อวตาร</p></div></li><li><b>02</b><div><strong>เพิ่ม Avatar</strong><p>ค้นหาจาก Cloud หรือเปิดโฟลเดอร์เพื่อติดตั้งไฟล์ที่มีอยู่</p></div></li><li><b>03</b><div><strong>เลือกใช้และทดลอง</strong><p>กดเลือกใช้ แล้วกด G เพื่อเปิดท่าทางหรือคำสั่งของ Avatar</p></div></li></ol>
+        <Link className="text-link" to="/docs/player-quickstart">อ่านวิธีใช้พร้อมแก้ปัญหา <ArrowRight size={15}/></Link>
       </div>
-      <div className="code-window"><div className="window-bar"><div><i/><i/><i/></div><span>avatar.json</span><button onClick={copyCode}>{copied ? <Check size={15}/> : <Copy size={15}/>} {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}</button></div><pre><code>{avatarCode}</code></pre><div className="code-status"><span><Check size={14}/> VALID MANIFEST</span><small>SHYNE STANDARD 2.0</small></div></div>
+      <div className="code-window starter-panel"><div className="window-bar"><div><i/><i/><i/></div><span>ปุ่มเริ่มต้น</span><small>PLAYER QUICKSTART</small></div><div className="starter-shortcuts">
+        <div><kbd>H</kbd><span><b>คลัง Avatar</b><small>ค้นหา เลือก และเปลี่ยน Avatar</small></span></div>
+        <div><kbd>G</kbd><span><b>คำสั่ง Avatar</b><small>เปิดท่าทาง สีหน้า และคำสั่งที่มี</small></span></div>
+        <div><kbd>O</kbd><span><b>ตั้งค่า Shyne</b><small>ปรับหน้าจอ Cloud และการตั้งค่าขั้นสูง</small></span></div>
+      </div><div className="code-status"><span><Check size={14}/> MOD READY</span><small>NEXT · CHOOSE AN AVATAR</small></div></div>
     </section>
     <Footer />
   </>

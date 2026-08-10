@@ -2,6 +2,8 @@
 
 ชุดนี้ใช้สำหรับ **ผู้สร้าง Avatar** บน Shyne Avatar Standard 2.0 ไม่ใช่ตัวม็อดสำหรับใส่ในโฟลเดอร์ `mods`
 
+หากคุณต้องการติดตั้ง Shyne เพื่อเล่นหรือใช้ Avatar ให้ดาวน์โหลดไฟล์ JAR ที่ตรงกับ Fabric หรือ NeoForge แทน แล้วอ่าน [เริ่มใช้ Shyne ใน 1 นาที](PLAYER_QUICKSTART_TH.md)
+
 ## สิ่งที่ต้องเตรียม
 
 - Blockbench สำหรับสร้างและแก้ `model.bbmodel`

@@ -1,4 +1,5 @@
 import overview from '../../README.md?raw'
+import playerQuickstart from '../../PLAYER_QUICKSTART_TH.md?raw'
 import quickstart from '../../CREATOR_QUICKSTART_TH.md?raw'
 import standard from '../../SHYNE_STANDARD_2_TH.md?raw'
 import blockbenchPlugin from '../../tools/blockbench/README_TH.md?raw'
@@ -37,7 +38,17 @@ const installation = `# ติดตั้ง Shyne Creator
 
 Shyne Creator **2.9.1-alpha-26.2** รองรับ Minecraft **26.2** บน Fabric และ NeoForge โดยม็อดทั้งสอง Loader ใช้ Mod ID \`shyne_creator\`, Shyne API Standard และ network protocol ชุดเดียวกัน
 
+> Shyne Creator เป็นระบบสำหรับใช้ Avatar และ Content Pack ไม่ใช่ม็อดที่เพิ่ม Avatar หรือสกิลมาให้ทันทีหลังติดตั้ง หากต้องการเริ่มเล่น ให้ติดตั้งตัวม็อดแล้วอ่าน [เริ่มใช้ Shyne ใน 1 นาที](PLAYER_QUICKSTART_TH.md)
+
 > ไฟล์ Fabric และ NeoForge เป็นคนละไฟล์ ห้ามใส่ทั้งสองไฟล์ใน Minecraft instance เดียวกัน
+
+## เลือกไฟล์ให้ถูก
+
+| คุณต้องการทำอะไร | ไฟล์ที่ต้องใช้ |
+| --- | --- |
+| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-2.9.1-alpha-26.2.jar\` พร้อม Fabric API |
+| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-2.9.1-alpha-26.2.jar\` |
+| สร้าง Avatar ด้วย Blockbench | Shyne Creator Kit — **ห้ามนำไปใส่ในโฟลเดอร์ mods** |
 
 ## ความต้องการของระบบ
 
@@ -53,13 +64,22 @@ Shyne Creator **2.9.1-alpha-26.2** รองรับ Minecraft **26.2** บน 
 
 1. ติดตั้ง Fabric Loader สำหรับ Minecraft 26.2
 2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.9.1-alpha-26.2.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
-3. เปิดเกมแล้วตรวจว่าเมนู Shyne Creator ปรากฏขึ้น
+3. เปิดเกมแล้วตรวจว่ามีโลโก้ Shyne ในหน้าเมนูหลัก หรือเมนู \`Esc → อวตาร\`
 
 ## ติดตั้งบน NeoForge
 
 1. ติดตั้ง NeoForge สำหรับ Minecraft 26.2
 2. ใส่ไฟล์ \`shyne-creator-neoforge-2.9.1-alpha-26.2.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
-3. เปิดเกมด้วยโปรไฟล์ NeoForge
+3. เปิดเกมด้วยโปรไฟล์ NeoForge แล้วตรวจว่ามีเมนู \`Esc → อวตาร\`
+
+## ติดตั้งเสร็จแล้วทำอะไรต่อ
+
+1. เข้าโลก Minecraft แล้วกด \`H\` หรือเปิด \`Esc → อวตาร\`
+2. กด \`Cloud\` เพื่อค้นหา Avatar หรือกด \`เปิดโฟลเดอร์\` เพื่อติดตั้ง Avatar ที่มีอยู่
+3. กลับมาหน้าคลังอวตาร กด \`โหลดใหม่\` แล้วกด \`เลือกใช้\`
+4. กด \`G\` เพื่อเปิดคำสั่ง ท่าทาง หรือสีหน้าที่ Avatar นั้นเตรียมไว้
+
+ถ้ายังเห็นเฉพาะตัวละคร Minecraft พื้นฐาน แปลว่าตัวม็อดติดตั้งสำเร็จแล้วแต่ยังไม่มี Avatar ในคอลเลกชัน ไม่ใช่ข้อผิดพลาดของการติดตั้ง
 
 ## โฟลเดอร์ Creator
 
@@ -77,9 +97,10 @@ Avatar และ content pack ใช้ตำแหน่งมาตรฐา�
 export const docs: DocItem[] = [
   { slug: 'overview', title: 'ภาพรวม Shyne Creator', shortTitle: 'ภาพรวม', description: 'ความสามารถ เวอร์ชัน โครงสร้าง และสถานะล่าสุดของม็อด', category: 'เริ่มต้น', icon: 'book', content: overview },
   { slug: 'installation', title: 'ติดตั้ง Shyne Creator', shortTitle: 'การติดตั้ง', description: 'ติดตั้งบน Fabric หรือ NeoForge สำหรับ Minecraft 26.2', category: 'เริ่มต้น', icon: 'download', content: installation },
-  { slug: 'first-avatar', title: 'สร้าง Avatar แรก', shortTitle: 'Avatar แรก', description: 'จากโปรเจกต์ Blockbench ไปสู่ Avatar ที่เล่นในเกมได้', category: 'เริ่มต้น', icon: 'sparkles', content: quickstart },
+  { slug: 'player-quickstart', title: 'เริ่มใช้ Shyne ใน 1 นาที', shortTitle: 'เริ่มใช้ Shyne', description: 'ติดตั้งแล้วไปต่ออย่างไร ตั้งแต่เปิดคลังจนเลือกใช้ Avatar', category: 'เริ่มต้น', icon: 'gamepad', content: playerQuickstart },
+  { slug: 'first-avatar', title: 'สร้าง Avatar แรก', shortTitle: 'สร้าง Avatar แรก', description: 'สำหรับ Creator: จากโปรเจกต์ Blockbench ไปสู่ Avatar ที่เล่นในเกมได้', category: 'เริ่มต้น', icon: 'sparkles', content: quickstart },
   { slug: 'standard-2', title: 'Shyne Avatar Standard 2.0', shortTitle: 'Standard 2.0', description: 'สัญญา Model-first, profile และ declarative behavior', category: 'สร้าง Avatar', icon: 'box', content: standard },
-  { slug: 'blockbench-plugin', title: 'Shyne Standard 2.0 สำหรับ Blockbench', shortTitle: 'Blockbench Plugin', description: 'ติดตั้ง ตั้งค่า ตรวจสอบ และ export Avatar Package จาก Blockbench', category: 'สร้าง Avatar', icon: 'wrench', content: blockbenchPlugin },
+  { slug: 'blockbench-plugin', title: 'เริ่มใช้ Blockbench กับ Shyne', shortTitle: 'คู่มือ Blockbench', description: 'สำหรับมือใหม่: รู้จักหน้าจอ สร้างโมเดล ใส่ Texture ทำ Animation และ Export เข้าเกม', category: 'สร้าง Avatar', icon: 'wrench', content: blockbenchPlugin },
   { slug: 'avatar-system', title: 'ระบบ Avatar', shortTitle: 'ระบบ Avatar', description: 'ตำแหน่งไฟล์ outfit, palette, client API และขอบเขตความปลอดภัย', category: 'สร้าง Avatar', icon: 'layers', content: avatarSystem },
   { slug: 'blockbench-animation', title: 'Blockbench Animation Standard', shortTitle: 'Blockbench & Animation', description: 'รูปแบบแอนิเมชัน Expression และค่าที่ runtime รองรับ', category: 'สร้าง Avatar', icon: 'play', content: blockbench },
   { slug: 'rig-api', title: 'Native Rig API 1.3', shortTitle: 'Rig & Physics', description: 'Spring, chain, collision, IK, cosmetic armor และ Custom Avatar', category: 'สร้าง Avatar', icon: 'workflow', content: rig, api: true },
@@ -104,7 +125,7 @@ export const exampleDocs = [
 ]
 
 export const fileToSlug: Record<string, string> = {
-  'README.md': 'overview', 'CREATOR_QUICKSTART_TH.md': 'first-avatar', 'SHYNE_STANDARD_2_TH.md': 'standard-2',
+  'README.md': 'overview', 'PLAYER_QUICKSTART_TH.md': 'player-quickstart', 'CREATOR_QUICKSTART_TH.md': 'first-avatar', 'SHYNE_STANDARD_2_TH.md': 'standard-2',
   'tools/blockbench/README_TH.md': 'blockbench-plugin',
   'AVATAR_SYSTEM.md': 'avatar-system', 'BLOCKBENCH_ANIMATION_STANDARD.md': 'blockbench-animation', 'RIG_API_TH.md': 'rig-api',
   'SHYNE_LUA_API_TH.md': 'lua-api', 'CUSTOM_RENDER_API_TH.md': 'render-api', 'SHYNE_GAMEPLAY_API_TH.md': 'gameplay-api',

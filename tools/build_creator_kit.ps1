@@ -85,6 +85,7 @@ $rootFiles = @(
     "TRADEMARKS.md",
     "THIRD_PARTY_NOTICES.md",
     "VERSION.txt",
+    "PLAYER_QUICKSTART_TH.md",
     "SHYNE_STANDARD_2_TH.md",
     "CREATOR_QUICKSTART_TH.md",
     "AVATAR_SYSTEM.md",

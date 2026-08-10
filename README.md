@@ -14,6 +14,21 @@
 
 Fabric และ NeoForge ใช้ `mod id`, Shyne API standard และ network protocol version เดียวกัน ส่วนไฟล์ที่ผูกกับ Loader จะถูกแยกออกจากระบบหลัก
 
+## ดาวน์โหลดแล้วเริ่มใช้อย่างไร
+
+Shyne Creator เป็น runtime สำหรับใช้ Avatar และ Content Pack ไม่ใช่ม็อดที่เพิ่ม Avatar หรือสกิลสำเร็จรูปมาให้ทันที หลังติดตั้งแล้ว การเห็นตัวละคร Minecraft แบบปกติถือว่าถูกต้อง
+
+1. เลือก JAR ให้ตรงกับ Fabric หรือ NeoForge; Fabric ต้องติดตั้ง Fabric API เพิ่ม
+2. ใส่ JAR ในโฟลเดอร์ `mods` แล้วเปิด Minecraft 26.2
+3. เข้าโลกแล้วกด `H` หรือเปิด `Esc → อวตาร`
+4. ค้นหา Avatar จาก Cloud หรือใช้ปุ่มเปิดโฟลเดอร์เพื่อนำ Avatar มาไว้ใน `shyne-mods/avatars`
+5. กด `โหลดใหม่` แล้วกด `เลือกใช้`
+6. กด `G` เพื่อเปิดท่าทางหรือคำสั่งที่ Avatar นั้นเตรียมไว้ และกด `O` เพื่อเปิดการตั้งค่า Shyne
+
+ปุ่ม `Z`, `X`, `C` และ `V` เป็นช่องความสามารถจาก Content Pack จึงอาจไม่ทำอะไรหากโลกหรือเซิร์ฟเวอร์ไม่ได้ติดตั้งแพ็กที่รองรับ ส่วน **Shyne Creator Kit ใช้สำหรับสร้าง Avatar และห้ามนำไปใส่ในโฟลเดอร์ `mods`**
+
+คู่มือสำหรับผู้เล่น: [เริ่มใช้ Shyne ใน 1 นาที](PLAYER_QUICKSTART_TH.md)
+
 ## Shyne Avatar Standard 2.0 — Model-first
 
 Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Blockbench และ `avatar.json`: Avatar ทั่วไปเล่น autoplay, locomotion และ blink ได้โดยไม่ต้องมี `script.lua` ส่วน Lua เป็นทางเลือกสำหรับ procedural rig หรือ logic เฉพาะเท่านั้น
