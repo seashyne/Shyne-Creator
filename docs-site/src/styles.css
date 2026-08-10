@@ -330,6 +330,10 @@ body {
 .search-results button small { color:#9ba8ba; font-size:11px; line-height:1.5; }
 footer { color:#9eabbd; background:#09101a; border-color:#30394a; }
 footer p,footer a { font-size:11px; }
+.footer-links { flex-wrap:wrap; justify-content:flex-end; }
+.footer-links a { display:inline-flex; align-items:center; gap:5px; }
+.footer-links a:hover { color:#e9f8ff; }
+.social-youtube:hover { color:#ff5a62; border-color:#7f3940; }
 .download-button {
   height:38px;
   padding:0 14px;

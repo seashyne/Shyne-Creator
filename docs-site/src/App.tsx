@@ -5,12 +5,14 @@ import remarkGfm from 'remark-gfm'
 import {
   Activity, ArrowLeft, ArrowRight, BookOpen, Box, Boxes, Braces, Check, ChevronDown,
   ChevronRight, Cloud, Code2, Copy, Download, ExternalLink, FileCode2, Gamepad2,
-  Layers, Menu, Palette, Play, Search, ShieldCheck, Sparkles, Users, Workflow, Wrench, X, Zap,
+  Layers, Menu, MessageCircle, Palette, Play, Search, ShieldCheck, Sparkles, Users, Workflow, Wrench, X, Zap,
   type LucideIcon,
 } from 'lucide-react'
 import { docs, exampleDocs, fileToSlug, version, type DocIcon, type DocItem } from './content'
 
 const CURSEFORGE_URL = 'https://www.curseforge.com/minecraft/mc-mods/shyne-creator'
+const YOUTUBE_URL = 'https://www.youtube.com/@seashyne'
+const CONTACT_URL = 'https://github.com/seashyne/Shyne-Creator/issues'
 const ModelViewer = lazy(() => import('./ModelViewer'))
 
 const iconMap: Record<DocIcon, LucideIcon> = {
@@ -77,6 +79,8 @@ function AppShell() {
       <div className="header-actions">
         <button className="search-button" onClick={() => setSearchOpen(true)}><Search size={16}/><span>ค้นหาเอกสาร</span><kbd>⌘ K</kbd></button>
         <a className="download-button" href={CURSEFORGE_URL} target="_blank" rel="noreferrer" aria-label="ดาวน์โหลด Shyne Creator จาก CurseForge"><Download size={17}/><span>ดาวน์โหลด</span></a>
+        <a className="icon-button social-youtube" href={YOUTUBE_URL} target="_blank" rel="noreferrer" aria-label="YouTube ของ Shyne Creator"><Play size={20}/></a>
+        <a className="icon-button" href={CONTACT_URL} target="_blank" rel="noreferrer" aria-label="ติดต่อและแจ้งปัญหา Shyne Creator"><MessageCircle size={19}/></a>
         <a className="icon-button" href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer" aria-label="ซอร์สโค้ด Shyne Creator"><Code2 size={19}/></a>
         <button className="icon-button mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-label="เปิดเมนู">{menuOpen ? <X/> : <Menu/>}</button>
       </div>
@@ -246,7 +250,7 @@ function CodeBlock({ children }: { children: ReactNode }) {
 }
 
 function Footer() {
-  return <footer><div><img src="shyne-icon.png" alt="Shyne Creator"/><span><b>SHYNE CREATOR</b><small>Create beyond the skin.</small></span></div><p>เอกสารสำหรับ Shyne Creator {version} · Minecraft 26.2 · MPL-2.0</p><div><a href={CURSEFORGE_URL} target="_blank" rel="noreferrer">ดาวน์โหลดบน CurseForge</a><a href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer">GitHub</a></div></footer>
+  return <footer><div><img src="shyne-icon.png" alt="Shyne Creator"/><span><b>SHYNE CREATOR</b><small>Create beyond the skin.</small></span></div><p>เอกสารสำหรับ Shyne Creator {version} · Minecraft 26.2 · MPL-2.0</p><div className="footer-links"><a href={YOUTUBE_URL} target="_blank" rel="noreferrer"><Play size={15}/> YouTube</a><a href={CONTACT_URL} target="_blank" rel="noreferrer"><MessageCircle size={14}/> ติดต่อ / แจ้งปัญหา</a><a href={CURSEFORGE_URL} target="_blank" rel="noreferrer">CurseForge</a><a href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer">GitHub</a></div></footer>
 }
 
 function extractHeadings(markdown: string) {
