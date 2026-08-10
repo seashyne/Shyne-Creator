@@ -28,7 +28,7 @@ export type DocItem = {
   title: string
   shortTitle: string
   description: string
-  category: 'เริ่มต้น' | 'สร้าง Avatar' | 'API และระบบ' | 'เผยแพร่และพัฒนา'
+  category: 'เริ่มต้น' | 'Blockbench' | 'สร้าง Avatar' | 'API และระบบ' | 'เผยแพร่และพัฒนา'
   icon: DocIcon
   content: string
   api?: boolean
@@ -98,11 +98,11 @@ export const docs: DocItem[] = [
   { slug: 'overview', title: 'ภาพรวม Shyne Creator', shortTitle: 'ภาพรวม', description: 'ความสามารถ เวอร์ชัน โครงสร้าง และสถานะล่าสุดของม็อด', category: 'เริ่มต้น', icon: 'book', content: overview },
   { slug: 'installation', title: 'ติดตั้ง Shyne Creator', shortTitle: 'การติดตั้ง', description: 'ติดตั้งบน Fabric หรือ NeoForge สำหรับ Minecraft 26.2', category: 'เริ่มต้น', icon: 'download', content: installation },
   { slug: 'player-quickstart', title: 'เริ่มใช้ Shyne ใน 1 นาที', shortTitle: 'เริ่มใช้ Shyne', description: 'ติดตั้งแล้วไปต่ออย่างไร ตั้งแต่เปิดคลังจนเลือกใช้ Avatar', category: 'เริ่มต้น', icon: 'gamepad', content: playerQuickstart },
-  { slug: 'first-avatar', title: 'สร้าง Avatar แรก', shortTitle: 'สร้าง Avatar แรก', description: 'สำหรับ Creator: จากโปรเจกต์ Blockbench ไปสู่ Avatar ที่เล่นในเกมได้', category: 'เริ่มต้น', icon: 'sparkles', content: quickstart },
+  { slug: 'first-avatar', title: 'สร้าง Avatar แรก', shortTitle: 'สร้าง Avatar แรก', description: 'สำหรับ Creator: จากโปรเจกต์ Blockbench ไปสู่ Avatar ที่เล่นในเกมได้', category: 'Blockbench', icon: 'sparkles', content: quickstart },
   { slug: 'standard-2', title: 'Shyne Avatar Standard 2.0', shortTitle: 'Standard 2.0', description: 'สัญญา Model-first, profile และ declarative behavior', category: 'สร้าง Avatar', icon: 'box', content: standard },
-  { slug: 'blockbench-plugin', title: 'เริ่มใช้ Blockbench กับ Shyne', shortTitle: 'คู่มือ Blockbench', description: 'สำหรับมือใหม่: รู้จักหน้าจอ สร้างโมเดล ใส่ Texture ทำ Animation และ Export เข้าเกม', category: 'สร้าง Avatar', icon: 'wrench', content: blockbenchPlugin },
+  { slug: 'blockbench-plugin', title: 'เริ่มใช้ Blockbench กับ Shyne', shortTitle: 'คู่มือ Blockbench', description: 'สำหรับมือใหม่: รู้จักหน้าจอ สร้างโมเดล ใส่ Texture ทำ Animation และ Export เข้าเกม', category: 'Blockbench', icon: 'wrench', content: blockbenchPlugin },
   { slug: 'avatar-system', title: 'ระบบ Avatar', shortTitle: 'ระบบ Avatar', description: 'ตำแหน่งไฟล์ outfit, palette, client API และขอบเขตความปลอดภัย', category: 'สร้าง Avatar', icon: 'layers', content: avatarSystem },
-  { slug: 'blockbench-animation', title: 'Blockbench Animation Standard', shortTitle: 'Blockbench & Animation', description: 'รูปแบบแอนิเมชัน Expression และค่าที่ runtime รองรับ', category: 'สร้าง Avatar', icon: 'play', content: blockbench },
+  { slug: 'blockbench-animation', title: 'Blockbench Animation Standard', shortTitle: 'Animation Standard', description: 'รูปแบบแอนิเมชัน Expression และค่าที่ runtime รองรับ', category: 'Blockbench', icon: 'play', content: blockbench },
   { slug: 'rig-api', title: 'Native Rig API 1.3', shortTitle: 'Rig & Physics', description: 'Spring, chain, collision, IK, cosmetic armor และ Custom Avatar', category: 'สร้าง Avatar', icon: 'workflow', content: rig, api: true },
   { slug: 'lua-api', title: 'Shyne Native Lua API — Standard 2.0', shortTitle: 'Lua API 2.0', description: 'API หลักสำหรับโมเดล state, network, event, sound และ input', category: 'API และระบบ', icon: 'braces', content: lua, api: true },
   { slug: 'render-api', title: 'Custom Render API 1.3', shortTitle: 'Render API 1.3', description: 'Primitive, HUD, world task, native bone binding และ performance budget', category: 'API และระบบ', icon: 'palette', content: render, api: true },

@@ -19,7 +19,7 @@ const iconMap: Record<DocIcon, LucideIcon> = {
   shield: ShieldCheck, users: Users, wrench: Wrench, workflow: Workflow,
 }
 
-const categories = ['เริ่มต้น', 'สร้าง Avatar', 'API และระบบ', 'เผยแพร่และพัฒนา'] as const
+const categories = ['เริ่มต้น', 'Blockbench', 'สร้าง Avatar', 'API และระบบ', 'เผยแพร่และพัฒนา'] as const
 
 function Brand() {
   return <Link className="brand" to="/" aria-label="Shyne Creator หน้าหลัก">
@@ -70,6 +70,7 @@ function AppShell() {
       <Brand />
       <nav className="topnav" aria-label="เมนูหลัก">
         <NavLink to="/docs/overview">คู่มือ</NavLink>
+        <NavLink to="/docs/blockbench-plugin">Blockbench</NavLink>
         <NavLink to="/api">API</NavLink>
         <NavLink to="/showcase">ตัวอย่าง</NavLink>
       </nav>
