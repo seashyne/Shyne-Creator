@@ -43,6 +43,8 @@ import java.security.MessageDigest;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static seashyne.shynecore.network.ShyneNetworkValidator.*;
+
 public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.Listener, AttachmentRuntime.Listener,
     PowerStateMachine.Listener, SkillRegistry.Listener, PlayerProfileRuntime.Listener, EquipmentRuntime.Listener {
 
@@ -104,19 +106,21 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public static final CustomPacketPayload.Type<AvatarSyncRequestPayload> AVATAR_SYNC_REQUEST_PAYLOAD = new CustomPacketPayload.Type<>(AVATAR_SYNC_REQUEST);
 
     public static final Gson GSON = new GsonBuilder().serializeNulls().create();
-    public static final int MAX_TEXTURE_BYTES = 8 * 1024 * 1024;
-    public static final int MAX_AVATAR_TEXTURE_BYTES = 64 * 1024 * 1024;
-    public static final int MAX_AVATAR_JSON_CHARS = 2 * 1024 * 1024;
-    public static final int MAX_AVATAR_SUBSCRIPTION_COMMAND_BYTES = 16 * 1024;
-    private static final int MAX_AVATAR_PARTS = 1024;
-    private static final int MAX_SYNCED_VARS = 64;
-    private static final int MAX_MODEL_CUBES = 16_384;
-    private static final int MAX_MODEL_MESHES = 4_096;
-    private static final int MAX_MODEL_MESH_VERTICES = 65_536;
-    private static final int MAX_MODEL_MESH_FACES = 65_536;
-    private static final int MAX_MODEL_BONES = 4_096;
-    private static final int MAX_MODEL_ANIMATIONS = 512;
-    private static final int MAX_MODEL_TEXTURES = 256;
+    public static final double MAX_AVATAR_TRACKING_DISTANCE = 160.0;
+    public static final double MAX_AVATAR_TRACKING_DISTANCE_SQR = MAX_AVATAR_TRACKING_DISTANCE * MAX_AVATAR_TRACKING_DISTANCE;
+    public static final int MAX_TEXTURE_BYTES = ShyneNetworkValidator.MAX_TEXTURE_BYTES;
+    public static final int MAX_AVATAR_TEXTURE_BYTES = ShyneNetworkValidator.MAX_AVATAR_TEXTURE_BYTES;
+    public static final int MAX_AVATAR_JSON_CHARS = ShyneNetworkValidator.MAX_AVATAR_JSON_CHARS;
+    public static final int MAX_AVATAR_SUBSCRIPTION_COMMAND_BYTES = ShyneNetworkValidator.MAX_AVATAR_SUBSCRIPTION_COMMAND_BYTES;
+    public static final int MAX_AVATAR_PARTS = ShyneNetworkValidator.MAX_AVATAR_PARTS;
+    public static final int MAX_SYNCED_VARS = ShyneNetworkValidator.MAX_SYNCED_VARS;
+    public static final int MAX_MODEL_CUBES = ShyneNetworkValidator.MAX_MODEL_CUBES;
+    public static final int MAX_MODEL_MESHES = ShyneNetworkValidator.MAX_MODEL_MESHES;
+    public static final int MAX_MODEL_MESH_VERTICES = ShyneNetworkValidator.MAX_MODEL_MESH_VERTICES;
+    public static final int MAX_MODEL_MESH_FACES = ShyneNetworkValidator.MAX_MODEL_MESH_FACES;
+    public static final int MAX_MODEL_BONES = ShyneNetworkValidator.MAX_MODEL_BONES;
+    public static final int MAX_MODEL_ANIMATIONS = ShyneNetworkValidator.MAX_MODEL_ANIMATIONS;
+    public static final int MAX_MODEL_TEXTURES = ShyneNetworkValidator.MAX_MODEL_TEXTURES;
     // Native physics publishes every two client ticks (about 100 ms). Leave a
     // little scheduling headroom so a valid 10 Hz stream is not discarded.
     private static final long AVATAR_SNAPSHOT_INTERVAL_NANOS = 75_000_000L;
@@ -458,25 +462,6 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         return new NetTextureDefinition(texture.id(), texture.name(), texture.relativePath(), texture.width(), texture.height(), hash, content);
     }
 
-    private static byte[] readTextureBytes(BbModelDefinition model, BbTextureDefinition texture) {
-        if (model == null || model.sourceFile() == null || texture == null || texture.relativePath() == null) return null;
-        Path modelRoot = model.sourceFile().toAbsolutePath().normalize().getParent();
-        if (modelRoot == null) return null;
-        Path allowedRoot = modelRoot.getParent() == null ? modelRoot : modelRoot.getParent();
-        Path candidate = modelRoot.resolve(texture.relativePath().replace('/', java.io.File.separatorChar)).normalize();
-        Path fallback = modelRoot.resolve("textures").resolve(Path.of(texture.relativePath()).getFileName()).normalize();
-        try {
-            Path selected = Files.isRegularFile(candidate) && candidate.startsWith(allowedRoot) ? candidate : fallback;
-            if (!selected.startsWith(allowedRoot) || !Files.isRegularFile(selected)) return null;
-            long size = Files.size(selected);
-            if (size <= 0 || size > MAX_TEXTURE_BYTES) return null;
-            byte[] bytes = Files.readAllBytes(selected);
-            return PngTextureValidator.matches(bytes, texture.width(), texture.height()) ? bytes : null;
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
     private NetAvatarSnapshot normalizeAvatarSnapshot(ServerPlayer player, NetAvatarSnapshot incoming) {
         if (incoming == null || !incoming.onlineSync() || !isSafeId(incoming.avatarId())) return null;
         if (incoming.parts() != null && incoming.parts().size() > MAX_AVATAR_PARTS) return null;
@@ -546,207 +531,10 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         );
     }
 
-    private static boolean isSafeAnimationParameters(Map<String, Double> parameters) {
-        if (parameters == null) return true;
-        if (parameters.size() > 64) return false;
-        return parameters.entrySet().stream().allMatch(entry -> entry.getKey() != null
-            && entry.getKey().matches("[A-Za-z_][A-Za-z0-9_.-]{0,63}")
-            && entry.getValue() != null && Double.isFinite(entry.getValue()) && Math.abs(entry.getValue()) <= 1_000_000.0);
-    }
-
-    private static boolean isSafeSyncedVars(Map<String, Object> values) {
-        if (values == null) return true;
-        if (values.size() > MAX_SYNCED_VARS) return false;
-        return values.entrySet().stream().allMatch(entry -> isSafeId(entry.getKey()) && AvatarValueValidator.isSafe(entry.getValue()));
-    }
-
-    private static boolean isSafeVanillaVisibility(Map<String, Boolean> values) {
-        if (values == null) return true;
-        if (values.size() > 64) return false;
-        return values.entrySet().stream().allMatch(entry -> isSafeId(entry.getKey()) && entry.getValue() != null);
-    }
-
     private static NetAvatarSnapshot withSyncedVars(NetAvatarSnapshot snapshot, Map<String, Object> values) {
         return new NetAvatarSnapshot(snapshot.playerId(), snapshot.avatarId(), snapshot.modelId(), snapshot.replaceVanilla(), snapshot.onlineSync(), snapshot.model(),
             snapshot.parts(), snapshot.vanillaVisibility(), values, snapshot.currentAnimation(), snapshot.animationStartedAtMillis(), snapshot.animationLayers(),
             snapshot.animationParameters(), snapshot.nameplateText(), snapshot.nameplateVisible());
-    }
-
-    private static boolean isSafeModel(NetModelDefinition model) {
-        if (model.bones() == null || model.cubes() == null || model.meshes() == null || model.animations() == null || model.textures() == null) return false;
-        if (model.bones().size() > MAX_MODEL_BONES || model.cubes().size() > MAX_MODEL_CUBES || model.meshes().size() > MAX_MODEL_MESHES || model.animations().size() > MAX_MODEL_ANIMATIONS || model.textures().size() > MAX_MODEL_TEXTURES) return false;
-        if (model.textureWidth() <= 0 || model.textureWidth() > 8192 || model.textureHeight() <= 0 || model.textureHeight() > 8192) return false;
-        if (!isBoundedText(model.sourceModId(), 128, false) || !isBoundedText(model.displayName(), 256, true)
-            || !isBoundedText(model.primaryTextureRelativePath(), 1_024, true)) return false;
-        for (NetBoneDefinition bone : model.bones()) if (!isSafeBone(bone)) return false;
-        for (NetCubeDefinition cube : model.cubes()) if (!isSafeCube(cube, model.textures().size())) return false;
-        long meshVertices = 0;
-        long meshFaces = 0;
-        for (NetMeshDefinition mesh : model.meshes()) {
-            if (mesh == null || mesh.vertices() == null || mesh.faces() == null
-                || !isBoundedText(mesh.uuid(), 512, false) || !isBoundedText(mesh.name(), 512, true)
-                || !isBoundedText(mesh.parentBoneUuid(), 512, true)
-                || !finiteBounded(mesh.originX()) || !finiteBounded(mesh.originY()) || !finiteBounded(mesh.originZ())
-                || !finiteBounded(mesh.rotationX()) || !finiteBounded(mesh.rotationY()) || !finiteBounded(mesh.rotationZ())) return false;
-            meshVertices += mesh.vertices().size();
-            meshFaces += mesh.faces().size();
-            if (meshVertices > MAX_MODEL_MESH_VERTICES || meshFaces > MAX_MODEL_MESH_FACES) return false;
-            for (Map.Entry<String, NetMeshVertexDefinition> entry : mesh.vertices().entrySet()) {
-                NetMeshVertexDefinition vertex = entry.getValue();
-                if (!isBoundedText(entry.getKey(), 512, false) || vertex == null || !isBoundedText(vertex.id(), 512, false)
-                    || !finiteBounded(vertex.x()) || !finiteBounded(vertex.y()) || !finiteBounded(vertex.z())) return false;
-            }
-            for (NetMeshFaceDefinition face : mesh.faces()) {
-                if (face == null || !isBoundedText(face.id(), 512, false) || face.vertexIds() == null || face.uvByVertex() == null
-                    || face.vertexIds().size() > 256 || face.uvByVertex().size() > 256 || face.textureIndex() < -1 || face.textureIndex() >= model.textures().size()) return false;
-                if (face.vertexIds().stream().anyMatch(id -> id == null || !mesh.vertices().containsKey(id))) return false;
-                if (face.uvByVertex().entrySet().stream().anyMatch(entry -> entry.getKey() == null || !mesh.vertices().containsKey(entry.getKey())
-                    || entry.getValue() == null || !finiteBounded(entry.getValue().u()) || !finiteBounded(entry.getValue().v()))) return false;
-            }
-        }
-        long keyframeCount = 0;
-        for (NetAnimationDefinition animation : model.animations()) {
-            if (animation == null || !isBoundedText(animation.name(), 128, false) || !Double.isFinite(animation.lengthSeconds())
-                || animation.lengthSeconds() < 0 || animation.lengthSeconds() > 86_400 || animation.animatorCount() < 0
-                || animation.animatorCount() > MAX_MODEL_BONES || animation.boneAnimations() == null
-                || animation.boneAnimations().size() > MAX_MODEL_BONES || animation.affectedBones() == null
-                || animation.affectedBones().size() > MAX_MODEL_BONES
-                || animation.affectedBones().stream().anyMatch(value -> !isBoundedText(value, 512, false))) return false;
-            for (Map.Entry<String, NetBoneAnimation> entry : animation.boneAnimations().entrySet()) {
-                NetBoneAnimation bone = entry.getValue();
-                if (!isBoundedText(entry.getKey(), 512, false) || bone == null || !isBoundedText(bone.boneUuid(), 512, false)) return false;
-                for (List<NetKeyframe> channel : Arrays.asList(bone.rotation(), bone.position(), bone.scale())) {
-                    if (channel == null || (keyframeCount += channel.size()) > 20_000) return false;
-                    if (channel.stream().anyMatch(key -> !isSafeKeyframe(key))) return false;
-                }
-            }
-        }
-        long totalTextureBytes = 0;
-        long totalTexturePixels = 0;
-        for (NetTextureDefinition texture : model.textures()) {
-            if (texture == null || !isBoundedText(texture.id(), 256, false) || !isBoundedText(texture.name(), 256, true)
-                || !isBoundedText(texture.relativePath(), 1_024, true) || texture.width() <= 0 || texture.height() <= 0
-                || texture.width() > PngTextureValidator.MAX_DIMENSION || texture.height() > PngTextureValidator.MAX_DIMENSION
-                || texture.contentHash() == null || texture.contentBase64() == null || texture.contentBase64().length() > (MAX_TEXTURE_BYTES * 4 / 3) + 8) return false;
-            if (!texture.contentHash().matches("[0-9a-fA-F]{64}") || texture.contentBase64().isBlank()) return false;
-            try {
-                byte[] bytes = Base64.getDecoder().decode(texture.contentBase64());
-                PngTextureValidator.Dimensions dimensions = PngTextureValidator.dimensions(bytes);
-                if (bytes.length > MAX_TEXTURE_BYTES || dimensions == null || dimensions.width() != texture.width() || dimensions.height() != texture.height()) return false;
-                totalTextureBytes += bytes.length;
-                totalTexturePixels += dimensions.pixels();
-                if (totalTextureBytes > MAX_AVATAR_TEXTURE_BYTES) return false;
-                if (totalTexturePixels > PngTextureValidator.MAX_AVATAR_PIXELS) return false;
-                if (!texture.contentHash().isBlank() && !texture.contentHash().equalsIgnoreCase(HexFormat.of().formatHex(sha256(bytes)))) return false;
-            } catch (IllegalArgumentException error) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean isSafeKeyframe(NetKeyframe keyframe) {
-        if (keyframe == null || !Float.isFinite(keyframe.time()) || keyframe.time() < -1 || keyframe.time() > 86_400) return false;
-        return isSafePoint(keyframe.pre()) && isSafePoint(keyframe.post()) && keyframe.easing() != null && keyframe.easing().length() <= 32
-            && isSafeBezier(keyframe.bezier());
-    }
-
-    private static boolean isSafeBone(NetBoneDefinition bone) {
-        return bone != null && isBoundedText(bone.uuid(), 512, false) && isBoundedText(bone.name(), 512, true)
-            && isBoundedText(bone.parentName(), 512, true) && isBoundedText(bone.parentUuid(), 512, true)
-            && isBoundedText(bone.parentType(), 64, true) && isBoundedText(bone.role(), 64, true)
-            && isBoundedText(bone.physicsPreset(), 64, true) && bone.cubeCount() >= 0 && bone.cubeCount() <= MAX_MODEL_CUBES
-            && finiteBounded(bone.pivotX()) && finiteBounded(bone.pivotY()) && finiteBounded(bone.pivotZ())
-            && finiteBounded(bone.rotationX()) && finiteBounded(bone.rotationY()) && finiteBounded(bone.rotationZ())
-            && bone.tags() != null && bone.tags().size() <= 64 && bone.tags().stream().allMatch(value -> isBoundedText(value, 128, false))
-            && bone.childBoneUuids() != null && bone.childBoneUuids().size() <= MAX_MODEL_BONES
-            && bone.childBoneUuids().stream().allMatch(value -> isBoundedText(value, 512, false));
-    }
-
-    private static boolean isSafeCube(NetCubeDefinition cube, int textureCount) {
-        if (cube == null || !isBoundedText(cube.name(), 512, true) || !isBoundedText(cube.parentBoneUuid(), 512, true)
-            || cube.faces() == null || cube.faces().size() > 6 || cube.textureIndex() < -1 || cube.textureIndex() >= textureCount) return false;
-        if (!finiteBounded(cube.fromX()) || !finiteBounded(cube.fromY()) || !finiteBounded(cube.fromZ())
-            || !finiteBounded(cube.toX()) || !finiteBounded(cube.toY()) || !finiteBounded(cube.toZ())
-            || !finiteBounded(cube.originX()) || !finiteBounded(cube.originY()) || !finiteBounded(cube.originZ())
-            || !finiteBounded(cube.rotationX()) || !finiteBounded(cube.rotationY()) || !finiteBounded(cube.rotationZ())
-            || !finiteBounded(cube.inflate())) return false;
-        return cube.faces().entrySet().stream().allMatch(entry -> isBoundedText(entry.getKey(), 16, false)
-            && entry.getValue() != null && isSafeFace(entry.getValue(), textureCount));
-    }
-
-    private static boolean isSafeFace(NetFaceUvDefinition face, int textureCount) {
-        return finiteBounded(face.u1()) && finiteBounded(face.v1()) && finiteBounded(face.u2()) && finiteBounded(face.v2())
-            && face.rotation() >= 0 && face.rotation() <= 270 && face.rotation() % 90 == 0
-            && face.textureIndex() >= -1 && face.textureIndex() < textureCount;
-    }
-
-    private static boolean isSafeBezier(BbBezierData bezier) {
-        if (bezier == null) return false;
-        for (int axis = 0; axis < 3; axis++) {
-            if (!finiteBounded(bezier.leftTime(axis)) || !finiteBounded(bezier.leftValue(axis))
-                || !finiteBounded(bezier.rightTime(axis)) || !finiteBounded(bezier.rightValue(axis))) return false;
-        }
-        return true;
-    }
-
-    private static boolean isBoundedText(String value, int maxLength, boolean nullable) {
-        if (value == null) return nullable;
-        if (value.length() > maxLength || (!nullable && value.isBlank())) return false;
-        for (int i = 0; i < value.length(); i++) if (Character.isISOControl(value.charAt(i))) return false;
-        return true;
-    }
-
-    private static boolean isSafePoint(seashyne.shynecore.model.BbKeyframePoint point) {
-        return point != null && isSafeExpression(point.x()) && isSafeExpression(point.y()) && isSafeExpression(point.z());
-    }
-
-    private static boolean isSafeExpression(String expression) {
-        return expression != null && !expression.isBlank() && expression.length() <= 2_048;
-    }
-
-    private static boolean isSafeId(String value) {
-        return value != null && value.length() >= 1 && value.length() <= 64 && value.matches("[A-Za-z0-9_.:-]+");
-    }
-
-    private static boolean isSafePart(NetAvatarPart part) {
-        if (part == null || !isSafePartPath(part.path())) return false;
-        return finiteBounded(part.posX()) && finiteBounded(part.posY()) && finiteBounded(part.posZ())
-            && finiteBounded(part.rotX()) && finiteBounded(part.rotY()) && finiteBounded(part.rotZ())
-            && finiteBounded(part.scaleX()) && finiteBounded(part.scaleY()) && finiteBounded(part.scaleZ())
-            && finiteBounded(part.additiveRotX()) && finiteBounded(part.additiveRotY()) && finiteBounded(part.additiveRotZ());
-    }
-
-    /** Blockbench names may contain spaces or Unicode; paths never touch the filesystem. */
-    private static boolean isSafePartPath(String value) {
-        if (value == null || value.isBlank() || value.length() > 512) return false;
-        for (int i = 0; i < value.length(); i++) if (Character.isISOControl(value.charAt(i))) return false;
-        return true;
-    }
-
-    private static boolean isSafeAnimationLayer(NetAvatarAnimation layer) {
-        return layer != null && layer.name() != null && layer.name().length() <= 128
-            && AvatarAnimationClock.isSafeAge(layer.startedAtMillis())
-            && AvatarAnimationClock.isSafeOptionalAge(layer.stoppingAtMillis())
-            && Double.isFinite(layer.lengthSeconds()) && layer.lengthSeconds() >= 0 && layer.lengthSeconds() <= 86_400
-            && Double.isFinite(layer.speed()) && layer.speed() >= 0.01 && layer.speed() <= 8
-            && Double.isFinite(layer.weight()) && layer.weight() >= 0 && layer.weight() <= 1
-            && layer.priority() >= -1000 && layer.priority() <= 1000
-            && layer.fadeInTicks() >= 0 && layer.fadeInTicks() <= 1200
-            && layer.fadeOutTicks() >= 0 && layer.fadeOutTicks() <= 1200
-            && (layer.mask() == null || (layer.mask().size() <= 256 && layer.mask().stream().allMatch(value -> value != null && value.length() <= 256)));
-    }
-
-    private static boolean finiteBounded(float value) {
-        return Float.isFinite(value) && Math.abs(value) <= 10_000f;
-    }
-
-    private static byte[] sha256(byte[] bytes) {
-        try {
-            return MessageDigest.getInstance("SHA-256").digest(bytes);
-        } catch (Exception impossible) {
-            throw new IllegalStateException(impossible);
-        }
     }
 
     private void completeHandshake(ServerPlayer player, ProtocolHelloPayload hello) {
@@ -806,10 +594,16 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     private void broadcastAvatarSnapshot(UUID ownerId, NetAvatarSnapshot snapshot, long revision) {
         if (server == null || snapshot == null) return;
         NetAvatarSnapshot encoded = encodeAnimationTimes(snapshot, System.currentTimeMillis());
+        ServerPlayer ownerPlayer = server.getPlayerList().getPlayer(ownerId);
+        boolean isDeltaPose = snapshot.model() == null && !snapshot.avatarId().isBlank();
         for (ServerPlayer recipient : server.getPlayerList().getPlayers()) {
             boolean ownerAck = recipient.getUUID().equals(ownerId);
             AvatarSubscriptions subscriptions = avatarSubscriptions.computeIfAbsent(recipient.getUUID(), ignored -> new AvatarSubscriptions());
             if (!ownerAck && !subscriptions.isSubscribed(ownerId)) continue;
+            if (!ownerAck && isDeltaPose && ownerPlayer != null) {
+                if (recipient.level() != ownerPlayer.level()) continue;
+                if (recipient.distanceToSqr(ownerPlayer) > MAX_AVATAR_TRACKING_DISTANCE_SQR) continue;
+            }
             NetAvatarSnapshot outgoing = ownerAck && encoded.model() != null ? withoutModel(encoded) : encoded;
             sendAvatarSnapshotPacket(recipient, outgoing, revision, false);
         }
@@ -920,72 +714,13 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         };
     }
 
-    /** Token bucket measured in encoded bytes, with a caller-supplied monotonic clock for deterministic tests. */
-    public static final class ByteRateLimiter {
-        private final long capacityBytes;
-        private final long refillBytesPerSecond;
-        private double availableBytes;
-        private long lastRefillNanos;
-
+    public static class ByteRateLimiter extends seashyne.shynecore.network.ByteRateLimiter {
         public ByteRateLimiter(long capacityBytes, long refillBytesPerSecond, long nowNanos) {
-            if (capacityBytes <= 0 || refillBytesPerSecond <= 0) throw new IllegalArgumentException("byte limits must be positive");
-            this.capacityBytes = capacityBytes;
-            this.refillBytesPerSecond = refillBytesPerSecond;
-            this.availableBytes = capacityBytes;
-            this.lastRefillNanos = nowNanos;
-        }
-
-        public boolean tryConsume(long bytes, long nowNanos) {
-            if (bytes < 0 || bytes > capacityBytes) return false;
-            if (nowNanos > lastRefillNanos) {
-                double refill = (nowNanos - lastRefillNanos) * (refillBytesPerSecond / 1_000_000_000.0);
-                availableBytes = Math.min(capacityBytes, availableBytes + refill);
-                lastRefillNanos = nowNanos;
-            }
-            if (availableBytes + 0.0001 < bytes) return false;
-            availableBytes -= bytes;
-            return true;
+            super(capacityBytes, refillBytesPerSecond, nowNanos);
         }
     }
 
-    /** Recipient-local allow list. It starts empty so saved privacy rules apply before any avatar payload is sent. */
-    public static final class AvatarSubscriptions {
-        private boolean subscribeAll;
-        private final Set<UUID> subscribed = new HashSet<>();
-        private final Set<UUID> excluded = new HashSet<>();
-
-        public boolean isSubscribed(UUID playerId) {
-            if (playerId == null) return false;
-            return subscribeAll ? !excluded.contains(playerId) : subscribed.contains(playerId);
-        }
-
-        public void subscribe(UUID playerId) {
-            if (playerId == null) return;
-            if (subscribeAll) excluded.remove(playerId); else subscribed.add(playerId);
-        }
-
-        public void unsubscribe(UUID playerId) {
-            if (playerId == null) return;
-            if (subscribeAll) excluded.add(playerId); else subscribed.remove(playerId);
-        }
-
-        public void subscribeAll() {
-            subscribeAll = true;
-            subscribed.clear();
-            excluded.clear();
-        }
-
-        public void reset() {
-            subscribeAll = false;
-            subscribed.clear();
-            excluded.clear();
-        }
-
-        public void forget(UUID playerId) {
-            subscribed.remove(playerId);
-            excluded.remove(playerId);
-        }
-    }
+    public static class AvatarSubscriptions extends seashyne.shynecore.network.AvatarSubscriptions {}
 
     public record ModelSyncPayload(List<NetModelDefinition> models) {}
     public record ActiveSyncPayload(List<NetPlayback> playbacks) {}
