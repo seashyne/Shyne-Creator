@@ -62,7 +62,7 @@ Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}*
 | Minecraft | ${minecraftVersion} |
 | Java | 25 ขึ้นไป |
 | Fabric Loader | 0.19.3 ขึ้นไป |
-| Fabric API | 0.155.2+${minecraftVersion} |
+| Fabric API | 0.161.0+${minecraftVersion} |
 | NeoForge | 26.3.0.16-beta ขึ้นไป |
 
 ## ติดตั้งบน Fabric

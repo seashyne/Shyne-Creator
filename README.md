@@ -8,7 +8,7 @@
 - Minecraft: `26.3`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
-- Fabric API: `0.155.2+26.3`
+- Fabric API: `0.161.0+26.3`
 - NeoForge: `26.3.0.16-beta+`
 - Gradle: `9.5.1`
 
