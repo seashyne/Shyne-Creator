@@ -59,6 +59,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public static final String CAP_AVATAR_SNAPSHOT_REQUEST = "avatar.snapshot_request_v1";
     public static final String CAP_AVATAR_RECIPIENT_SUBSCRIPTIONS = "avatar.recipient_subscriptions_v1";
     public static final String CAP_AVATAR_BONE_PHYSICS = "avatar.bone_physics_v1";
+    public static final String CAP_PACKET_COMPRESSION = "network.compression_v1";
     public static final List<String> SERVER_CAPABILITIES = List.of(
         CAP_SERVER_AUTHORITATIVE_GAMEPLAY,
         CAP_CONTENT_REGISTRY_SYNC,
@@ -66,7 +67,8 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         CAP_PLAYER_TAB_STATUS,
         CAP_AVATAR_SNAPSHOT_REQUEST,
         CAP_AVATAR_RECIPIENT_SUBSCRIPTIONS,
-        CAP_AVATAR_BONE_PHYSICS
+        CAP_AVATAR_BONE_PHYSICS,
+        CAP_PACKET_COMPRESSION
     );
     public static final Identifier PROTOCOL_HELLO = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "protocol_hello");
     public static final Identifier PROTOCOL_STATUS = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "protocol_status");
@@ -860,7 +862,46 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public record NetAvatarVars(String playerId, String avatarId, Map<String, Object> values) {}
 
     public record JsonPayload(CustomPacketPayload.Type<JsonPayload> payloadId, String json) implements CustomPacketPayload {
-        public static StreamCodec<RegistryFriendlyByteBuf, JsonPayload> codec(CustomPacketPayload.Type<JsonPayload> payloadId) { return ByteBufCodecs.stringUtf8(MAX_AVATAR_JSON_CHARS).map(json -> new JsonPayload(payloadId, json), JsonPayload::json).cast(); }
+        public static StreamCodec<RegistryFriendlyByteBuf, JsonPayload> codec(CustomPacketPayload.Type<JsonPayload> payloadId) {
+            return new StreamCodec<RegistryFriendlyByteBuf, JsonPayload>() {
+                @Override
+                public JsonPayload decode(RegistryFriendlyByteBuf buf) {
+                    byte mode = buf.readByte();
+                    if (mode == 1) {
+                        int length = buf.readVarInt();
+                        if (length < 0 || length > MAX_AVATAR_JSON_CHARS) throw new IllegalArgumentException("Payload compressed length out of bounds: " + length);
+                        byte[] bytes = new byte[length];
+                        buf.readBytes(bytes);
+                        String json = PacketCompressor.decompress(bytes);
+                        return new JsonPayload(payloadId, json != null ? json : "{}");
+                    } else if (mode == 0) {
+                        int length = buf.readVarInt();
+                        if (length < 0 || length > MAX_AVATAR_JSON_CHARS) throw new IllegalArgumentException("Payload length out of bounds: " + length);
+                        byte[] bytes = new byte[length];
+                        buf.readBytes(bytes);
+                        return new JsonPayload(payloadId, new String(bytes, StandardCharsets.UTF_8));
+                    } else {
+                        throw new IllegalArgumentException("Unknown payload encoding mode: " + mode);
+                    }
+                }
+
+                @Override
+                public void encode(RegistryFriendlyByteBuf buf, JsonPayload payload) {
+                    String json = payload.json() == null ? "{}" : payload.json();
+                    PacketCompressor.CompressedPayload compressed = PacketCompressor.compressIfBeneficial(json, PacketCompressor.COMPRESSION_THRESHOLD);
+                    if (compressed != null && compressed.compressed()) {
+                        buf.writeByte(1);
+                        buf.writeVarInt(compressed.data().length);
+                        buf.writeBytes(compressed.data());
+                    } else {
+                        buf.writeByte(0);
+                        byte[] raw = json.getBytes(StandardCharsets.UTF_8);
+                        buf.writeVarInt(raw.length);
+                        buf.writeBytes(raw);
+                    }
+                }
+            };
+        }
         @Override public CustomPacketPayload.Type<JsonPayload> type() { return payloadId; }
     }
     public record ProtocolHelloPayload(int protocolVersion, String modVersion) implements CustomPacketPayload {

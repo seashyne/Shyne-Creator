@@ -10,6 +10,7 @@ import seashyne.shynecore.client.avatar.AvatarOutfitLoader;
 import seashyne.shynecore.avatar.PngTextureValidator;
 import seashyne.shynecore.model.BbModelDefinition;
 import seashyne.shynecore.model.BbTextureDefinition;
+import seashyne.shynecore.network.AsyncTextureLoader;
 import seashyne.shynecore.network.ShyneNetwork;
 
 import java.io.ByteArrayInputStream;
@@ -93,6 +94,7 @@ public final class BbModelTextures {
     }
 
     public static void clearRemoteSyncedTextures() {
+        AsyncTextureLoader.cancelAll();
         removeSyncedMatching(key -> key.startsWith("remote:"));
     }
 
@@ -123,21 +125,27 @@ public final class BbModelTextures {
         SyncedTexture cached = SYNCED.get(key);
         if (cached != null && cached.hash.equals(hash)) return;
 
-        try {
-            byte[] bytes = Base64.getDecoder().decode(texture.contentBase64());
-            if (bytes.length <= 0 || bytes.length > ShyneNetwork.MAX_TEXTURE_BYTES) return;
-            if (!PngTextureValidator.matches(bytes, texture.width(), texture.height())) {
-                ShyneCore.LOGGER.warn("[AvatarTexture] Rejected PNG with invalid or mismatched IHDR for {} #{}", model.modelId(), textureIndex);
-                return;
+        AsyncTextureLoader.decodeAsync(model.modelId(), textureIndex, texture.contentBase64(), hash, texture.width(), texture.height(), new AsyncTextureLoader.TextureReadyCallback() {
+            @Override
+            public void onTextureReady(AsyncTextureLoader.DecodedTexture decoded) {
+                Minecraft.getInstance().execute(() -> {
+                    try {
+                        NativeImage image = NativeImage.read(new ByteArrayInputStream(decoded.pngBytes()));
+                        String suffix = hash.isBlank() ? Integer.toUnsignedString(java.util.Arrays.hashCode(decoded.pngBytes()), 36) : hash.substring(0, Math.min(16, hash.length()));
+                        Identifier id = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "synced/" + suffix + "_" + decoded.textureIndex());
+                        Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(() -> "Synced Shyne texture " + decoded.modelId() + " #" + decoded.textureIndex(), image));
+                        SYNCED.put(key, new SyncedTexture(id, hash));
+                    } catch (IOException | RuntimeException error) {
+                        ShyneCore.LOGGER.warn("[AvatarTexture] Rejected synced texture {} for {}: {}", decoded.textureIndex(), decoded.modelId(), error.getMessage());
+                    }
+                });
             }
-            NativeImage image = NativeImage.read(new ByteArrayInputStream(bytes));
-            String suffix = hash.isBlank() ? Integer.toUnsignedString(java.util.Arrays.hashCode(bytes), 36) : hash.substring(0, Math.min(16, hash.length()));
-            Identifier id = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "synced/" + suffix + "_" + textureIndex);
-            Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(() -> "Synced Shyne texture " + model.modelId() + " #" + textureIndex, image));
-            SYNCED.put(key, new SyncedTexture(id, hash));
-        } catch (IOException | RuntimeException error) {
-            ShyneCore.LOGGER.warn("[AvatarTexture] Rejected synced texture {} for {}: {}", textureIndex, model.modelId(), error.getMessage());
-        }
+
+            @Override
+            public void onTextureError(String modelId, int texIndex, String error) {
+                ShyneCore.LOGGER.warn("[AvatarTexture] Failed to decode async texture {} for {}: {}", texIndex, modelId, error);
+            }
+        });
     }
 
     private static void installOverride(String modelId, int textureIndex, byte[] bytes, String label) throws IOException {

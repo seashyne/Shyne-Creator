@@ -78,5 +78,10 @@ final class ShyneNetworkSafetyTest {
         assertTrue(ShyneNetworkValidator.isSafeSyncedVars(Map.of("flag", true, "count", 42.0, "name", "shyne")));
         assertFalse(ShyneNetworkValidator.isSafeSyncedVars(Map.of("invalid key with spaces", true)));
     }
+
+    @Test
+    void serverCapabilitiesIncludeCompression() {
+        assertTrue(ShyneNetwork.SERVER_CAPABILITIES.contains(ShyneNetwork.CAP_PACKET_COMPRESSION));
+    }
 }
 
