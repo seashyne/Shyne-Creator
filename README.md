@@ -9,7 +9,7 @@
 - Java: `25`
 - Fabric Loader: `0.19.3+`
 - Fabric API: `0.155.2+26.3`
-- NeoForge: `26.3.0.25-beta+`
+- NeoForge: `26.3.0.16-beta+`
 - Gradle: `9.5.1`
 
 Fabric และ NeoForge ใช้ `mod id`, Shyne API standard และ network protocol version เดียวกัน ส่วนไฟล์ที่ผูกกับ Loader จะถูกแยกออกจากระบบหลัก

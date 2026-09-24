@@ -15,7 +15,7 @@ import seashyne.shynecore.client.render.BbModelEntityRenderer;
 @Mixin(FirstPersonHandsAndItemsRenderer.class)
 public abstract class FirstPersonArmMixin {
     @Redirect(
-        method = "renderPlayerArm",
+        method = "renderPlayerHand",
         at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/entity/player/AvatarRenderer;renderRightHand(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/resources/Identifier;Z)V"
@@ -30,7 +30,7 @@ public abstract class FirstPersonArmMixin {
     }
 
     @Redirect(
-        method = "renderPlayerArm",
+        method = "renderPlayerHand",
         at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/entity/player/AvatarRenderer;renderLeftHand(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/resources/Identifier;Z)V"
