@@ -52,7 +52,7 @@ foreach ($relativePath in $versionFiles) {
 
 $kitPath = Join-Path $projectRoot 'tools/kit/README_INSTALL_TH.md'
 $kitText = [IO.File]::ReadAllText($kitPath)
-$kitText = [regex]::Replace($kitText, 'Shyne Creator Kit \d+\.\d+\.\d+-alpha-26\.2', "Shyne Creator Kit $nextVersion", 1)
+$kitText = [regex]::Replace($kitText, 'Shyne Creator Kit \d+\.\d+\.\d+-alpha-26\.\d+', "Shyne Creator Kit $nextVersion", 1)
 $kitText = [regex]::Replace($kitText, 'Shyne Creator \d+\.\d+\.\d+ ส่ง Public Avatar', "Shyne Creator $($versionMatch.Groups['major'].Value).$($versionMatch.Groups['minor'].Value).$nextPatch ส่ง Public Avatar", 1)
 [IO.File]::WriteAllText($kitPath, $kitText)
 

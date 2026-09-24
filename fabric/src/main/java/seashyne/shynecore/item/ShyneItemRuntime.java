@@ -13,6 +13,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemLore;
+import net.minecraft.world.item.component.SwingAnimation;
+import net.minecraft.util.Prediction;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.diagnostics.ContentDiagnostics;
 import seashyne.shynecore.equipment.EquipmentRuntime;
@@ -136,7 +138,7 @@ public final class ShyneItemRuntime {
         while (remaining > 0) {
             int batch = Math.min(remaining, definition.maxStack());
             ItemStack stack = createStack(itemId, batch);
-            if (!player.getInventory().add(stack)) player.drop(stack, false, true);
+            if (!player.getInventory().add(stack)) player.drop(stack, false, Prediction.PREDICTED);
             remaining -= batch;
         }
         ShyneCore.LOGGER.info("[ShyneItemRuntime] Gave {}x {} to {}", count, definition.itemId(), player.getName().getString());
@@ -187,7 +189,7 @@ public final class ShyneItemRuntime {
 
         if (definition.cooldownTicks() > 0) player.getCooldowns().addCooldown(stack, definition.cooldownTicks());
         if (definition.consumeOnUse() && !player.hasInfiniteMaterials()) stack.shrink(1);
-        player.swing(hand);
+        player.swing(hand, SwingAnimation.DEFAULT, false);
         return InteractionResult.SUCCESS_SERVER;
     }
 

@@ -479,7 +479,7 @@ public final class AvatarRenderTaskRegistry {
     }
 
     private static void applyBillboard(PoseStack poseStack, CameraRenderState camera, TaskSpec task) {
-        if (task.billboard && camera.orientation != null) poseStack.mulPose(camera.orientation);
+        if (task.billboard && camera.orientation != null) poseStack.rotate(camera.orientation);
     }
 
     private static int worldLight(Minecraft client, TaskSpec task, Vec3 origin) {

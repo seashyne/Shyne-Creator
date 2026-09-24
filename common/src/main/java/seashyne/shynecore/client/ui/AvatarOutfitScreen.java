@@ -7,7 +7,7 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Util;
+import com.mojang.blaze3d.Blaze3D;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.avatar.AvatarOutfit;
 import seashyne.shynecore.client.avatar.AvatarOutfitLoader;
@@ -205,7 +205,7 @@ public final class AvatarOutfitScreen extends Screen {
         Path folder = AvatarOutfitLoader.outfitDir(active.rootDir());
         try {
             Files.createDirectories(folder);
-            Util.getPlatform().openPath(folder);
+            Blaze3D.openPath(folder);
         } catch (IOException error) {
             ShyneCore.LOGGER.error("[AvatarOutfit] Could not open {}: {}", folder, error.getMessage());
         }

@@ -8,7 +8,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+
 import seashyne.shynecore.client.input.DynamicAvatarInputRegistry;
 
 import java.util.List;
@@ -73,13 +73,13 @@ public final class AvatarInputSettingsScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (capturing == null) return super.keyPressed(event);
-        if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (event.key() == InputConstants.KEY_ESCAPE) {
             capturing = null;
-        } else if (event.key() == GLFW.GLFW_KEY_BACKSPACE || event.key() == GLFW.GLFW_KEY_DELETE) {
+        } else if (event.key() == InputConstants.KEY_BACKSPACE || event.key() == InputConstants.KEY_DELETE) {
             DynamicAvatarInputRegistry.unbind(capturing);
             capturing = null;
         } else {
-            DynamicAvatarInputRegistry.setKey(capturing, InputConstants.Type.KEYSYM.getOrCreate(event.key()));
+            DynamicAvatarInputRegistry.setKey(capturing, InputConstants.Type.KEYBOARD.getOrCreate(event.key()));
             capturing = null;
         }
         rebuildWidgets();

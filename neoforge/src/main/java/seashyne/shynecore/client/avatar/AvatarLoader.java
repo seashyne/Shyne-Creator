@@ -109,8 +109,25 @@ public final class AvatarLoader {
             throw new IOException("avatar.json is not valid JSON", malformed);
         }
         if (json == null) throw new IOException("avatar.json is empty");
+        String importSource = "";
+        com.google.gson.JsonObject importObj = null;
+        if (json.has("import")) {
+            var importElem = json.get("import");
+            if (importElem.isJsonPrimitive() && importElem.getAsJsonPrimitive().isString()) {
+                importSource = importElem.getAsString().trim().toLowerCase(Locale.ROOT);
+            } else if (importElem.isJsonObject()) {
+                importObj = importElem.getAsJsonObject();
+                if (importObj.has("type") && importObj.get("type").isJsonPrimitive()) {
+                    importSource = importObj.get("type").getAsString().trim().toLowerCase(Locale.ROOT);
+                }
+            }
+        }
         String standard = json.has("standard") ? json.get("standard").getAsString().trim() : "2.0";
-        if (!"2.0".equals(standard)) {
+        if ("figura".equalsIgnoreCase(standard)) {
+            importSource = "figura";
+        }
+        boolean isFigura = "figura".equalsIgnoreCase(importSource);
+        if (!isFigura && !"2.0".equals(standard)) {
             throw new IOException("unsupported Shyne Avatar standard: " + standard + "; expected 2.0");
         }
         List<String> declaredTextures = new ArrayList<>();
@@ -118,6 +135,18 @@ public final class AvatarLoader {
             for (var texture : json.getAsJsonArray("textures")) {
                 if (texture.isJsonPrimitive() && texture.getAsJsonPrimitive().isString()) declaredTextures.add(texture.getAsString());
             }
+        }
+        if (isFigura && declaredTextures.isEmpty()) {
+            try (var stream = Files.walk(safeRoot)) {
+                stream.filter(Files::isRegularFile)
+                    .filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".png"))
+                    .forEach(p -> {
+                        String rel = safeRoot.relativize(p).toString().replace('\\', '/');
+                        if (!declaredTextures.contains(rel)) {
+                            declaredTextures.add(rel);
+                        }
+                    });
+            } catch (IOException ignored) {}
         }
         Set<AvatarPermission> declaredPermissions = EnumSet.noneOf(AvatarPermission.class);
         if (json.has("permissions")) {
@@ -135,6 +164,11 @@ public final class AvatarLoader {
                     throw new IOException("duplicate avatar permission: " + permission.id());
                 }
             }
+        }
+        if (isFigura && declaredPermissions.isEmpty()) {
+            declaredPermissions.add(AvatarPermission.PARTICLE);
+            declaredPermissions.add(AvatarPermission.SOUND);
+            declaredPermissions.add(AvatarPermission.CAMERA);
         }
         if (json.has("api_version")) {
             throw new IOException("avatar api_version is not supported by Shyne Standard 2.0; use api \"2.0\"");
@@ -165,7 +199,9 @@ public final class AvatarLoader {
         }
         AvatarProfile profile;
         try {
-            profile = AvatarProfile.parse(json.has("profile") ? json.get("profile").getAsString() : "accessory");
+            String defaultProfile = isFigura ? "full_body" : "accessory";
+            String profileStr = json.has("profile") ? json.get("profile").getAsString() : (importObj != null && importObj.has("profile") ? importObj.get("profile").getAsString() : defaultProfile);
+            profile = AvatarProfile.parse(profileStr);
         } catch (IllegalArgumentException unsupported) {
             throw new IOException(unsupported.getMessage(), unsupported);
         }
@@ -175,17 +211,51 @@ public final class AvatarLoader {
         } catch (IllegalArgumentException invalid) {
             throw new IOException(invalid.getMessage(), invalid);
         }
-        if (json.has("compatibility")) {
+        if (!isFigura && json.has("compatibility")) {
             throw new IOException("avatar compatibility modes are not supported by Shyne Standard 2.0");
         }
+        String modelFile = json.has("model") ? json.get("model").getAsString().trim() : "model.bbmodel";
+        if (isFigura) {
+            Path candidate = resolveContainedOrNull(safeRoot, modelFile);
+            if (candidate == null || !Files.isRegularFile(candidate)) {
+                try (var stream = Files.list(safeRoot)) {
+                    List<Path> bbmodels = stream
+                        .filter(Files::isRegularFile)
+                        .filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".bbmodel"))
+                        .toList();
+                    if (bbmodels.size() == 1) {
+                        modelFile = safeRoot.relativize(bbmodels.get(0)).toString().replace('\\', '/');
+                    } else if (!bbmodels.isEmpty()) {
+                        for (Path p : bbmodels) {
+                            if (p.getFileName().toString().equalsIgnoreCase("model.bbmodel")) {
+                                modelFile = safeRoot.relativize(p).toString().replace('\\', '/');
+                                break;
+                            }
+                        }
+                        if (modelFile.equals("model.bbmodel") && !Files.isRegularFile(safeRoot.resolve("model.bbmodel"))) {
+                            modelFile = safeRoot.relativize(bbmodels.get(0)).toString().replace('\\', '/');
+                        }
+                    }
+                } catch (IOException ignored) {}
+            }
+        }
+        String mainScript = json.has("main") ? json.get("main").getAsString().trim() : "";
+        if (isFigura && mainScript.isBlank()) {
+            if (Files.isRegularFile(safeRoot.resolve("script.lua"))) {
+                mainScript = "script.lua";
+            } else if (Files.isRegularFile(safeRoot.resolve("main.lua"))) {
+                mainScript = "main.lua";
+            }
+        }
+        String avatarName = json.has("name") ? json.get("name").getAsString() : (isFigura ? root.getFileName().toString() : "");
         AvatarManifest manifest = new AvatarManifest(
             standard,
             json.has("id") ? json.get("id").getAsString() : defaultAvatarId(root),
-            json.has("name") ? json.get("name").getAsString() : "",
+            avatarName,
             json.has("version") ? json.get("version").getAsString() : "1.0.0",
-            json.has("main") ? json.get("main").getAsString() : "",
-            json.has("model") ? json.get("model").getAsString() : "model.bbmodel",
-            json.has("replace_vanilla") ? json.get("replace_vanilla").getAsBoolean() : profile.replaceVanilla(),
+            mainScript,
+            modelFile,
+            json.has("replace_vanilla") ? json.get("replace_vanilla").getAsBoolean() : (importObj != null && importObj.has("replace_vanilla") ? importObj.get("replace_vanilla").getAsBoolean() : profile.replaceVanilla()),
             !json.has("online_sync") || json.get("online_sync").getAsBoolean(),
             json.has("description") ? json.get("description").getAsString() : "",
             json.has("first_person_masking") ? json.get("first_person_masking").getAsBoolean() : profile.firstPersonMasking(),
@@ -198,7 +268,8 @@ public final class AvatarLoader {
             apiSelection.automatic(),
             Map.copyOf(apiRequirements),
             profile.id(),
-            behavior
+            behavior,
+            importSource
         );
         String normalizedId = manifest.id() == null ? "" : manifest.id().toLowerCase(Locale.ROOT);
         if (!SAFE_ID.matcher(normalizedId).matches()) throw new IOException("avatar id must match " + SAFE_ID.pattern());
@@ -213,6 +284,14 @@ public final class AvatarLoader {
             requireFile(resolveContained(safeRoot, manifest.syncedSchema()), MAX_MANIFEST_BYTES, "synced schema");
         }
         return manifest;
+    }
+
+    private static Path resolveContainedOrNull(Path root, String relative) {
+        try {
+            return resolveContained(root, relative);
+        } catch (IOException ignored) {
+            return null;
+        }
     }
 
     private static String defaultAvatarId(Path root) {

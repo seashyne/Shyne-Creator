@@ -1,4 +1,4 @@
-# Shyne Creator Kit 2.9.1-alpha-26.2
+# Shyne Creator Kit 2.10.0-alpha-26.3
 
 ชุดนี้ใช้สำหรับ **ผู้สร้าง Avatar** บน Shyne Avatar Standard 2.0 ไม่ใช่ตัวม็อดสำหรับใส่ในโฟลเดอร์ `mods`
 
@@ -7,7 +7,7 @@
 ## สิ่งที่ต้องเตรียม
 
 - Blockbench สำหรับสร้างและแก้ `model.bbmodel`
-- Shyne Creator สำหรับ Fabric หรือ NeoForge ติดตั้งใน Minecraft 26.2 เพื่อทดสอบ Avatar
+- Shyne Creator สำหรับ Fabric หรือ NeoForge ติดตั้งใน Minecraft 26.3 เพื่อทดสอบ Avatar
 - Python 3 เฉพาะเมื่อต้องการใช้ Creator CLI
 - PowerShell เฉพาะเมื่อต้องการใช้เครื่องมือย้าย geometry/texture ที่ตนเองมีสิทธิ์
 

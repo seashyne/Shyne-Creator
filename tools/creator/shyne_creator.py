@@ -407,8 +407,13 @@ def validate(root: Path) -> dict:
         errors.append("id must use 1-64 lowercase letters, numbers, dot, dash, or underscore")
     if manifest and not str(manifest.get("name", "")).strip():
         errors.append("name is required")
-    declared_standard = str(manifest.get("standard", "2.0")).strip()
-    if manifest and declared_standard != "2.0":
+    import_spec = manifest.get("import", "")
+    is_figura = (
+        (isinstance(import_spec, str) and import_spec.strip().lower() == "figura")
+        or (isinstance(import_spec, dict) and str(import_spec.get("type", "")).strip().lower() == "figura")
+    )
+    declared_standard = str(manifest.get("standard", "figura" if is_figura else "2.0")).strip()
+    if manifest and declared_standard not in {"2.0", "figura"} and not is_figura:
         errors.append("standard must be 2.0")
     declared_profile = str(manifest.get("profile", "accessory")).strip().lower()
     profile = PROFILE_ALIASES.get(declared_profile, declared_profile)

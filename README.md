@@ -1,15 +1,15 @@
 # Shyne Creator Multi-loader
 
-โปรเจกต์หลักสำหรับ Build Shyne Creator บน Minecraft 26.2 ทั้ง Fabric และ NeoForge จาก source ชุดเดียว
+โปรเจกต์หลักสำหรับ Build Shyne Creator บน Minecraft 26.3 ทั้ง Fabric และ NeoForge จาก source ชุดเดียว
 
 ## Version
 
-- Shyne Creator: `2.9.1-alpha-26.2`
-- Minecraft: `26.2`
+- Shyne Creator: `2.10.0-alpha-26.3`
+- Minecraft: `26.3`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
-- Fabric API: `0.155.2+26.2`
-- NeoForge: `26.2.0.25-beta+`
+- Fabric API: `0.155.2+26.3`
+- NeoForge: `26.3.0.25-beta+`
 - Gradle: `9.5.1`
 
 Fabric และ NeoForge ใช้ `mod id`, Shyne API standard และ network protocol version เดียวกัน ส่วนไฟล์ที่ผูกกับ Loader จะถูกแยกออกจากระบบหลัก

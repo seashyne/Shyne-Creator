@@ -542,7 +542,7 @@ public final class AvatarRuntime {
     }
 
     private static void validateDeclaredTextures(BbModelDefinition model, AvatarManifest manifest) throws IOException {
-        if (manifest.textures() == null || manifest.textures().isEmpty()) return;
+        if (manifest.isFiguraImport() || manifest.textures() == null || manifest.textures().isEmpty()) return;
         Set<String> declared = new HashSet<>();
         for (String texture : manifest.textures()) declared.add(normalizeTextureName(texture));
         for (var texture : model.textures()) {

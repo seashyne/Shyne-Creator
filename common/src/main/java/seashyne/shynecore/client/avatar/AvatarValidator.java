@@ -127,7 +127,11 @@ public final class AvatarValidator {
             String relative = normalize(texture.relativePath());
             used.add(relative);
             if (!declared.isEmpty() && !declared.contains(relative)) {
-                error(issues, "texture_undeclared", "Model texture is not declared in avatar.json: " + texture.relativePath(), manifest.model());
+                if (manifest.isFiguraImport()) {
+                    warning(issues, "texture_undeclared", "Model texture is not declared in avatar.json (Figura import): " + texture.relativePath(), manifest.model());
+                } else {
+                    error(issues, "texture_undeclared", "Model texture is not declared in avatar.json: " + texture.relativePath(), manifest.model());
+                }
             }
             if (modelRoot == null || relative.isBlank()) {
                 error(issues, "texture_path", "Model contains an empty texture path", manifest.model());
@@ -145,7 +149,7 @@ public final class AvatarValidator {
         }
         if (textureBytes > MAX_TEXTURE_TOTAL_BYTES) error(issues, "texture_total_size", "Avatar textures exceed the 64 MiB multiplayer limit", manifest.model());
         for (String value : declared) {
-            if (!used.contains(value)) warning(issues, "texture_unused", "Declared texture is not used by the model", value);
+            if (!used.contains(value) && !manifest.isFiguraImport()) warning(issues, "texture_unused", "Declared texture is not used by the model", value);
         }
     }
 

@@ -4,7 +4,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import seashyne.shynecore.client.network.ShyneClientNetworking;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
 
@@ -20,13 +20,13 @@ public final class ShyneKeybinds {
     private ShyneKeybinds() {}
 
     public static void init() {
-        openSettings = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.open_settings", GLFW.GLFW_KEY_O, KeyMapping.Category.MISC));
-        castLight = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.cast_light", GLFW.GLFW_KEY_Z, KeyMapping.Category.GAMEPLAY));
-        castHeavy = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.cast_heavy", GLFW.GLFW_KEY_X, KeyMapping.Category.GAMEPLAY));
-        castUtility = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.cast_utility", GLFW.GLFW_KEY_C, KeyMapping.Category.GAMEPLAY));
-        castFinisher = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.cast_finisher", GLFW.GLFW_KEY_V, KeyMapping.Category.GAMEPLAY));
-        openShynePalette = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.open_palette", GLFW.GLFW_KEY_G, KeyMapping.Category.MISC));
-        openAvatarManager = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.avatar_manager", GLFW.GLFW_KEY_H, KeyMapping.Category.MISC));
+        openSettings = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.open_settings", InputConstants.KEY_O, KeyMapping.Category.MISC));
+        castLight = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.cast_light", InputConstants.KEY_Z, KeyMapping.Category.GAMEPLAY));
+        castHeavy = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.cast_heavy", InputConstants.KEY_X, KeyMapping.Category.GAMEPLAY));
+        castUtility = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.cast_utility", InputConstants.KEY_C, KeyMapping.Category.GAMEPLAY));
+        castFinisher = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.cast_finisher", InputConstants.KEY_V, KeyMapping.Category.GAMEPLAY));
+        openShynePalette = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.open_palette", InputConstants.KEY_G, KeyMapping.Category.MISC));
+        openAvatarManager = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.avatar_manager", InputConstants.KEY_H, KeyMapping.Category.MISC));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openSettings.consumeClick()) {

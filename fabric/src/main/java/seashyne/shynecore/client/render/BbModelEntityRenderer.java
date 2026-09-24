@@ -937,7 +937,7 @@ public final class BbModelEntityRenderer {
                 rightLegX = 65f;
             }
 
-            float attackTime = clamp(state.attackTime, 0f, 1f);
+            float attackTime = clamp(state.swingAnimation, 0f, 1f);
             if (attackTime > 0.001f) {
                 float remaining = 1f - attackTime;
                 float eased = 1f - remaining * remaining * remaining * remaining;
@@ -945,7 +945,10 @@ public final class BbModelEntityRenderer {
                     + (float) Math.sin(attackTime * Math.PI) * 20f;
                 float attackTwist = (float) Math.sin(Math.sqrt(attackTime) * Math.PI * 2.0) * 8f;
                 float attackRoll = (float) Math.sin(attackTime * Math.PI) * 6f;
-                HumanoidArm attackArm = state.attackArm == null ? state.mainArm : state.attackArm;
+                HumanoidArm attackArm = state.mainArm;
+                if (state.currentSwing != null && state.currentSwing.hand() == net.minecraft.world.InteractionHand.OFF_HAND) {
+                    attackArm = state.mainArm.getOpposite();
+                }
                 if (attackArm == HumanoidArm.LEFT) {
                     leftArmX += attackPitch;
                     leftArmY -= attackTwist;
@@ -953,7 +956,7 @@ public final class BbModelEntityRenderer {
                 } else {
                     rightArmX += attackPitch;
                     rightArmY += attackTwist;
-                    rightArmZ -= attackRoll;
+                    rightArmZ += attackRoll;
                 }
             }
 

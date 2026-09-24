@@ -1,7 +1,7 @@
 package seashyne.shynecore.client.ui;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.util.Util;
+import com.mojang.blaze3d.Blaze3D;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -292,7 +292,7 @@ public class AvatarManagerScreen extends Screen {
         Path folder = AvatarLoader.avatarsDir().toAbsolutePath().normalize();
         try {
             Files.createDirectories(folder);
-            Util.getPlatform().openPath(folder);
+            Blaze3D.openPath(folder);
             AvatarRuntime.refreshCatalogAsync(true).whenComplete((entries, error) -> Minecraft.getInstance().execute(() -> {
                 page = 0;
                 rebuildWidgets();

@@ -41,7 +41,7 @@ public class ProjectileRuntime {
         Entity best = null; double bestDist = Double.MAX_VALUE;
         for (Entity entity : entities) { if (owner != null && teamRuntime.areAllied(owner.getUUID(), entity.getUUID())) continue; double dist = projectile.distanceToSqr(entity); if (dist < bestDist) { bestDist = dist; best = entity; } }
         if (best == null) return; double dx = best.getX() - projectile.getX(), dy = (best.getY() + best.getBbHeight() * 0.5) - (projectile.getY() + projectile.getBbHeight() * 0.5), dz = best.getZ() - projectile.getZ(); double len = Math.max(0.001, Math.sqrt(dx*dx+dy*dy+dz*dz));
-        projectile.setDeltaMovement(projectile.getDeltaMovement().scale(0.85).add(dx/len * state.homingStrength(), dy/len * state.homingStrength(), dz/len * state.homingStrength())); projectile.hurtMarked = true;
+        projectile.setDeltaMovement(projectile.getDeltaMovement().scale(0.85).add(dx/len * state.homingStrength(), dy/len * state.homingStrength(), dz/len * state.homingStrength())); projectile.syncVelocity = true;
     }
     private List<Entity> findHitTargets(Entity projectile, SpellProjectileState state) {
         AABB box = projectile.getBoundingBox().inflate(state.hitboxRadius());

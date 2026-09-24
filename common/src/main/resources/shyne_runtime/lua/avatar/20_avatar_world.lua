@@ -3,10 +3,18 @@ local function vanilla_proxy(part)
   function proxy:visible(value) if value == nil then return _avatar_vanilla_transform(self.part).visible end _avatar_vanilla_visible(self.part, bool(value)) return self end
   function proxy:show() return self:visible(true) end
   function proxy:hide() return self:visible(false) end
+  function proxy:setVisible(value) return self:visible(value) end
+  function proxy:getVisible() return self:visible() end
   function proxy:position() return vector.new(_avatar_vanilla_transform(self.part).position) end
   function proxy:rotation() return vector.new(_avatar_vanilla_transform(self.part).rotation) end
   return proxy
 end
+
+vanilla_model = setmetatable({}, {
+  __index = function(_, part)
+    return vanilla_proxy(part)
+  end
+})
 
 avatar = { camera = {}, texture = {}, network = {}, state = state }
 function avatar.id() return SHYNE_AVATAR_ID end

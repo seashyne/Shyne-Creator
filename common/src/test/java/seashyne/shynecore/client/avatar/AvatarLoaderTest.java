@@ -216,4 +216,92 @@ final class AvatarLoaderTest {
         assertEquals("glow", AvatarOutfitLoader.displayName("glow.overlay", 2));
         assertEquals("full", AvatarOutfitLoader.displayName("full.replace", 2));
     }
+
+    @Test
+    void figuraImportStringShortcutLoadsDefaultsAndDiscoversAssets() throws Exception {
+        Path root = temp.resolve("figura-avatar-test");
+        Files.createDirectories(root);
+        Files.writeString(root.resolve("avatar.json"), """
+            {
+              "name": "Figura Test Avatar",
+              "import": "figura",
+              "compatibility": {"legacy": true}
+            }
+            """);
+        Files.writeString(root.resolve("custom_model.bbmodel"), "{}");
+        Files.writeString(root.resolve("texture.png"), "dummy-png");
+        Files.writeString(root.resolve("script.lua"), "print('hello figura')");
+
+        AvatarManifest manifest = AvatarLoader.loadManifest(root);
+
+        assertTrue(manifest.isFiguraImport());
+        assertEquals("figura", manifest.importSource());
+        assertEquals("full_body", manifest.profile());
+        assertEquals("custom_model.bbmodel", manifest.model());
+        assertEquals("script.lua", manifest.main());
+        assertTrue(manifest.textures().contains("texture.png"));
+        assertTrue(manifest.permissions().contains(AvatarPermission.PARTICLE));
+        assertTrue(manifest.permissions().contains(AvatarPermission.SOUND));
+        assertTrue(manifest.permissions().contains(AvatarPermission.CAMERA));
+    }
+
+    @Test
+    void figuraImportObjectSpecOverridesProfileAndDiscoversMainLua() throws Exception {
+        Path root = temp.resolve("figura-obj-test");
+        Files.createDirectories(root);
+        Files.writeString(root.resolve("avatar.json"), """
+            {
+              "name": "Figura Obj Test",
+              "import": {
+                "type": "figura",
+                "profile": "accessory",
+                "replace_vanilla": true
+              }
+            }
+            """);
+        Files.writeString(root.resolve("model.bbmodel"), "{}");
+        Files.writeString(root.resolve("main.lua"), "-- main script");
+
+        AvatarManifest manifest = AvatarLoader.loadManifest(root);
+
+        assertTrue(manifest.isFiguraImport());
+        assertEquals("accessory", manifest.profile());
+        assertTrue(manifest.replaceVanilla());
+        assertEquals("main.lua", manifest.main());
+    }
+
+    @Test
+    void figuraStandardPropertyTriggersFiguraImport() throws Exception {
+        Path root = temp.resolve("figura-standard-test");
+        Files.createDirectories(root);
+        Files.writeString(root.resolve("avatar.json"), """
+            {
+              "name": "Figura Standard",
+              "standard": "figura"
+            }
+            """);
+        Files.writeString(root.resolve("model.bbmodel"), "{}");
+
+        AvatarManifest manifest = AvatarLoader.loadManifest(root);
+
+        assertTrue(manifest.isFiguraImport());
+        assertEquals("figura", manifest.importSource());
+        assertEquals("full_body", manifest.profile());
+    }
+
+    @Test
+    void nonFiguraAvatarRejectsCompatibilityMode() throws Exception {
+        Path root = temp.resolve("non-figura-compat-test");
+        Files.createDirectories(root);
+        Files.writeString(root.resolve("avatar.json"), """
+            {
+              "name": "Non Figura",
+              "compatibility": {"legacy": true}
+            }
+            """);
+        Files.writeString(root.resolve("model.bbmodel"), "{}");
+
+        IOException ex = assertThrows(IOException.class, () -> AvatarLoader.loadManifest(root));
+        assertTrue(ex.getMessage().contains("compatibility modes are not supported"));
+    }
 }

@@ -222,5 +222,31 @@ function model.animation.parameter(name, value)
   _avatar_anim_parameter("set", tostring(name or ""), tonumber(value) or 0)
   return value
 end
-function model.animation.clear_parameter(name) _avatar_anim_parameter("clear", tostring(name or "")); return model.animation end
+function model.animation.clear_parameter(name)
+  _avatar_anim_parameter("clear", tostring(name or ""))
+  return model.animation
+end
 setmetatable(model, { __index = function(_, key) return part_proxy("model." .. tostring(key)) end })
+
+models = setmetatable({}, {
+  __index = function(_, key)
+    return model.part(tostring(key))
+  end
+})
+
+animations = setmetatable({}, {
+  __index = function(_, key)
+    local anim_name = tostring(key)
+    if model.animation.exists(anim_name) then
+      return model.animation.get(anim_name)
+    end
+    return setmetatable({}, {
+      __index = function(_, sub_key)
+        return model.animation.get(tostring(sub_key))
+      end
+    })
+  end
+})
+
+figura = { version = "0.1.4", is_shyne = true }
+

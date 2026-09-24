@@ -8,9 +8,30 @@
   "properties": {
     "standard": {
       "type": "string",
-      "const": "2.0",
+      "enum": [
+        "2.0",
+        "figura"
+      ],
       "default": "2.0",
       "description": "Shyne model-first Avatar standard. Missing selects the current Standard 2.0."
+    },
+    "import": {
+      "description": "Import Figura avatars into Shyne Creator.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["figura"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["figura"] },
+            "profile": { "type": "string", "enum": ["auto", "accessory", "full_body", "custom"] },
+            "replace_vanilla": { "type": "boolean" }
+          },
+          "required": ["type"]
+        }
+      ]
     },
     "api": {
       "type": "string",

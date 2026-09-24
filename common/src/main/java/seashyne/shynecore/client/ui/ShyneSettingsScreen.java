@@ -1,7 +1,7 @@
 package seashyne.shynecore.client.ui;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.util.Util;
+import com.mojang.blaze3d.Blaze3D;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
@@ -307,7 +307,7 @@ public class ShyneSettingsScreen extends Screen {
         Path folder = AvatarLoader.avatarsDir().toAbsolutePath().normalize();
         try {
             Files.createDirectories(folder);
-            Util.getPlatform().openPath(folder);
+            Blaze3D.openPath(folder);
         } catch (IOException exception) {
             ShyneCore.LOGGER.warn("[ShyneCreator] Could not open Avatar folder: {}", exception.getMessage());
         }
@@ -315,7 +315,7 @@ public class ShyneSettingsScreen extends Screen {
 
     private void openUrl(java.net.URI uri) {
         try {
-            Util.getPlatform().openUri(uri);
+            Blaze3D.openUri(uri);
         } catch (RuntimeException exception) {
             ShyneCore.LOGGER.warn("[ShyneCreator] Could not open creator URL {}: {}", uri, exception.getMessage());
         }

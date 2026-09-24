@@ -7,7 +7,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+
 import seashyne.shynecore.ShyneCore;
 
 import java.io.IOException;
@@ -60,7 +60,7 @@ public final class DynamicAvatarInputRegistry {
 
         Minecraft client = Minecraft.getInstance();
         if (client.options == null) throw new IllegalStateException("Minecraft options are not ready");
-        InputConstants.Type safeType = type == null ? InputConstants.Type.KEYSYM : type;
+        InputConstants.Type safeType = type == null ? InputConstants.Type.KEYBOARD : type;
         KeyMapping mapping = new KeyMapping("key.shyne_avatar." + stableId, safeType, defaultCode, KeyMapping.Category.MISC);
         SavedBinding saved = SAVED.get(stableId);
         if (saved != null && saved.key != null && !saved.key.isBlank()) {
@@ -131,8 +131,7 @@ public final class DynamicAvatarInputRegistry {
     public static InputConstants.Type inputType(String name) {
         return switch (name == null ? "" : name.toLowerCase(Locale.ROOT)) {
             case "mouse" -> InputConstants.Type.MOUSE;
-            case "scancode" -> InputConstants.Type.SCANCODE;
-            default -> InputConstants.Type.KEYSYM;
+            default -> InputConstants.Type.KEYBOARD;
         };
     }
 
@@ -168,16 +167,14 @@ public final class DynamicAvatarInputRegistry {
 
     private static boolean modifiersDown(int mask) {
         if (mask == 0) return true;
-        Minecraft client = Minecraft.getInstance();
-        var window = client.getWindow();
-        if ((mask & MOD_SHIFT) != 0 && !eitherDown(window, GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_KEY_RIGHT_SHIFT)) return false;
-        if ((mask & MOD_CONTROL) != 0 && !eitherDown(window, GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_KEY_RIGHT_CONTROL)) return false;
-        if ((mask & MOD_ALT) != 0 && !eitherDown(window, GLFW.GLFW_KEY_LEFT_ALT, GLFW.GLFW_KEY_RIGHT_ALT)) return false;
-        return (mask & MOD_SUPER) == 0 || eitherDown(window, GLFW.GLFW_KEY_LEFT_SUPER, GLFW.GLFW_KEY_RIGHT_SUPER);
+        if ((mask & MOD_SHIFT) != 0 && !eitherDown(InputConstants.KEY_LSHIFT, InputConstants.KEY_RSHIFT)) return false;
+        if ((mask & MOD_CONTROL) != 0 && !eitherDown(InputConstants.KEY_LCONTROL, InputConstants.KEY_RCONTROL)) return false;
+        if ((mask & MOD_ALT) != 0 && !eitherDown(InputConstants.KEY_LALT, InputConstants.KEY_RALT)) return false;
+        return (mask & MOD_SUPER) == 0 || eitherDown(InputConstants.KEY_LGUI, InputConstants.KEY_RGUI);
     }
 
-    private static boolean eitherDown(com.mojang.blaze3d.platform.Window window, int left, int right) {
-        return InputConstants.isKeyDown(window, left) || InputConstants.isKeyDown(window, right);
+    private static boolean eitherDown(int left, int right) {
+        return InputConstants.isKeyDown(left) || InputConstants.isKeyDown(right);
     }
 
     private static void addToMinecraftOptions(KeyMapping mapping) {

@@ -4,7 +4,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Util;
+import com.mojang.blaze3d.Blaze3D;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.avatar.AvatarCatalogEntry;
 import seashyne.shynecore.client.avatar.AvatarLoader;
@@ -130,7 +130,7 @@ public final class AvatarValidationScreen extends Screen {
     private void openFolder() {
         try {
             Files.createDirectories(AvatarLoader.avatarsDir());
-            Util.getPlatform().openPath(AvatarLoader.avatarsDir());
+            Blaze3D.openPath(AvatarLoader.avatarsDir());
         } catch (IOException error) {
             ShyneCore.LOGGER.error("[AvatarValidation] Could not open Avatar folder: {}", error.getMessage());
         }

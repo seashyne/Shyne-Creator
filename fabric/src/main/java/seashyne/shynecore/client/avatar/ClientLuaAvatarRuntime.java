@@ -21,6 +21,7 @@ import seashyne.shynecore.script.LuaSandbox;
 import seashyne.shynecore.script.LuaValueCodec;
 import seashyne.shynecore.voice.ShyneMicrophoneState;
 import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -590,7 +591,7 @@ globals.set("_avatar_schema_validate", new VarArgFunction() {
                     var handle = DynamicAvatarInputRegistry.register(
                         inputOwner, state.avatarId(), id, args.arg(2).optjstring(id),
                         DynamicAvatarInputRegistry.inputType(args.arg(4).optjstring("keyboard")),
-                        args.arg(3).optint(org.lwjgl.glfw.GLFW.GLFW_KEY_UNKNOWN), args.arg(5).optint(0)
+                        args.arg(3).optint(InputConstants.UNKNOWN.getValue()), args.arg(5).optint(0)
                     );
                     inputBindings.put(id, new InputBinding(handle, args.arg(6), args.arg(7), args.arg(8),
                         args.arg(9).optboolean(false), Math.max(1, args.arg(10).optint(10)),

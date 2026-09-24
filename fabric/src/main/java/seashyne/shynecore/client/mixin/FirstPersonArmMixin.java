@@ -1,7 +1,7 @@
 package seashyne.shynecore.client.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.resources.Identifier;
@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
 import seashyne.shynecore.client.render.BbModelEntityRenderer;
 
-@Mixin(ItemInHandRenderer.class)
+@Mixin(FirstPersonHandsAndItemsRenderer.class)
 public abstract class FirstPersonArmMixin {
     @Redirect(
         method = "renderPlayerArm",
