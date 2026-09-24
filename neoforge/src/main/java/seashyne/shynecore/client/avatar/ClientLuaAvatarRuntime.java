@@ -45,7 +45,8 @@ public final class ClientLuaAvatarRuntime {
         "/shyne_runtime/lua/avatar/30_render_tasks.lua",
         "/shyne_runtime/lua/avatar/31_render_shapes.lua",
         "/shyne_runtime/lua/avatar/40_optional_systems.lua",
-        "/shyne_runtime/lua/avatar/50_easy_api.lua"
+        "/shyne_runtime/lua/avatar/50_easy_api.lua",
+        "/shyne_runtime/lua/avatar/60_figura_compat.lua"
     );
     private final AvatarState state;
     private final BbModelDefinition model;
