@@ -1,6 +1,6 @@
 # Shyne Native Rig API 1.3
 
-เอกสารนี้ตรงกับ Shyne Creator `2.9.1-alpha-26.2` และใช้กับ Avatar ที่ระบุ `main` เพื่อเปิด native Lua พร้อมประกาศ `api: "2.0"` และ `"rig": ">=1.3"` ใน `requires`
+เอกสารนี้ตรงกับ Shyne Creator `2.10.0-alpha-26.3` และใช้กับ Avatar ที่ระบุ `main` เพื่อเปิด native Lua พร้อมประกาศ `api: "2.0"` และ `"rig": ">=1.3"` ใน `requires`
 
 Rig API เป็นระบบ native ของ Shyne สำหรับ custom/SquAPI-style avatar โดยไม่ต้องใช้ Figura: มันทำ secondary motion, chain, cosmetic armor และ vanilla attachment ผ่าน Lua ปกติ
 

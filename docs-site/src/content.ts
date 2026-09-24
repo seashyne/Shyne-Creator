@@ -34,9 +34,14 @@ export type DocItem = {
   api?: boolean
 }
 
+export const version = '2.10.0-alpha-26.3'
+export const minecraftVersion = '26.3'
+
 const installation = `# ติดตั้ง Shyne Creator
 
-Shyne Creator **2.10.0-alpha-26.3** รองรับ Minecraft **26.3** บน Fabric และ NeoForge โดยม็อดทั้งสอง Loader ใช้ Mod ID \`shyne_creator\`, Shyne API Standard และ network protocol ชุดเดียวกัน
+Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}** บน Fabric และ NeoForge โดยม็อดทั้งสอง Loader ใช้ Mod ID \`shyne_creator\`, Shyne API Standard และ network protocol ชุดเดียวกัน
+
+> รุ่นนี้แก้ปัญหาเกมเด้งตอนเริ่มต้นบน Minecraft 26.3 ที่เกิดจากการเชื่อมระบบ renderer มุมมองบุคคลที่หนึ่ง
 
 > Shyne Creator เป็นระบบสำหรับใช้ Avatar และ Content Pack ไม่ใช่ม็อดที่เพิ่ม Avatar หรือสกิลมาให้ทันทีหลังติดตั้ง หากต้องการเริ่มเล่น ให้ติดตั้งตัวม็อดแล้วอ่าน [เริ่มใช้ Shyne ใน 1 นาที](PLAYER_QUICKSTART_TH.md)
 
@@ -54,21 +59,21 @@ Shyne Creator **2.10.0-alpha-26.3** รองรับ Minecraft **26.3** บน
 
 | รายการ | เวอร์ชัน |
 | --- | --- |
-| Minecraft | 26.3 |
+| Minecraft | ${minecraftVersion} |
 | Java | 25 ขึ้นไป |
 | Fabric Loader | 0.19.3 ขึ้นไป |
-| Fabric API | 0.155.2+26.3 |
+| Fabric API | 0.155.2+${minecraftVersion} |
 | NeoForge | 26.3.0.16-beta ขึ้นไป |
 
 ## ติดตั้งบน Fabric
 
-1. ติดตั้ง Fabric Loader สำหรับ Minecraft 26.3
+1. ติดตั้ง Fabric Loader สำหรับ Minecraft ${minecraftVersion}
 2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.10.0-alpha-26.3.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมแล้วตรวจว่ามีโลโก้ Shyne ในหน้าเมนูหลัก หรือเมนู \`Esc → อวตาร\`
 
 ## ติดตั้งบน NeoForge
 
-1. ติดตั้ง NeoForge สำหรับ Minecraft 26.3
+1. ติดตั้ง NeoForge สำหรับ Minecraft ${minecraftVersion}
 2. ใส่ไฟล์ \`shyne-creator-neoforge-2.10.0-alpha-26.3.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมด้วยโปรไฟล์ NeoForge แล้วตรวจว่ามีเมนู \`Esc → อวตาร\`
 
@@ -96,7 +101,7 @@ Avatar และ content pack ใช้ตำแหน่งมาตรฐา�
 
 export const docs: DocItem[] = [
   { slug: 'overview', title: 'ภาพรวม Shyne Creator', shortTitle: 'ภาพรวม', description: 'ความสามารถ เวอร์ชัน โครงสร้าง และสถานะล่าสุดของม็อด', category: 'เริ่มต้น', icon: 'book', content: overview },
-  { slug: 'installation', title: 'ติดตั้ง Shyne Creator', shortTitle: 'การติดตั้ง', description: 'ติดตั้งบน Fabric หรือ NeoForge สำหรับ Minecraft 26.3', category: 'เริ่มต้น', icon: 'download', content: installation },
+  { slug: 'installation', title: 'ติดตั้ง Shyne Creator', shortTitle: 'การติดตั้ง', description: `ติดตั้งบน Fabric หรือ NeoForge สำหรับ Minecraft ${minecraftVersion}`, category: 'เริ่มต้น', icon: 'download', content: installation },
   { slug: 'player-quickstart', title: 'เริ่มใช้ Shyne ใน 1 นาที', shortTitle: 'เริ่มใช้ Shyne', description: 'ติดตั้งแล้วไปต่ออย่างไร ตั้งแต่เปิดคลังจนเลือกใช้ Avatar', category: 'เริ่มต้น', icon: 'gamepad', content: playerQuickstart },
   { slug: 'first-avatar', title: 'สร้าง Avatar แรก', shortTitle: 'สร้าง Avatar แรก', description: 'สำหรับ Creator: จากโปรเจกต์ Blockbench ไปสู่ Avatar ที่เล่นในเกมได้', category: 'Blockbench', icon: 'sparkles', content: quickstart },
   { slug: 'standard-2', title: 'Shyne Avatar Standard 2.0', shortTitle: 'Standard 2.0', description: 'สัญญา Model-first, profile และ declarative behavior', category: 'สร้าง Avatar', icon: 'box', content: standard },
@@ -132,5 +137,3 @@ export const fileToSlug: Record<string, string> = {
   'AVATAR_CLOUD.md': 'cloud', 'CLOUD_API.md': 'cloud-api', 'SECURITY.md': 'security', 'PUBLIC_SHARE.md': 'public-share',
   'MULTIPLAYER_TESTING.md': 'multiplayer-testing', 'CREATOR_SDK_TH.md': 'creator-sdk', 'ARCHITECTURE_TH.md': 'architecture',
 }
-
-export const version = '2.10.0-alpha-26.3'

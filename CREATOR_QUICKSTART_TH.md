@@ -6,7 +6,7 @@
 
 ## ก่อนเริ่ม เตรียม 3 อย่าง
 
-1. Minecraft 26.2 ที่ติดตั้ง Shyne Creator แล้ว
+1. Minecraft 26.3 ที่ติดตั้ง Shyne Creator แล้ว
 2. [Blockbench](https://www.blockbench.net/) สำหรับทำโมเดล
 3. [Shyne Standard 2.0 Blockbench Plugin](tools/blockbench/README_TH.md)
 

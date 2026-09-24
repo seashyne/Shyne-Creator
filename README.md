@@ -19,7 +19,7 @@ Fabric และ NeoForge ใช้ `mod id`, Shyne API standard และ netwo
 Shyne Creator เป็น runtime สำหรับใช้ Avatar และ Content Pack ไม่ใช่ม็อดที่เพิ่ม Avatar หรือสกิลสำเร็จรูปมาให้ทันที หลังติดตั้งแล้ว การเห็นตัวละคร Minecraft แบบปกติถือว่าถูกต้อง
 
 1. เลือก JAR ให้ตรงกับ Fabric หรือ NeoForge; Fabric ต้องติดตั้ง Fabric API เพิ่ม
-2. ใส่ JAR ในโฟลเดอร์ `mods` แล้วเปิด Minecraft 26.2
+2. ใส่ JAR ในโฟลเดอร์ `mods` แล้วเปิด Minecraft 26.3
 3. เข้าโลกแล้วกด `H` หรือเปิด `Esc → อวตาร`
 4. ค้นหา Avatar จาก Cloud หรือใช้ปุ่มเปิดโฟลเดอร์เพื่อนำ Avatar มาไว้ใน `shyne-mods/avatars`
 5. กด `โหลดใหม่` แล้วกด `เลือกใช้`

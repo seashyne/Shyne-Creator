@@ -10,7 +10,7 @@ Shyne Creator เป็น runtime สำหรับเปิดใช้ Avata
 
 - Fabric ใช้ไฟล์ชื่อ `shyne-creator-fabric-...jar` และต้องมี Fabric API
 - NeoForge ใช้ไฟล์ชื่อ `shyne-creator-neoforge-...jar`
-- เลือกเพียง Loader เดียวและใช้ Minecraft 26.2
+- เลือกเพียง Loader เดียวและใช้ Minecraft 26.3
 - ไฟล์ Shyne Creator Kit ใช้สำหรับสร้าง Avatar และนำไปใส่ในโฟลเดอร์ `mods` ไม่ได้
 
 เปิดเกมแล้วมองหาโลโก้ Shyne ในหน้าเมนูหลัก หรือเข้าโลกแล้วเปิด `Esc → อวตาร` หากพบเมนูนี้ แปลว่าตัวม็อดทำงานแล้ว
@@ -71,7 +71,7 @@ Avatar Cloud เป็นระบบเสริม หากปุ่ม Cloud
 | อาการ | วิธีตรวจและแก้ |
 | --- | --- |
 | เข้าเกมแล้วไม่มีอะไรเปลี่ยน | กด `H` และเพิ่ม Avatar ก่อน ตัวม็อดไม่แถม Avatar มาให้ |
-| ไม่พบเมนู Shyne | ตรวจ Minecraft 26.2, Loader และไฟล์ JAR; Fabric ต้องมี Fabric API |
+| ไม่พบเมนู Shyne | ตรวจ Minecraft 26.3, Loader และไฟล์ JAR; Fabric ต้องมี Fabric API |
 | คลังอวตารมีแต่ตัวละครพื้นฐาน | กด Cloud หรือเปิดโฟลเดอร์เพื่อติดตั้ง Avatar |
 | วาง Avatar แล้วไม่ขึ้น | ตรวจว่าแตก ZIP แล้ว และ `avatar.json` อยู่ในโฟลเดอร์ Avatar ชั้นแรก |
 | Avatar ขึ้นเครื่องหมาย ! | เปิด `ตรวจไฟล์` เพื่อดูชื่อไฟล์หรือโครงสร้างที่ผิด |

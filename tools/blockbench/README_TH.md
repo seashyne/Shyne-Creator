@@ -8,7 +8,7 @@
 
 1. [Blockbench](https://www.blockbench.net/) รุ่น 4.10 ขึ้นไป
 2. ไฟล์ Plugin `shyne_standard_2.js` จาก `tools/blockbench/`
-3. Minecraft 26.2 ที่ติดตั้ง Shyne Creator แล้ว
+3. Minecraft 26.3 ที่ติดตั้ง Shyne Creator แล้ว
 4. โฟลเดอร์ตัวอย่าง `examples/zero-lua-avatar`
 
 Plugin ของ Shyne ใช้ได้ทั้ง Blockbench Desktop และ Web แต่แนะนำ Desktop สำหรับมือใหม่ เพราะการเปิดไฟล์ Plugin, Texture และตำแหน่ง Export ทำได้ตรงกว่า ไม่ต้องติดตั้ง Figura หรือ Plugin ของ Figura

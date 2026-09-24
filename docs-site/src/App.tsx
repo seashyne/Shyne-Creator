@@ -8,7 +8,7 @@ import {
   Layers, Menu, MessageCircle, Palette, Play, Search, ShieldCheck, Sparkles, Users, Workflow, Wrench, X, Zap,
   type LucideIcon,
 } from 'lucide-react'
-import { docs, exampleDocs, fileToSlug, version, type DocIcon, type DocItem } from './content'
+import { docs, exampleDocs, fileToSlug, minecraftVersion, version, type DocIcon, type DocItem } from './content'
 
 const CURSEFORGE_URL = 'https://www.curseforge.com/minecraft/mc-mods/shyne-creator'
 const YOUTUBE_URL = 'https://www.youtube.com/@seashyne'
@@ -140,7 +140,7 @@ function HomePage() {
         <p className="lead">Shyne Creator เป็นระบบสำหรับใช้ Avatar และ Content Pack ตัวม็อดไม่แถม Avatar หรือสกิลมาให้—ติดตั้งแล้วกด H เพื่อเริ่มเลือก Avatar แรกของคุณ</p>
         <div className="hero-actions"><Link className="primary" to="/docs/player-quickstart">เริ่มใช้ Shyne <ArrowRight size={18}/></Link><a className="download-cta" href={CURSEFORGE_URL} target="_blank" rel="noreferrer"><Download size={18}/> ดาวน์โหลด</a><Link className="secondary" to="/docs/installation"><BookOpen size={18}/> วิธีติดตั้ง</Link></div>
         <div className="hero-note"><Check size={16}/><span>เห็นตัวละคร Minecraft ปกติหลังติดตั้งถือว่าถูกต้อง—ขั้นต่อไปคือเพิ่ม Avatar</span></div>
-        <div className="compat"><span>VERSION</span><b>{version}</b><i></i><b>MINECRAFT 26.2</b><small>JAVA 25</small></div>
+        <div className="compat"><span>VERSION</span><b>{version}</b><i></i><b>MINECRAFT {minecraftVersion}</b><small>JAVA 25</small></div>
       </div>
       <div className="hero-visual">
         <Suspense fallback={<div className="model-viewer model-fallback"><img src="shyne-icon.png" alt=""/><span>กำลังเตรียมตัวอย่าง 3D</span></div>}><ModelViewer /></Suspense>
@@ -250,7 +250,7 @@ function CodeBlock({ children }: { children: ReactNode }) {
 }
 
 function Footer() {
-  return <footer><div><img src="shyne-icon.png" alt="Shyne Creator"/><span><b>SHYNE CREATOR</b><small>Create beyond the skin.</small></span></div><p>เอกสารสำหรับ Shyne Creator {version} · Minecraft 26.2 · MPL-2.0</p><div className="footer-links"><a href={YOUTUBE_URL} target="_blank" rel="noreferrer"><Play size={15}/> YouTube</a><a href={CONTACT_URL} target="_blank" rel="noreferrer"><MessageCircle size={14}/> ติดต่อ / แจ้งปัญหา</a><a href={CURSEFORGE_URL} target="_blank" rel="noreferrer">CurseForge</a><a href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer">GitHub</a></div></footer>
+  return <footer><div><img src="shyne-icon.png" alt="Shyne Creator"/><span><b>SHYNE CREATOR</b><small>Create beyond the skin.</small></span></div><p>เอกสารสำหรับ Shyne Creator {version} · Minecraft {minecraftVersion} · MPL-2.0</p><div className="footer-links"><a href={YOUTUBE_URL} target="_blank" rel="noreferrer"><Play size={15}/> YouTube</a><a href={CONTACT_URL} target="_blank" rel="noreferrer"><MessageCircle size={14}/> ติดต่อ / แจ้งปัญหา</a><a href={CURSEFORGE_URL} target="_blank" rel="noreferrer">CurseForge</a><a href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer">GitHub</a></div></footer>
 }
 
 function extractHeadings(markdown: string) {

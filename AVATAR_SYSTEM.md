@@ -1,6 +1,6 @@
 # Shyne Avatar System
 
-เอกสารนี้ตรงกับ Shyne Creator `2.9.1-alpha-26.2`
+เอกสารนี้ตรงกับ Shyne Creator `2.10.0-alpha-26.3`
 
 ระบบนี้เป็นสถาปัตยกรรมของ Shyne Creator เอง ใช้ Blockbench model เป็นข้อมูลภาพและใช้ Lua sandbox ของ Shyne เป็นพฤติกรรม ไม่มีการนำ source, API หรือ asset ของม็อดอวตารอื่นมารวมไว้ ขณะเล่นเกม Shyne ไม่โหลดหรือต้องติดตั้ง Figura; ไฟล์ Figura ต้นทางมีบทบาทเป็นข้อมูลอ้างอิงให้ตัวแปลงเท่านั้น
 
