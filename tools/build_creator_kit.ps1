@@ -16,6 +16,8 @@ $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $projectParent = Split-Path -Parent $projectRoot
 $version = (Get-Content -LiteralPath (Join-Path $projectRoot "VERSION.txt") -Raw).Trim()
 if ([string]::IsNullOrWhiteSpace($version)) { throw "VERSION.txt is empty" }
+$minecraftVersion = [regex]::Match($version, '\d+\.\d+$').Value
+if ([string]::IsNullOrWhiteSpace($minecraftVersion)) { throw "Could not read Minecraft version from VERSION.txt: $version" }
 
 if ([string]::IsNullOrWhiteSpace($Destination)) {
     $Destination = Join-Path $projectParent "Shyne-Creator-Kit-$version"
@@ -110,7 +112,7 @@ Copy-KitDirectory "tools\examples\zero-lua-avatar" "examples\zero-lua-avatar"
 $kitInfo = @(
     "Shyne Creator Kit",
     "Version: $version",
-    "Minecraft: 26.2",
+    "Minecraft: $minecraftVersion",
     "Avatar Standard: 2.0",
     "Runtime: Shyne native; no Figura runtime",
     "Mod JARs are distributed separately."
