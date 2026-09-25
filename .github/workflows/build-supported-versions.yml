@@ -1,0 +1,89 @@
+name: Build supported Minecraft versions
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Minecraft ${{ matrix.minecraft }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - minecraft: '26.3'
+            ref: main
+          - minecraft: '26.2'
+            ref: mc/26.2
+    steps:
+      - name: Checkout ${{ matrix.ref }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ matrix.ref }}
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Confirm Minecraft and mod versions
+        id: mod_version
+        shell: pwsh
+        env:
+          EXPECTED_MINECRAFT: ${{ matrix.minecraft }}
+        run: |
+          $properties = Get-Content gradle.properties
+          $minecraftLine = $properties | Where-Object { $_ -match '^minecraft_version=' } | Select-Object -First 1
+          $modLine = $properties | Where-Object { $_ -match '^mod_version=' } | Select-Object -First 1
+          if (-not $minecraftLine -or -not $modLine) { throw 'Release versions are missing from gradle.properties' }
+          $minecraftVersion = $minecraftLine.Substring('minecraft_version='.Length)
+          $modVersion = $modLine.Substring('mod_version='.Length)
+          if ($minecraftVersion -ne $env:EXPECTED_MINECRAFT -or -not $modVersion.EndsWith("-$env:EXPECTED_MINECRAFT")) {
+            throw "Expected Minecraft $env:EXPECTED_MINECRAFT, found Minecraft $minecraftVersion and mod $modVersion"
+          }
+          "value=$modVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Build Fabric and NeoForge release files
+        shell: pwsh
+        run: .\gradlew.bat clean releaseBundle --stacktrace
+
+      - name: Upload JARs and checksums
+        uses: actions/upload-artifact@v6
+        with:
+          name: shyne-creator-${{ steps.mod_version.outputs.value }}
+          path: build/releases/*
+          if-no-files-found: error
+
+  creator-kit:
+    name: Creator Kit
+    runs-on: windows-latest
+    steps:
+      - name: Checkout current Creator Kit
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Build Creator Kit
+        id: kit
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION.txt -Raw).Trim()
+          $destination = Join-Path $env:RUNNER_TEMP "Shyne-Creator-Kit-$version"
+          .\tools\build_creator_kit.ps1 -Destination $destination
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "directory=$destination" >> $env:GITHUB_OUTPUT
+
+      - name: Upload Creator Kit
+        uses: actions/upload-artifact@v6
+        with:
+          name: Shyne-Creator-Kit-${{ steps.kit.outputs.version }}
+          path: ${{ steps.kit.outputs.directory }}
+          if-no-files-found: error

@@ -169,6 +169,18 @@ neoforge/build/libs/shyne-creator-neoforge-<version>.jar
 
 อย่าใส่ JAR ทั้งสองตัวใน Minecraft instance เดียว ให้เลือกไฟล์ที่ตรงกับ Loader
 
+### สร้างไฟล์สำหรับ Minecraft หลายรุ่นในครั้งเดียว
+
+เปิด [Build supported Minecraft versions](https://github.com/seashyne/Shyne-Creator/actions/workflows/build-supported-versions.yml) เลือก branch `main` แล้วกด **Run workflow** ดาวน์โหลดไฟล์จากส่วน **Artifacts** เมื่อทุกงานเสร็จ:
+
+| Minecraft | Source branch | ภายในชุด |
+| --- | --- | --- |
+| 26.3 | `main` | Fabric JAR, NeoForge JAR, SHA256SUMS |
+| 26.2 | `mc/26.2` | Fabric JAR, NeoForge JAR, SHA256SUMS |
+| Creator Kit รุ่นล่าสุด | `main` | เครื่องมือสร้าง Avatar, คู่มือ, SHA256SUMS |
+
+ชื่อ Artifact ใช้ `mod_version` ของ branch นั้นโดยอัตโนมัติ หลังแก้รุ่นใหม่ให้ commit และ push ไปยัง branch ของ Minecraft รุ่นนั้นก่อน แต่ละ branch จะ build และเก็บ Artifacts เมื่อ push ด้วย จากนั้นเลือก JAR ให้ตรงกับ Minecraft version และ Loader ตอนอัปโหลดบน CurseForge ส่วน Creator Kit แจกแยกจากตัวม็อด
+
 ติดตั้ง Build ปัจจุบันลง Instance สำหรับทดสอบด้วยสคริปต์มาตรฐาน โดยส่ง path ของ
 game directory หลักที่มีโฟลเดอร์ `mods` (ไม่ใช่ path ของ `mods` เอง):
 
