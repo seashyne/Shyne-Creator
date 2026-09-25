@@ -3,7 +3,7 @@ name: Build and Test Shyne Creator
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, 'mc/**']
   workflow_dispatch:
 
 permissions:
@@ -34,9 +34,17 @@ jobs:
         shell: pwsh
         run: .\gradlew.bat clean releaseBundle --stacktrace
 
+      - name: Read mod version
+        id: mod_version
+        shell: pwsh
+        run: |
+          $line = Get-Content gradle.properties | Where-Object { $_ -match '^mod_version=' } | Select-Object -First 1
+          if (-not $line) { throw 'mod_version is missing from gradle.properties' }
+          "value=$($line.Substring('mod_version='.Length))" >> $env:GITHUB_OUTPUT
+
       - name: Upload Fabric, NeoForge and checksums
         uses: actions/upload-artifact@v6
         with:
-          name: shyne-creator-${{ github.sha }}
+          name: shyne-creator-${{ steps.mod_version.outputs.value }}
           path: build/releases/*
           if-no-files-found: error
