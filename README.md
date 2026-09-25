@@ -14,6 +14,15 @@
 
 Fabric และ NeoForge ใช้ `mod id`, Shyne API standard และ network protocol version เดียวกัน ส่วนไฟล์ที่ผูกกับ Loader จะถูกแยกออกจากระบบหลัก
 
+## เริ่มใช้ Avatar
+
+1. ติดตั้ง JAR ให้ตรงกับ Minecraft 26.2 และ Fabric หรือ NeoForge; Fabric ต้องมี Fabric API
+2. เข้าโลกแล้วกด `H` หรือเปิด `Esc → อวตาร`
+3. กด `เปิดโฟลเดอร์` แล้ววางโฟลเดอร์ Avatar ที่แตก ZIP แล้วไว้ใน `shyne-mods/avatars/`
+4. กลับเข้าเกม กด `สแกนไฟล์` และกด `เลือกใช้`
+
+ผู้เล่นไม่ต้องแก้ `avatar.json` หรือปรับค่าม็อดก่อนใช้ Avatar ที่ติดตั้งถูกต้อง ส่วนการตั้งค่าปุ่มและงบทรัพยากรอยู่ในหน้าขั้นสูงเมื่อจำเป็น
+
 ## Shyne Avatar Standard 2.0 — Model-first
 
 Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Blockbench และ `avatar.json`: Avatar ทั่วไปเล่น autoplay, locomotion และ blink ได้โดยไม่ต้องมี `script.lua` ส่วน Lua เป็นทางเลือกสำหรับ procedural rig หรือ logic เฉพาะเท่านั้น
