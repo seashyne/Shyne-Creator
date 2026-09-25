@@ -191,13 +191,6 @@ public class AvatarManagerScreen extends Screen {
                     .bounds(listX + listWidth - actionWidth - 5, rowY, actionWidth, 20).build());
             }
         }
-        if (allCatalog.isEmpty()) {
-            Button vanillaActive = Button.builder(Component.translatable("screen.shyne_core.avatars.active"), ignored -> {})
-                .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.vanilla.active.tooltip")))
-                .bounds(listX + listWidth - actionWidth - 5, contentTop + 5, actionWidth, 20).build();
-            vanillaActive.active = false;
-            addRenderableWidget(vanillaActive);
-        }
     }
 
     private void addPager() {
@@ -217,17 +210,24 @@ public class AvatarManagerScreen extends Screen {
     private void addFooter(int innerX, int innerWidth) {
         Button back = Button.builder(Component.translatable("gui.back"), btn -> onClose()).build();
 
-        Button vanilla = Button.builder(Component.translatable("screen.shyne_core.avatars.vanilla"), btn -> {
-            AvatarRuntime.deactivate(Minecraft.getInstance());
-            openPage(currentPage);
-        }).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.vanilla.tooltip"))).build();
-        vanilla.active = active != null;
+        Button primary = active == null
+            ? Button.builder(Component.translatable("screen.shyne_core.avatars.folder"), btn -> openAvatarFolder())
+                .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.folder.tooltip"))).build()
+            : Button.builder(Component.translatable("screen.shyne_core.avatars.vanilla"), btn -> {
+                AvatarRuntime.deactivate(Minecraft.getInstance());
+                openPage(currentPage);
+            }).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.vanilla.tooltip"))).build();
 
-        Button reload = Button.builder(Component.translatable("screen.shyne_core.avatars.reload"), btn -> {
-            AvatarRuntime.reloadActive(Minecraft.getInstance());
-            openPage(currentPage);
-        }).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.reload.tooltip"))).build();
-        reload.active = active != null;
+        Button reload = Button.builder(Component.translatable(active == null
+                ? "screen.shyne_core.avatars.scan" : "screen.shyne_core.avatars.reload"), btn -> {
+            if (AvatarRuntime.active() == null) {
+                rescanCatalog();
+            } else {
+                AvatarRuntime.reloadActive(Minecraft.getInstance());
+                openPage(currentPage);
+            }
+        }).tooltip(Tooltip.create(Component.translatable(active == null
+            ? "screen.shyne_core.avatars.scan.tooltip" : "screen.shyne_core.avatars.reload.tooltip"))).build();
 
         Button mask = Button.builder(maskLabel(active), btn -> {
             AvatarState current = AvatarRuntime.active();
@@ -266,11 +266,13 @@ public class AvatarManagerScreen extends Screen {
         ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.more.tooltip"))).build();
 
         if (moreOpen) {
-            placeRow(innerX, footerTop - 24, innerWidth, List.of(mask, validate, folder, verify, cloudSettings));
+            placeRow(innerX, footerTop - 24, innerWidth, active == null
+                ? List.of(mask, validate, verify, cloudSettings)
+                : List.of(mask, validate, folder, verify, cloudSettings));
         }
 
         if (compactFooter) {
-            placeRow(innerX, footerTop, innerWidth, List.of(back, vanilla, reload));
+            placeRow(innerX, footerTop, innerWidth, List.of(back, primary, reload));
             if (compactHeight) {
                 Button previous = Button.builder(Component.literal("‹"), btn -> openPage(currentPage - 1))
                     .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.previous"))).build();
@@ -283,8 +285,7 @@ public class AvatarManagerScreen extends Screen {
                 placeRow(innerX, footerTop + 24, innerWidth, List.of(wheel, more));
             }
         } else {
-            // Vanilla and Reload intentionally remain separate, adjacent actions.
-            placeRow(innerX, footerTop, innerWidth, List.of(back, vanilla, reload, wheel, more));
+            placeRow(innerX, footerTop, innerWidth, List.of(back, primary, reload, wheel, more));
         }
     }
 
@@ -300,6 +301,16 @@ public class AvatarManagerScreen extends Screen {
         } catch (IOException error) {
             seashyne.shynecore.ShyneCore.LOGGER.error("[AvatarManager] Could not open avatar folder {}: {}", folder, error.getMessage());
         }
+    }
+
+    private void rescanCatalog() {
+        Minecraft client = Minecraft.getInstance();
+        AvatarRuntime.refreshCatalogAsync(true).whenComplete((entries, error) -> client.execute(() -> {
+            if (client.gui.screen() == this) {
+                page = 0;
+                rebuildWidgets();
+            }
+        }));
     }
 
     private void placeRow(int x, int y, int width, List<Button> buttons) {
@@ -323,8 +334,11 @@ public class AvatarManagerScreen extends Screen {
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 2, ACCENT);
 
         graphics.text(this.font, Component.translatable("screen.shyne_core.avatars.title"), panelX + 16, panelY + 14, 0xFFF4F7FC, true);
-        int availableCount = allCatalog.isEmpty() ? 1 : allCatalog.size();
-        graphics.text(this.font, Component.translatable("screen.shyne_core.avatars.subtitle", availableCount), panelX + 16, panelY + 31, TEXT_MUTED, false);
+        int availableCount = (int) allCatalog.stream().filter(AvatarCatalogEntry::valid).count();
+        Component subtitle = active == null && availableCount > 0
+            ? Component.translatable("screen.shyne_core.avatars.ready_hint", availableCount)
+            : Component.translatable("screen.shyne_core.avatars.subtitle", availableCount);
+        graphics.text(this.font, subtitle, panelX + 16, panelY + 31, TEXT_MUTED, false);
         Component local = Component.translatable("screen.shyne_core.avatars.local");
         if (panelWidth >= 430) {
             graphics.text(this.font, local, headerPlayersX - 10 - this.font.width(local), panelY + 18, 0xFF64748B, false);
@@ -401,10 +415,17 @@ public class AvatarManagerScreen extends Screen {
             } else {
                 renderRowBackground(graphics, contentTop, true);
                 renderInitialIcon(graphics, "MC", 0xFF79D8B2, contentTop, true);
-                int textWidth = Math.max(30, listWidth - 112);
+                int textWidth = Math.max(30, listWidth - 44);
                 String vanilla = this.font.plainSubstrByWidth(Component.translatable("screen.shyne_core.avatars.vanilla.name").getString(), textWidth);
                 graphics.text(this.font, Component.literal(vanilla), listX + 36, contentTop + 5, 0xFFF4F7FC, false);
-                graphics.text(this.font, Component.translatable("screen.shyne_core.avatars.vanilla.description"), listX + 36, contentTop + 17, TEXT_MUTED, false);
+                String description = this.font.plainSubstrByWidth(Component.translatable("screen.shyne_core.avatars.vanilla.description").getString(), textWidth);
+                graphics.text(this.font, Component.literal(description), listX + 36, contentTop + 17, TEXT_MUTED, false);
+                if (contentTop + 68 < pagerY) {
+                    Component emptyTitle = Component.translatable("screen.shyne_core.avatars.empty.title");
+                    Component emptyHint = Component.translatable("screen.shyne_core.avatars.empty");
+                    graphics.text(this.font, Component.literal(this.font.plainSubstrByWidth(emptyTitle.getString(), listWidth - 16)), listX + 8, contentTop + 43, 0xFFF4F7FC, false);
+                    graphics.text(this.font, Component.literal(this.font.plainSubstrByWidth(emptyHint.getString(), listWidth - 16)), listX + 8, contentTop + 57, TEXT_MUTED, false);
+                }
             }
             return;
         }

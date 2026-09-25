@@ -154,7 +154,7 @@ function HomePage() {
     </section>
     <section className="quickstart">
       <div className="quick-copy"><p className="overline">AFTER INSTALLATION <i></i></p><h2>จากดาวน์โหลด<br/><span>ไปถึง Avatar แรก</span></h2>
-        <ol><li><b>01</b><div><strong>เปิดคลัง Avatar</strong><p>เข้าโลกแล้วกด H หรือเลือก Esc → อวตาร</p></div></li><li><b>02</b><div><strong>เพิ่ม Avatar</strong><p>ค้นหาจาก Cloud หรือเปิดโฟลเดอร์เพื่อติดตั้งไฟล์ที่มีอยู่</p></div></li><li><b>03</b><div><strong>เลือกใช้และทดลอง</strong><p>กดเลือกใช้ แล้วกด G เพื่อเปิดท่าทางหรือคำสั่งของ Avatar</p></div></li></ol>
+        <ol><li><b>01</b><div><strong>เปิดคลัง Avatar</strong><p>เข้าโลกแล้วกด H หรือเลือก Esc → อวตาร</p></div></li><li><b>02</b><div><strong>เพิ่ม Avatar</strong><p>กดเปิดโฟลเดอร์ เพิ่มไฟล์ Avatar แล้วกดสแกนไฟล์</p></div></li><li><b>03</b><div><strong>เลือกใช้และทดลอง</strong><p>กดเลือกใช้ แล้วกด G เพื่อเปิดท่าทางหรือคำสั่งของ Avatar</p></div></li></ol>
         <Link className="text-link" to="/docs/player-quickstart">อ่านวิธีใช้พร้อมแก้ปัญหา <ArrowRight size={15}/></Link>
       </div>
       <div className="code-window starter-panel"><div className="window-bar"><div><i/><i/><i/></div><span>ปุ่มเริ่มต้น</span><small>PLAYER QUICKSTART</small></div><div className="starter-shortcuts">
