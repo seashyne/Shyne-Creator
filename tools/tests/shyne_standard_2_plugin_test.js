@@ -108,7 +108,7 @@ async function run() {
   vm.runInNewContext(source, context, { filename: pluginPath });
   assert.ok(plugin, 'plugin must register');
   plugin.onload();
-  assert.equal(plugin.version, '2.1.0');
+  assert.equal(plugin.version, '2.2.0');
   assert.ok(ModelProject.properties.shyne_manifest_mode);
   assert.ok(Texture.properties.shyne_export_role);
 

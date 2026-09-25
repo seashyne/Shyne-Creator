@@ -2,7 +2,7 @@
 
 คู่มือนี้พาเริ่มจากโปรเจกต์ว่างจนเห็น Avatar ในเกม เหมาะสำหรับคนที่เพิ่งใช้ Blockbench และยังไม่เคยเขียน Lua
 
-> **เป้าหมาย:** สร้างหมวก หู หรือของตกแต่งที่ขยับตามหัวผู้เล่น โดยใช้ `avatar.json` เพียงหนึ่งบรรทัดและไม่ต้องมี `script.lua`
+> **เป้าหมาย:** สร้างหมวก หู หรือของตกแต่งที่ขยับตามหัวผู้เล่น โดยไม่ต้องเขียน `avatar.json` หรือ `script.lua` เอง
 
 ## ก่อนเริ่ม เตรียม 3 อย่าง
 
@@ -34,7 +34,7 @@ C:\Users\<ชื่อผู้ใช้>\curseforge\minecraft\Instances\<ชื
 | `full_body` | ใช้โมเดลของเราแทนรูปร่างทั้งตัว | ทำหลังจาก Accessory สำเร็จ |
 | `custom` | รูปร่างเฉพาะ เช่น aquatic, creature หรือ rig ที่ออกแบบเอง | ระดับต่อยอด |
 
-สำหรับ Accessory ไฟล์ `avatar.json` แบบสั้นที่สุดคือ:
+ถ้าใช้ Blockbench Plugin ให้ Export Package แล้ว Plugin จะสร้าง `avatar.json` ให้เอง หากเขียนด้วยมือ แบบสั้นที่สุดคือ:
 
 ```json
 {
@@ -43,6 +43,14 @@ C:\Users\<ชื่อผู้ใช้>\curseforge\minecraft\Instances\<ชื
 ```
 
 Shyne จะเติม Standard 2.0, ID, `model.bbmodel`, profile `accessory` และ Auto Animation ให้โดยอัตโนมัติ
+
+อีกทางหนึ่ง ใช้ Creator CLI สร้างโปรเจกต์จากชื่อโฟลเดอร์ด้วยคำสั่งเดียว:
+
+```powershell
+.\tools\creator\shyne-creator.ps1 new .\my-first-avatar
+```
+
+ถ้าต้องการเขียน Lua สำหรับพฤติกรรมพิเศษ ให้เพิ่ม `--lua` เพื่อสร้าง `script.lua` เริ่มต้นพร้อมค่า `main` ใน `avatar.json`; งาน Avatar ทั่วไปไม่ต้องเปิดตัวเลือกนี้
 
 ## 2. ติดตั้ง Blockbench Plugin
 
@@ -126,7 +134,7 @@ avatars/my-first-avatar/my-first-avatar/avatar.json
 avatars/my-first-avatar/avatar.json
 ```
 
-ถ้าไม่ใช้ Plugin สามารถสร้างโฟลเดอร์ด้วยมือได้ โดยอย่างน้อยต้องมี `avatar.json` และ `model.bbmodel`
+ถ้าไม่ใช้ Plugin หรือ Creator CLI สามารถสร้างโฟลเดอร์ด้วยมือได้ โดยอย่างน้อยต้องมี `avatar.json` และ `model.bbmodel`
 
 ## 5. ใส่เกมและทดสอบ
 

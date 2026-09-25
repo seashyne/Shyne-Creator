@@ -61,18 +61,24 @@ HeadAccessory  [Attachment: Head]
 
 ## 3. ตั้งค่า Project
 
-เปิด `File → Project…` แล้วตรวจค่าของ Shyne:
+สำหรับ Avatar แรก **ไม่ต้องตั้งค่า Project ของ Shyne เพิ่ม** ตั้งชื่อโปรเจกต์ใน Blockbench แล้ว Export Package ได้เลย Plugin จะใช้ชื่อโปรเจกต์เป็นชื่อ Avatar, สร้าง ID จากชื่อ และเขียน `avatar.json` ให้เอง
+
+ชื่อภาษาไทยใช้ได้ Plugin จะสร้าง ID ที่ปลอดภัยและมีรหัสสั้นท้ายชื่อเพื่อไม่ให้ Avatar หลายตัวชนกัน
+
+ถ้าต้องการเปลี่ยนค่าเฉพาะ ให้เปิด `File → Project…`:
 
 | ค่า | แนะนำสำหรับงานแรก |
 | --- | --- |
-| Shyne Avatar Name | ชื่อที่ต้องการให้แสดงในเกม |
-| Shyne Avatar ID | ใช้อักษรอังกฤษตัวเล็ก ตัวเลข จุด ขีดกลาง หรือขีดล่าง เช่น `my.bunny_ears` |
+| Shyne Avatar Name | ไม่ต้องกรอกถ้าใช้ชื่อโปรเจกต์; กรอกเมื่ออยากให้ชื่อในเกมต่างออกไป |
+| Shyne Avatar ID | ไม่ต้องกรอกสำหรับงานแรก; ใช้เมื่อต้องการ ID คงที่ เช่น `my.bunny_ears` |
 | Shyne Manifest Detail | `Compact (recommended)` |
 | Shyne Profile | `Accessory` |
 | Shyne Auto Animation | เปิด |
 | Use Advanced Shyne Lua | ปิด |
 
 ค่า Compact จะ Export เฉพาะข้อมูลที่จำเป็น Shyne เติม Standard, model, profile และ Animation Controller ค่าเริ่มต้นให้เอง งานทั่วไปจึงไม่ต้องเขียน `avatar.json` ยาว ๆ
+
+Lua เป็นทางเลือกสำหรับพฤติกรรมพิเศษเท่านั้น หากต้องใช้ ให้เลือก `File → Export → Export Shyne Lua Starter (optional)` เพื่อได้ `script.lua` เริ่มต้น จากนั้นแก้ไฟล์นี้และเลือกไฟล์เมื่อ Export Package อีกครั้ง; Plugin จะเปิด `Use Advanced Shyne Lua` ให้โดยอัตโนมัติ
 
 ## 4. สร้าง Group และรูปทรง
 
@@ -180,7 +186,7 @@ Preset จะทำงานกับ Group รากและลูกที่
 2. เลือก `File → Export → Export Shyne Avatar Package (.zip)`
 3. เลือกตำแหน่งบันทึก
 4. แตก ZIP ลงใน `shyne-mods/avatars/`
-5. กลับเข้า Minecraft เปิดคลังอวตารแล้วกด `โหลดใหม่`
+5. กลับเข้า Minecraft เปิดคลังอวตารแล้วกด `สแกนไฟล์` ถ้ายังไม่ได้เลือก Avatar หรือ `โหลดใหม่` ถ้าใช้อยู่
 6. เลือก Avatar และกด `เลือกใช้`
 
 ZIP จะรวมไฟล์ที่จำเป็นให้อัตโนมัติ:
