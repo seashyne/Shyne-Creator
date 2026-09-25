@@ -112,6 +112,13 @@ async function run() {
   assert.ok(ModelProject.properties.shyne_manifest_mode);
   assert.ok(Texture.properties.shyne_export_role);
 
+  actions.shyne_export_lua_starter.click();
+  const luaStarter = exports.pop();
+  assert.equal(luaStarter.name, 'script');
+  assert.match(luaStarter.content, /Idle, Walk and Blink work without a script/);
+  assert.equal(Project.shyne_use_lua, true);
+  Project.shyne_use_lua = false;
+
   actions.shyne_export_avatar_manifest.click();
   const manifestExport = exports.pop();
   assert.deepEqual(JSON.parse(manifestExport.content), { name: 'Bunny Ears' });
