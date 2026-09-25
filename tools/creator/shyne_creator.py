@@ -678,7 +678,7 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "new":
         create(args.folder, args.id, args.name, args.lua)
-        print(f"Created {args.folder}")
+        print("Created Avatar project")
         print_report(validate(args.folder), False)
         return
     report = validate(args.folder)
