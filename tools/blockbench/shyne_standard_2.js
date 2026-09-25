@@ -5,7 +5,15 @@
   const registeredProperties = [];
   let exportAction;
   let packageAction;
+  let luaStarterAction;
   let validateAction;
+  const LUA_STARTER = [
+    '-- Optional Shyne Lua. Idle, Walk and Blink work without a script.',
+    'events.on("entity_init", function()',
+    '  -- Add custom behavior here.',
+    'end)',
+    ''
+  ].join('\n');
 
   function registerProperty(target, type, name, options) {
     if (typeof Property !== 'function' || !target) return;
@@ -34,11 +42,17 @@
   }
 
   function cleanId(value) {
-    const id = String(value || '')
-      .trim()
-      .toLowerCase()
+    const raw = String(value || '').trim().toLowerCase();
+    const id = raw
       .replace(/[^a-z0-9_.-]+/g, '_')
       .replace(/^[._-]+|[._-]+$/g, '');
+    if (/[^\x00-\x7f]/.test(raw) || id.length > 64) {
+      let hash = 2166136261;
+      for (let index = 0; index < raw.length; index++) {
+        hash = Math.imul(hash ^ raw.charCodeAt(index), 16777619) >>> 0;
+      }
+      return `${(id || 'avatar').slice(0, 55)}_${hash.toString(16).padStart(8, '0')}`;
+    }
     return id || 'avatar';
   }
 
@@ -70,7 +84,9 @@
   }
 
   function buildManifest() {
-    const name = String(projectValue('shyne_avatar_name', projectValue('name', 'Shyne Avatar')) || 'Shyne Avatar').trim();
+    const configuredName = String(projectValue('shyne_avatar_name', '') || '').trim();
+    const projectName = String(projectValue('name', '') || '').trim();
+    const name = configuredName || projectName || 'Shyne Avatar';
     const selectedProfile = String(projectValue('shyne_profile', 'accessory') || 'accessory').toLowerCase();
     const profile = selectedProfile === 'merling' || selectedProfile === 'aquatic' ? 'custom' : selectedProfile;
     const explicit = String(projectValue('shyne_manifest_mode', 'compact')) === 'explicit';
@@ -255,6 +271,24 @@
     });
   }
 
+  function exportLuaStarter() {
+    if (typeof Blockbench === 'undefined' || typeof Blockbench.export !== 'function') return;
+    const mainName = baseName(projectValue('shyne_main', 'script.lua') || 'script.lua');
+    if (!/^[A-Za-z0-9_.-]+\.lua$/i.test(mainName)) {
+      showMessage('Shyne Lua starter', 'Advanced Lua Main must be a top-level .lua file name, such as script.lua.');
+      return;
+    }
+    if (typeof Project !== 'undefined' && Project) Project.shyne_use_lua = true;
+    Blockbench.export({
+      resource_id: 'shyne_lua_starter',
+      type: 'Shyne Lua Starter',
+      extensions: ['lua'],
+      name: mainName.slice(0, -4),
+      content: LUA_STARTER,
+      savetype: 'text'
+    });
+  }
+
   async function exportPackage() {
     const result = validateProject(false, true);
     if (!result.valid) {
@@ -389,7 +423,7 @@
     author: 'Shyne Creator',
     description: 'Native model-first metadata, validation, compact avatar.json, and one-click Shyne package export. No Figura dependency.',
     icon: 'accessibility_new',
-    version: '2.1.0',
+    version: '2.2.0',
     variant: 'both',
     min_version: '4.10.0',
     onload() {
@@ -404,15 +438,20 @@
         packageAction = new Action('shyne_export_avatar_package', {
           name: 'Export Shyne Avatar Package (.zip)', icon: 'folder_zip', click: exportPackage
         });
+        luaStarterAction = new Action('shyne_export_lua_starter', {
+          name: 'Export Shyne Lua Starter (optional)', icon: 'code', click: exportLuaStarter
+        });
         addMenuAction(validateAction, 'tools');
         addMenuAction(exportAction, 'file.export');
         addMenuAction(packageAction, 'file.export');
+        addMenuAction(luaStarterAction, 'file.export');
       }
     },
     onunload() {
       if (validateAction && typeof validateAction.delete === 'function') validateAction.delete();
       if (exportAction && typeof exportAction.delete === 'function') exportAction.delete();
       if (packageAction && typeof packageAction.delete === 'function') packageAction.delete();
+      if (luaStarterAction && typeof luaStarterAction.delete === 'function') luaStarterAction.delete();
       registeredProperties.forEach((property) => {
         if (property && typeof property.delete === 'function') property.delete();
       });

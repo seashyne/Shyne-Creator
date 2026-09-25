@@ -20,6 +20,21 @@ TEXTURE_EXTENSIONS = {".png"}
 ALLOWED_PERMISSIONS = {"particle", "sound", "camera", "microphone", "command", "hud_render", "world_render"}
 LATEST_API = "2.0"
 SUPPORTED_APIS = {"auto", "latest", LATEST_API}
+
+
+def suggested_avatar_id(folder_name: str) -> str:
+    raw = folder_name.strip().lower()
+    slug = re.sub(r"[^a-z0-9_.-]+", "_", raw).strip("._-")
+    if any(ord(char) > 127 for char in raw) or len(slug) > 64:
+        value = 2166136261
+        utf16 = raw.encode("utf-16-le")
+        for index in range(0, len(utf16), 2):
+            code_unit = utf16[index] | (utf16[index + 1] << 8)
+            value = ((value ^ code_unit) * 16777619) & 0xFFFFFFFF
+        return f"{(slug or 'avatar')[:55]}_{value:08x}"
+    return slug or "avatar"
+
+
 API_MODULES = {
     "animation": "1.1", "core": "1.1", "diagnostics": "1.1", "easy": "1.0",
     "events": "2.0", "input": "1.0",
@@ -570,23 +585,28 @@ def validate(root: Path) -> dict:
     }
 
 
-def create(root: Path, avatar_id: str, name: str) -> None:
-    if not ID_PATTERN.fullmatch(avatar_id):
+def create(root: Path, avatar_id: str | None, name: str | None, with_lua: bool = False) -> None:
+    display_name = (name or re.sub(r"[_.-]+", " ", root.name).strip() or "My Avatar").strip()
+    if not display_name or len(display_name) > 96:
+        raise SystemExit("Avatar name must contain 1-96 characters")
+    if avatar_id is not None and not ID_PATTERN.fullmatch(avatar_id):
         raise SystemExit("invalid --id; use lowercase letters, numbers, dot, dash, or underscore")
     root.mkdir(parents=True, exist_ok=False)
-    manifest = {
-        "standard": "2.0",
-        "id": avatar_id,
-        "name": name,
-        "version": "1.0.0",
-        "profile": "accessory",
-        "model": "model.bbmodel",
-        "behavior": {"preset": "auto", "blend_ticks": 5},
-    }
+    manifest = {"name": display_name}
+    if avatar_id is not None:
+        manifest["id"] = avatar_id
+    else:
+        runtime_id = re.sub(r"[^a-z0-9_.-]+", "_", root.name.lower()).lstrip("._-")[:64] or "avatar"
+        suggested_id = suggested_avatar_id(root.name)
+        if suggested_id != runtime_id:
+            manifest["id"] = suggested_id
+    if with_lua:
+        manifest["main"] = "script.lua"
+        manifest["api"] = LATEST_API
     root_bone_id = str(uuid.uuid4())
     model = {
         "meta": {"format_version": "4.10", "model_format": "free"},
-        "name": name,
+        "name": display_name,
         "resolution": {"width": 16, "height": 16},
         "textures": [],
         "elements": [],
@@ -606,12 +626,21 @@ def create(root: Path, avatar_id: str, name: str) -> None:
     }
     (root / "avatar.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (root / "model.bbmodel").write_text(json.dumps(model, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if with_lua:
+        (root / "script.lua").write_text(
+            "-- Optional custom behavior. Idle, Walk and Blink work without Lua.\n"
+            "events.on(\"entity_init\", function()\n"
+            "  -- Add custom behavior here.\n"
+            "end)\n",
+            encoding="utf-8",
+        )
     (root / "README.md").write_text(
-        f"# {name}\n\n"
+        f"# {display_name}\n\n"
         "โปรเจกต์ Shyne Standard 2.0 แบบ model-first: เปิด `model.bbmodel` ใน Blockbench "
         "แล้ววางชิ้นส่วนไว้ใต้ `HeadAccessory` ได้ทันที ไม่ต้องเขียน Lua\n\n"
         "ตั้งชื่อ animation เช่น `Idle`, `Walk`, `Sprint`, `Swim`, `Crouch`, `Sleep`, "
-        "`Elytra` หรือ `Blink` เพื่อให้ Shyne ผูกพฤติกรรมให้อัตโนมัติ\n",
+        "`Elytra` หรือ `Blink` เพื่อให้ Shyne ผูกพฤติกรรมให้อัตโนมัติ\n"
+        + ("\nถ้าต้องการพฤติกรรมพิเศษ ให้แก้ `script.lua` ที่สร้างไว้ให้\n" if with_lua else ""),
         encoding="utf-8",
     )
 
@@ -637,8 +666,9 @@ def main() -> None:
     commands = parser.add_subparsers(dest="command", required=True)
     new = commands.add_parser("new", help="create a minimal Avatar project")
     new.add_argument("folder", type=Path)
-    new.add_argument("--id", required=True)
-    new.add_argument("--name", required=True)
+    new.add_argument("--id", help="optional stable id; defaults to the folder name")
+    new.add_argument("--name", help="display name; defaults to the folder name")
+    new.add_argument("--lua", action="store_true", help="include an optional script.lua starter")
     check = commands.add_parser("validate", help="validate an Avatar folder")
     check.add_argument("folder", type=Path)
     check.add_argument("--json", action="store_true")
@@ -647,7 +677,7 @@ def main() -> None:
 
     args = parser.parse_args()
     if args.command == "new":
-        create(args.folder, args.id, args.name)
+        create(args.folder, args.id, args.name, args.lua)
         print(f"Created {args.folder}")
         print_report(validate(args.folder), False)
         return

@@ -29,10 +29,12 @@
 ## สร้างโปรเจกต์ใหม่ด้วย Creator CLI
 
 ```powershell
-.\tools\creator\shyne-creator.ps1 new .\MyAvatar --id my.avatar --name "My Avatar"
+.\tools\creator\shyne-creator.ps1 new .\MyAvatar
 ```
 
-คำสั่งนี้สร้าง `avatar.json`, `model.bbmodel` และ README แบบ Zero-Lua ให้โดยอัตโนมัติ
+คำสั่งนี้ใช้ชื่อโฟลเดอร์เป็นชื่อ Avatar และสร้าง `avatar.json`, `model.bbmodel` และ README แบบ Zero-Lua ให้อัตโนมัติ ชื่อโฟลเดอร์ภาษาไทยใช้ได้ หากต้องการชื่อในเกมต่างออกไป ใช้ `--name "My Avatar"`; หากต้องการ ID คงที่ ใช้ `--id my.avatar`
+
+เพิ่ม `--lua` เฉพาะเมื่ออยากเขียนพฤติกรรมพิเศษ เครื่องมือจะสร้าง `script.lua` เริ่มต้นและเชื่อมกับ `avatar.json` ให้เอง
 
 ## เครื่องมือย้าย Avatar
 
