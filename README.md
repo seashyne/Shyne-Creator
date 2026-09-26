@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.10.0-alpha-26.3`
+- Shyne Creator: `2.10.1-alpha-26.3`
 - Minecraft: `26.3`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -134,6 +134,13 @@ neoforge/
 โค้ดใน `common` ต้องไม่ import Fabric หรือ NeoForge โดยตรง หากต้องเชื่อม Loader ให้สร้าง adapter ชื่อเดียวกันใน `fabric` และ `neoforge`
 
 ## Build
+
+## กติกาเวอร์ชัน
+
+เมื่อแก้บั๊กที่ทำให้พฤติกรรมของผู้เล่นหรือผู้สร้างเปลี่ยน ต้องเพิ่ม patch
+version ก่อน commit และ push เสมอ ทุก Minecraft branch ที่ได้รับแพตช์ต้องเพิ่ม
+version ของตัวเองด้วย ใช้ `tools/release_build.ps1` เพื่ออัปเดต metadata,
+runtime, เว็บไซต์, คู่มือ Creator Kit และชื่อ JAR ให้ตรงกัน
 
 Build และตรวจทั้งสอง Loader:
 

@@ -1,6 +1,6 @@
 # Shyne Creator SDK
 
-เอกสารนี้ตรงกับ Shyne Creator `2.10.0-alpha-26.3`
+เอกสารนี้ตรงกับ Shyne Creator `2.10.1-alpha-26.3`
 
 เอกสารนี้เป็นจุดเริ่มต้นสำหรับมอดเสริมที่สร้าง Power, Skill และ Avatar โดยไม่ฝัง content ตัวอย่างไว้ใน Shyne Creator
 
