@@ -557,9 +557,8 @@ public final class BbModelEntityRenderer {
         BbBoneDefinition leftNamed = null;
         BbBoneDefinition rightNamed = null;
         for (BbBoneDefinition bone : model.bones()) {
-            String name = normalizeBoneName(bone.name());
-            if (name.equals("leftarm")) leftNamed = bone;
-            if (name.equals("rightarm")) rightNamed = bone;
+            if (isHumanoidArmBone(bone, HumanoidArm.LEFT)) leftNamed = bone;
+            if (isHumanoidArmBone(bone, HumanoidArm.RIGHT)) rightNamed = bone;
         }
         if (leftNamed != null && rightNamed != null && Math.abs(leftNamed.pivotX() - rightNamed.pivotX()) > 0.01f) {
             BbBoneDefinition spatialRight = leftNamed.pivotX() < rightNamed.pivotX() ? leftNamed : rightNamed;
@@ -567,6 +566,22 @@ public final class BbModelEntityRenderer {
             return arm == HumanoidArm.RIGHT ? spatialRight : spatialLeft;
         }
         return arm == HumanoidArm.LEFT ? leftNamed : rightNamed;
+    }
+
+    /**
+     * Recognizes both conventional Blockbench arm names and the stable bone
+     * identifiers emitted by the Shyne Creator Kit for a Standard 2 humanoid.
+     */
+    private static boolean isHumanoidArmBone(BbBoneDefinition bone, HumanoidArm arm) {
+        if (bone == null) return false;
+        String side = arm == HumanoidArm.LEFT ? "left" : "right";
+        String expected = side + "arm";
+        String name = normalizeBoneName(bone.name());
+        String uuid = normalizeBoneName(bone.uuid());
+        return name.equals(expected)
+            || name.equals("humanoid" + expected)
+            || name.equals("shynehumanoid" + expected)
+            || uuid.equals("shynehumanoid" + expected);
     }
 
     /**
