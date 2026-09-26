@@ -158,15 +158,8 @@ public final class BbModelEntityRenderer {
         // from unexpectedly replacing the player's vanilla hand.
         if (armBone == null || (!AvatarRuntime.shouldHideLocalPlayer() && !dedicatedFirstPersonArm)) return false;
 
-        float canonicalPivotX = arm == HumanoidArm.RIGHT ? -5f : 5f;
-        float modelOffsetX = canonicalPivotX - armBone.pivotX();
-        float[] bounds = boneBounds(model, armBone.uuid());
-        float scaleX = minimumScale(bounds[3] - bounds[0], 4f);
-        float scaleY = minimumScale(bounds[4] - bounds[1], 12f);
-        float scaleZ = minimumScale(bounds[5] - bounds[2], 4f);
-
         UUID entityId = client.player.getUUID();
-        Map<String, BonePose> bonePoses = prepareBonePoses(model, entityId, VanillaPose.EMPTY);
+        Map<String, BonePose> bonePoses = prepareFirstPersonBonePoses(model, entityId, armBone, dedicatedFirstPersonArm);
         // Do not consume Minecraft's hand render when a script has hidden this
         // tree or when the FP pivot is only an empty helper group.
         if (!hasDrawableGeometry(model, entityId, armBone.uuid(), bonePoses)) return false;
@@ -182,15 +175,219 @@ public final class BbModelEntityRenderer {
             collector.order(1).submitCustomGeometry(
                 poseStack,
                 RenderTypes.entityCutout(texture),
-                (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, armBone.uuid(), modelOffsetX, scaleX, scaleY, scaleZ, false, Set.of())
+                (pose, vertices) -> renderFirstPersonModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, armBone, arm, false)
             );
             collector.order(2).submitCustomGeometry(
                 poseStack,
                 RenderTypes.entityTranslucent(texture),
-                (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, armBone.uuid(), modelOffsetX, scaleX, scaleY, scaleZ, true, Set.of())
+                (pose, vertices) -> renderFirstPersonModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, armBone, arm, true)
             );
         }
         return true;
+    }
+
+    private static void renderFirstPersonModel(
+        PoseStack.Pose pose,
+        VertexConsumer vertices,
+        BbModelDefinition model,
+        UUID entityId,
+        int lightCoords,
+        int targetTextureIndex,
+        int textureCount,
+        int textureWidth,
+        int textureHeight,
+        Map<String, BonePose> bonePoses,
+        BbBoneDefinition armBone,
+        HumanoidArm arm,
+        boolean translucentPass
+    ) {
+        float vanillaPivotX = arm == HumanoidArm.RIGHT ? -5.0f : 5.0f;
+        float vanillaPivotY = 2.0f;
+        float vanillaPivotZ = 0.0f;
+        float vanillaRotZ = arm == HumanoidArm.RIGHT ? 0.1f : -0.1f;
+
+        Matrix4f modelToWorld = new Matrix4f(pose.pose())
+            .translate(vanillaPivotX / 16.0f, vanillaPivotY / 16.0f, vanillaPivotZ / 16.0f)
+            .rotateZ(vanillaRotZ)
+            .scale(1.0f / 16.0f, -1.0f / 16.0f, 1.0f / 16.0f)
+            .translate(-armBone.pivotX(), -armBone.pivotY(), -armBone.pivotZ());
+
+        for (BbCubeDefinition cube : model.cubes()) {
+            if (!belongsToBone(model, cube.parentBoneUuid(), armBone.uuid())) continue;
+            BonePose bonePose = cube.parentBoneUuid() == null ? BonePose.IDENTITY : bonePoses.getOrDefault(cube.parentBoneUuid(), BonePose.IDENTITY);
+            if (!bonePose.visible) continue;
+            AvatarPartState cubePart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.cubePath(cube));
+            boolean cubeVisible = cube.visible();
+            if (cubePart != null && cubePart.visibilityControlled()) cubeVisible = cubePart.visible();
+            if (!cubeVisible) continue;
+
+            Matrix4f transform = new Matrix4f(modelToWorld).mul(bonePose.matrix);
+            if (cubePart != null) transform.translate(cubePart.posX(), cubePart.posY(), cubePart.posZ());
+            transform.translate(cube.originX(), cube.originY(), cube.originZ());
+            transform.rotateZYX(cube.rotationZ() * DEG_TO_RAD, cube.rotationY() * DEG_TO_RAD, cube.rotationX() * DEG_TO_RAD);
+            if (cubePart != null) {
+                transform.rotateZYX(cubePart.rotZ() * DEG_TO_RAD, cubePart.rotY() * DEG_TO_RAD, cubePart.rotX() * DEG_TO_RAD);
+                transform.scale(cubePart.scaleX(), cubePart.scaleY(), cubePart.scaleZ());
+            }
+            transform.translate(-cube.originX(), -cube.originY(), -cube.originZ());
+            int colorArgb = bonePose.colorArgb;
+            boolean emissive = bonePose.emissive;
+            if (cubePart != null && cubePart.renderControlled()) {
+                colorArgb = multiplyColor(colorArgb, cubePart.colorArgb());
+                emissive |= cubePart.emissive();
+            }
+            boolean translucent = ((colorArgb >>> 24) & 255) < 255;
+            if (translucent != translucentPass) continue;
+            emitCube(vertices, transform, cube, targetTextureIndex, textureCount, textureWidth, textureHeight, emissive ? 0x00F000F0 : lightCoords, colorArgb);
+        }
+        for (BbMeshDefinition mesh : model.meshes()) {
+            if (!belongsToBone(model, mesh.parentBoneUuid(), armBone.uuid())) continue;
+            BonePose bonePose = mesh.parentBoneUuid() == null ? BonePose.IDENTITY : bonePoses.getOrDefault(mesh.parentBoneUuid(), BonePose.IDENTITY);
+            if (!bonePose.visible) continue;
+            AvatarPartState meshPart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.meshPath(mesh));
+            boolean meshVisible = mesh.visible();
+            if (meshPart != null && meshPart.visibilityControlled()) meshVisible = meshPart.visible();
+            if (!meshVisible) continue;
+
+            Matrix4f transform = new Matrix4f(modelToWorld).mul(bonePose.matrix);
+            if (meshPart != null) transform.translate(meshPart.posX(), meshPart.posY(), meshPart.posZ());
+            transform.translate(mesh.originX(), mesh.originY(), mesh.originZ());
+            transform.rotateZYX(mesh.rotationZ() * DEG_TO_RAD, mesh.rotationY() * DEG_TO_RAD, mesh.rotationX() * DEG_TO_RAD);
+            if (meshPart != null) {
+                transform.rotateZYX(meshPart.rotZ() * DEG_TO_RAD, meshPart.rotY() * DEG_TO_RAD, meshPart.rotX() * DEG_TO_RAD);
+                transform.scale(meshPart.scaleX(), meshPart.scaleY(), meshPart.scaleZ());
+            }
+            int colorArgb = bonePose.colorArgb;
+            boolean emissive = bonePose.emissive;
+            if (meshPart != null && meshPart.renderControlled()) {
+                colorArgb = multiplyColor(colorArgb, meshPart.colorArgb());
+                emissive |= meshPart.emissive();
+            }
+            boolean translucent = ((colorArgb >>> 24) & 255) < 255;
+            if (translucent != translucentPass) continue;
+            emitMesh(vertices, transform, mesh, targetTextureIndex, textureCount, textureWidth, textureHeight, emissive ? 0x00F000F0 : lightCoords, colorArgb);
+        }
+    }
+
+    private static Map<String, BonePose> prepareFirstPersonBonePoses(
+        BbModelDefinition model,
+        UUID entityId,
+        BbBoneDefinition armRootBone,
+        boolean dedicatedFpArm
+    ) {
+        Map<String, BonePose> bonePoses = new HashMap<>(Math.max(16, model.bones().size() * 2));
+        var playback = ClientAnimationState.getPlayback(entityId);
+        List<AvatarAnimationLayer> layers = AvatarRuntime.animationLayers(entityId);
+        if (layers.isEmpty()) layers = ClientAnimationState.getRemoteAnimationLayers(entityId);
+        var activeAnimation = playback == null ? null : model.findAnimation(playback.animationName());
+        long now = System.currentTimeMillis();
+        AnimationExpressionContext expressionContext = expressionContext(entityId);
+        Set<String> visiting = new HashSet<>();
+        for (BbBoneDefinition bone : model.bones()) {
+            if (belongsToBone(model, bone.uuid(), armRootBone.uuid())) {
+                buildFirstPersonBonePose(
+                    model, bone, entityId, armRootBone, dedicatedFpArm,
+                    bonePoses, visiting, playback, layers, activeAnimation, now, expressionContext
+                );
+            }
+        }
+        return bonePoses;
+    }
+
+    private static BonePose buildFirstPersonBonePose(
+        BbModelDefinition model,
+        BbBoneDefinition bone,
+        UUID entityId,
+        BbBoneDefinition armRootBone,
+        boolean dedicatedFpArm,
+        Map<String, BonePose> cache,
+        Set<String> visiting,
+        seashyne.shynecore.animation.AnimationPlayback playback,
+        List<AvatarAnimationLayer> layers,
+        seashyne.shynecore.model.BbAnimationDefinition activeAnimation,
+        long now,
+        AnimationExpressionContext expressionContext
+    ) {
+        BonePose cached = cache.get(bone.uuid());
+        if (cached != null) return cached;
+        if (!visiting.add(bone.uuid())) return BonePose.IDENTITY;
+
+        BonePose parent = BonePose.IDENTITY;
+        if (!bone.uuid().equals(armRootBone.uuid()) && bone.parentUuid() != null) {
+            BbBoneDefinition parentBone = model.findBoneByUuid(bone.parentUuid());
+            if (parentBone != null && belongsToBone(model, parentBone.uuid(), armRootBone.uuid())) {
+                parent = buildFirstPersonBonePose(
+                    model, parentBone, entityId, armRootBone, dedicatedFpArm,
+                    cache, visiting, playback, layers, activeAnimation, now, expressionContext
+                );
+            }
+        }
+
+        Matrix4f matrix = new Matrix4f(parent.matrix);
+        boolean visible = parent.visible;
+        int colorArgb = parent.colorArgb;
+        boolean emissive = parent.emissive;
+
+        boolean isRootArm = bone.uuid().equals(armRootBone.uuid());
+        BbModelAnimator.Transform animation;
+        if (!dedicatedFpArm && isRootArm) {
+            animation = new BbModelAnimator.Transform(
+                new Vector3f(bone.pivotX(), bone.pivotY(), bone.pivotZ()),
+                new Vector3f(bone.rotationX(), bone.rotationY(), bone.rotationZ()),
+                new Vector3f(1, 1, 1)
+            );
+        } else if (playback == null && layers.isEmpty()) {
+            animation = new BbModelAnimator.Transform(
+                new Vector3f(bone.pivotX(), bone.pivotY(), bone.pivotZ()),
+                new Vector3f(bone.rotationX(), bone.rotationY(), bone.rotationZ()),
+                new Vector3f(1, 1, 1)
+            );
+        } else if (layers.isEmpty()) {
+            animation = BbModelAnimator.sampleBoneTransform(
+                model, playback.animationName(), bone.uuid(), playback.startedAtMillis(), now, 0f, expressionContext
+            );
+        } else {
+            animation = blendAnimationLayers(model, bone, layers, now, expressionContext);
+        }
+
+        AvatarPartState part = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.bonePath(bone.uuid()));
+        boolean luaControlsPosition = part != null && part.positionControlled();
+        boolean luaControlsRotation = part != null && part.rotationControlled();
+        boolean luaControlsScale = part != null && part.scaleControlled();
+
+        Vector3f pivot = luaControlsPosition
+            ? new Vector3f(bone.pivotX() + part.posX(), bone.pivotY() + part.posY(), bone.pivotZ() + part.posZ())
+            : new Vector3f(animation.pivot());
+        Vector3f rotation = luaControlsRotation
+            ? new Vector3f(bone.rotationX() + part.rotX(), bone.rotationY() + part.rotY(), bone.rotationZ() + part.rotZ())
+            : new Vector3f(animation.rotation());
+        Vector3f scale = luaControlsScale
+            ? new Vector3f(part.scaleX(), part.scaleY(), part.scaleZ())
+            : new Vector3f(animation.scale());
+
+        if (part != null && part.additiveRotationControlled()) {
+            rotation.add(part.additiveRotX(), part.additiveRotY(), part.additiveRotZ());
+        }
+
+        boolean localVisible = bone.visible();
+        if (part != null) {
+            if (part.visibilityControlled()) localVisible = part.visible();
+            if (part.renderControlled()) {
+                colorArgb = multiplyColor(colorArgb, part.colorArgb());
+                emissive |= part.emissive();
+            }
+        }
+        visible &= localVisible;
+
+        matrix.translate(pivot.x, pivot.y, pivot.z);
+        matrix.rotateZYX(rotation.z * DEG_TO_RAD, rotation.y * DEG_TO_RAD, rotation.x * DEG_TO_RAD);
+        matrix.scale(scale.x, scale.y, scale.z);
+        matrix.translate(-bone.pivotX(), -bone.pivotY(), -bone.pivotZ());
+
+        BonePose result = new BonePose(matrix, visible, colorArgb, emissive);
+        cache.put(bone.uuid(), result);
+        visiting.remove(bone.uuid());
+        return result;
     }
 
     private static void renderModel(

@@ -21,10 +21,13 @@ public abstract class FirstPersonArmMixin {
         )
     )
     private void shyne$renderRightAvatarArm(AvatarRenderer renderer, PoseStack poseStack, SubmitNodeCollector collector, int light, Identifier texture, boolean sleeve) {
-        if (!BbModelEntityRenderer.renderFirstPersonArm(poseStack, collector, light, HumanoidArm.RIGHT)) {
-            // A full-body Avatar hides the world player model. Never let a
-            // missing or unsupported first-person arm tree hide the player's
-            // interaction hand as well.
+        boolean rendered = false;
+        try {
+            rendered = BbModelEntityRenderer.renderFirstPersonArm(poseStack, collector, light, HumanoidArm.RIGHT);
+        } catch (Throwable ignored) {
+            rendered = false;
+        }
+        if (!rendered) {
             renderer.renderRightHand(poseStack, collector, light, texture, sleeve);
         }
     }
@@ -37,9 +40,13 @@ public abstract class FirstPersonArmMixin {
         )
     )
     private void shyne$renderLeftAvatarArm(AvatarRenderer renderer, PoseStack poseStack, SubmitNodeCollector collector, int light, Identifier texture, boolean sleeve) {
-        if (!BbModelEntityRenderer.renderFirstPersonArm(poseStack, collector, light, HumanoidArm.LEFT)) {
-            // See the right-hand path: first-person interaction must always
-            // retain a visible fallback hand.
+        boolean rendered = false;
+        try {
+            rendered = BbModelEntityRenderer.renderFirstPersonArm(poseStack, collector, light, HumanoidArm.LEFT);
+        } catch (Throwable ignored) {
+            rendered = false;
+        }
+        if (!rendered) {
             renderer.renderLeftHand(poseStack, collector, light, texture, sleeve);
         }
     }

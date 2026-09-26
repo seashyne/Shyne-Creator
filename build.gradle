@@ -112,11 +112,11 @@ tasks.register('collectReleaseJars', Sync) {
     description = 'Builds both loaders and stages only the current release JARs in build/releases.'
     dependsOn buildAll
     from(project(':fabric').layout.buildDirectory.dir('libs')) {
-        include '*.jar'
+        include "*${project.mod_version}.jar"
         exclude '*-sources.jar'
     }
     from(project(':neoforge').layout.buildDirectory.dir('libs')) {
-        include '*.jar'
+        include "*${project.mod_version}.jar"
         exclude '*-sources.jar'
     }
     into layout.buildDirectory.dir('releases')
