@@ -1,0 +1,19 @@
+{
+  "id": "shyne.custom_skill_hud_showcase",
+  "name": "Custom Skill & Mana HUD Showcase",
+  "description": "Showcases Avatar Custom Keybinds, Mana/Energy HUD, Skill VFX/SFX, 3D Magic Shield, and Action Wheel integration.",
+  "author": "Shyne Creator Team",
+  "version": "2.0.0",
+  "standard": "2.0",
+  "api": "2.0",
+  "main": "script.lua",
+  "model": "model.bbmodel",
+  "replace_vanilla": false,
+  "online_sync": true,
+  "permissions": [
+    "sound",
+    "particle",
+    "hud_render",
+    "command"
+  ]
+}

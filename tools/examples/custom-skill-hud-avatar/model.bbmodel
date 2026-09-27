@@ -1,0 +1,311 @@
+{
+  "meta": {
+    "format_version": "4.10",
+    "model_format": "free"
+  },
+  "name": "Custom Skill & Mana HUD Showcase Avatar",
+  "resolution": {
+    "width": 64,
+    "height": 64
+  },
+  "textures": [],
+  "elements": [
+    {
+      "name": "HeadCube",
+      "uuid": "elem-head",
+      "type": "cube",
+      "from": [-4, 24, -4],
+      "to": [4, 32, 4],
+      "origin": [0, 24, 0],
+      "faces": {
+        "north": {"uv": [8, 8, 16, 16]},
+        "south": {"uv": [24, 8, 32, 16]},
+        "east": {"uv": [0, 8, 8, 16]},
+        "west": {"uv": [16, 8, 24, 16]},
+        "up": {"uv": [8, 0, 16, 8]},
+        "down": {"uv": [16, 0, 24, 8]}
+      }
+    },
+    {
+      "name": "BodyCube",
+      "uuid": "elem-body",
+      "type": "cube",
+      "from": [-4, 12, -2],
+      "to": [4, 24, 2],
+      "origin": [0, 12, 0],
+      "faces": {
+        "north": {"uv": [20, 20, 28, 32]},
+        "south": {"uv": [32, 20, 40, 32]},
+        "east": {"uv": [16, 20, 20, 32]},
+        "west": {"uv": [28, 20, 32, 32]},
+        "up": {"uv": [20, 16, 28, 20]},
+        "down": {"uv": [28, 16, 36, 20]}
+      }
+    },
+    {
+      "name": "RightArmCube",
+      "uuid": "elem-right-arm",
+      "type": "cube",
+      "from": [-8, 12, -2],
+      "to": [-4, 24, 2],
+      "origin": [-5, 22, 0],
+      "faces": {
+        "north": {"uv": [44, 20, 48, 32]},
+        "south": {"uv": [52, 20, 56, 32]},
+        "east": {"uv": [40, 20, 44, 32]},
+        "west": {"uv": [48, 20, 52, 32]},
+        "up": {"uv": [44, 16, 48, 20]},
+        "down": {"uv": [48, 16, 52, 20]}
+      }
+    },
+    {
+      "name": "LeftArmCube",
+      "uuid": "elem-left-arm",
+      "type": "cube",
+      "from": [4, 12, -2],
+      "to": [8, 24, 2],
+      "origin": [5, 22, 0],
+      "faces": {
+        "north": {"uv": [36, 52, 40, 64]},
+        "south": {"uv": [44, 52, 48, 64]},
+        "east": {"uv": [32, 52, 36, 64]},
+        "west": {"uv": [40, 52, 44, 64]},
+        "up": {"uv": [36, 48, 40, 52]},
+        "down": {"uv": [40, 48, 44, 52]}
+      }
+    },
+    {
+      "name": "ShieldOrbNorth",
+      "uuid": "elem-shield-n",
+      "type": "cube",
+      "from": [-1.5, 16, -12],
+      "to": [1.5, 19, -9],
+      "origin": [0, 17.5, 0],
+      "faces": {
+        "north": {"uv": [0, 0, 3, 3]},
+        "south": {"uv": [0, 0, 3, 3]},
+        "east": {"uv": [0, 0, 3, 3]},
+        "west": {"uv": [0, 0, 3, 3]},
+        "up": {"uv": [0, 0, 3, 3]},
+        "down": {"uv": [0, 0, 3, 3]}
+      }
+    },
+    {
+      "name": "ShieldOrbSouth",
+      "uuid": "elem-shield-s",
+      "type": "cube",
+      "from": [-1.5, 16, 9],
+      "to": [1.5, 19, 12],
+      "origin": [0, 17.5, 0],
+      "faces": {
+        "north": {"uv": [0, 0, 3, 3]},
+        "south": {"uv": [0, 0, 3, 3]},
+        "east": {"uv": [0, 0, 3, 3]},
+        "west": {"uv": [0, 0, 3, 3]},
+        "up": {"uv": [0, 0, 3, 3]},
+        "down": {"uv": [0, 0, 3, 3]}
+      }
+    },
+    {
+      "name": "ShieldOrbEast",
+      "uuid": "elem-shield-e",
+      "type": "cube",
+      "from": [9, 16, -1.5],
+      "to": [12, 19, 1.5],
+      "origin": [0, 17.5, 0],
+      "faces": {
+        "north": {"uv": [0, 0, 3, 3]},
+        "south": {"uv": [0, 0, 3, 3]},
+        "east": {"uv": [0, 0, 3, 3]},
+        "west": {"uv": [0, 0, 3, 3]},
+        "up": {"uv": [0, 0, 3, 3]},
+        "down": {"uv": [0, 0, 3, 3]}
+      }
+    },
+    {
+      "name": "ShieldOrbWest",
+      "uuid": "elem-shield-w",
+      "type": "cube",
+      "from": [-12, 16, -1.5],
+      "to": [-9, 19, 1.5],
+      "origin": [0, 17.5, 0],
+      "faces": {
+        "north": {"uv": [0, 0, 3, 3]},
+        "south": {"uv": [0, 0, 3, 3]},
+        "east": {"uv": [0, 0, 3, 3]},
+        "west": {"uv": [0, 0, 3, 3]},
+        "up": {"uv": [0, 0, 3, 3]},
+        "down": {"uv": [0, 0, 3, 3]}
+      }
+    }
+  ],
+  "outliner": [
+    {
+      "name": "root",
+      "uuid": "bone-root",
+      "origin": [0, 0, 0],
+      "children": [
+        {
+          "name": "Body",
+          "uuid": "bone-body",
+          "origin": [0, 12, 0],
+          "children": [
+            "elem-body",
+            {
+              "name": "MagicShield",
+              "uuid": "bone-magic-shield",
+              "origin": [0, 17.5, 0],
+              "children": [
+                "elem-shield-n",
+                "elem-shield-s",
+                "elem-shield-e",
+                "elem-shield-w"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Head",
+          "uuid": "bone-head",
+          "origin": [0, 24, 0],
+          "children": ["elem-head"]
+        },
+        {
+          "name": "RightArm",
+          "uuid": "bone-right-arm",
+          "origin": [-5, 22, 0],
+          "children": ["elem-right-arm"]
+        },
+        {
+          "name": "LeftArm",
+          "uuid": "bone-left-arm",
+          "origin": [5, 22, 0],
+          "children": ["elem-left-arm"]
+        }
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "name": "idle",
+      "length": 2.0,
+      "loop": "loop",
+      "animators": {
+        "bone-body": {
+          "name": "Body",
+          "position": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 1.0, "vector": [0, 0.4, 0]},
+            {"time": 2.0, "vector": [0, 0, 0]}
+          ]
+        },
+        "bone-right-arm": {
+          "name": "RightArm",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 3]},
+            {"time": 1.0, "vector": [0, 0, 6]},
+            {"time": 2.0, "vector": [0, 0, 3]}
+          ]
+        },
+        "bone-left-arm": {
+          "name": "LeftArm",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, -3]},
+            {"time": 1.0, "vector": [0, 0, -6]},
+            {"time": 2.0, "vector": [0, 0, -3]}
+          ]
+        }
+      }
+    },
+    {
+      "name": "cast_dash",
+      "length": 0.6,
+      "loop": "once",
+      "animators": {
+        "bone-body": {
+          "name": "Body",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 0.2, "vector": [35, 0, 0]},
+            {"time": 0.6, "vector": [0, 0, 0]}
+          ]
+        },
+        "bone-right-arm": {
+          "name": "RightArm",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 0.2, "vector": [-60, 0, -20]},
+            {"time": 0.6, "vector": [0, 0, 0]}
+          ]
+        },
+        "bone-left-arm": {
+          "name": "LeftArm",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 0.2, "vector": [-60, 0, 20]},
+            {"time": 0.6, "vector": [0, 0, 0]}
+          ]
+        }
+      }
+    },
+    {
+      "name": "cast_ultimate",
+      "length": 1.2,
+      "loop": "once",
+      "animators": {
+        "bone-head": {
+          "name": "Head",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 0.3, "vector": [-30, 0, 0]},
+            {"time": 0.8, "vector": [-35, 0, 0]},
+            {"time": 1.2, "vector": [0, 0, 0]}
+          ]
+        },
+        "bone-right-arm": {
+          "name": "RightArm",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 0.3, "vector": [-120, -30, 45]},
+            {"time": 0.8, "vector": [-135, -45, 60]},
+            {"time": 1.2, "vector": [0, 0, 0]}
+          ]
+        },
+        "bone-left-arm": {
+          "name": "LeftArm",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 0.3, "vector": [-120, 30, -45]},
+            {"time": 0.8, "vector": [-135, 45, -60]},
+            {"time": 1.2, "vector": [0, 0, 0]}
+          ]
+        }
+      }
+    },
+    {
+      "name": "cast_shield",
+      "length": 0.8,
+      "loop": "once",
+      "animators": {
+        "bone-right-arm": {
+          "name": "RightArm",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 0.2, "vector": [-75, 45, 0]},
+            {"time": 0.6, "vector": [-75, 45, 0]},
+            {"time": 0.8, "vector": [0, 0, 0]}
+          ]
+        },
+        "bone-left-arm": {
+          "name": "LeftArm",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 0.2, "vector": [-75, -45, 0]},
+            {"time": 0.6, "vector": [-75, -45, 0]},
+            {"time": 0.8, "vector": [0, 0, 0]}
+          ]
+        }
+      }
+    }
+  ]
+}
