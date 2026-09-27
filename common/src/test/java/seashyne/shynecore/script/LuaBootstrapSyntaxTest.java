@@ -293,7 +293,45 @@ final class LuaBootstrapSyntaxTest {
                   and hover.pos.x < 10.2 and hover.vel.x < 0
                   and legacy.points[1].pos ~= 0 and writes["model.LegacyFloat"] ~= nil
                 """, "squapi-hover-physics-test").call();
-            assertTrue(squapiHoverPhysics.toboolean());
+            LuaValue figuraHostAndParticle = globals.load("""
+                local particle_spawned = nil
+                _shyne_particle_spawn = function(id, x, y, z, vx, vy, vz, r, g, b, scale)
+                  particle_spawned = {
+                    id = id,
+                    pos = { x = x, y = y, z = z },
+                    vel = { x = vx, y = vy, z = vz },
+                    r = r, g = g, b = b, scale = scale
+                  }
+                  return true
+                end
+
+                -- Test host proxy and avatar voice helpers
+                local host_ok = host ~= nil and host:isHost() == true and type(host:getAir()) == "number"
+                local avatar_voice_ok = avatar:isSpeaking() ~= nil and type(avatar:getVoiceLevel()) == "number"
+
+                -- Test particle.spawn with vector velocity
+                particle.spawn("minecraft:flame", vector.new(1, 2, 3), vector.new(0, 0.5, 0))
+                local flame_ok = particle_spawned ~= nil and particle_spawned.id == "minecraft:flame"
+                  and particle_spawned.pos.x == 1 and particle_spawned.vel.y == 0.5
+
+                -- Test particle.spawn with minecraft:dust and RGB color
+                particle.spawn("minecraft:dust", vector.new(4, 5, 6), {
+                  velocity = vector.new(0.1, 0.2, 0.3),
+                  color = { 1, 0.5, 0.2 },
+                  scale = 1.5
+                })
+                local dust_ok = particle_spawned ~= nil and particle_spawned.id == "minecraft:dust"
+                  and particle_spawned.vel.x == 0.1 and particle_spawned.r == 1
+                  and particle_spawned.g == 0.5 and particle_spawned.scale == 1.5
+
+                -- Test particles:newParticle (Figura compat)
+                particles:newParticle("minecraft:portal", { 7, 8, 9 }, { 0, 1, 0 })
+                local figura_particle_ok = particle_spawned ~= nil and particle_spawned.id == "minecraft:portal"
+                  and particle_spawned.pos.x == 7 and particle_spawned.vel.y == 1
+
+                return host_ok and avatar_voice_ok and flame_ok and dust_ok and figura_particle_ok
+                """, "figura-host-and-particle-test").call();
+            assertTrue(figuraHostAndParticle.toboolean());
     }
 
     private String avatarBootstrap() throws IOException {

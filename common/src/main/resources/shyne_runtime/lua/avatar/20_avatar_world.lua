@@ -126,10 +126,10 @@ function minecraft.command(command) return _minecraft_shyne_command(command) end
 -- MICROPHONE (Voice Audio State)
 -- ------------------------------------------------------------------------------
 microphone = {}
-function microphone.available() return _microphone_available() end
-function microphone.level() return _microphone_level() end
-function microphone.speaking() return _microphone_speaking() end
-function microphone.muted() return _microphone_muted() end
+function microphone.available() return type(_microphone_available) == "function" and _microphone_available() or false end
+function microphone.level(target) return type(_microphone_level) == "function" and _microphone_level(target) or 0 end
+function microphone.speaking(target) return type(_microphone_speaking) == "function" and _microphone_speaking(target) or false end
+function microphone.muted() return type(_microphone_muted) == "function" and _microphone_muted() or false end
 
 -- ------------------------------------------------------------------------------
 -- AUDIO (Custom Avatar Sounds & Vanilla SFX)
@@ -162,10 +162,53 @@ end
 -- PARTICLES
 -- ------------------------------------------------------------------------------
 particle = {}
-function particle.spawn(id, position, options)
-  position, options = vector.new(position or vector.zero()), options or {}
-  local velocity = vector.new(options.velocity or vector.zero())
-  return _shyne_particle_spawn(id, position.x, position.y, position.z, velocity.x, velocity.y, velocity.z)
+
+--- Spawns a Minecraft particle with position, velocity, and options (including RGB for dust).
+---@param id string Particle ID (e.g. "minecraft:portal", "minecraft:dust", "minecraft:flame")
+---@param position Vector3|table|nil Spawn position
+---@param options table|Vector3|nil Velocity vector OR options table { velocity, vel, color, rgb, scale }
+---@param extra_options table|nil Optional extra options if 3rd arg was a velocity vector
+---@return boolean
+function particle.spawn(id, position, options, extra_options)
+  position = vector.new(position or vector.zero())
+  options = options or {}
+  extra_options = extra_options or {}
+
+  local velocity = vector.zero()
+  local opt_table = extra_options
+
+  if type(options) == "table" then
+    if options.x or options[1] then
+      velocity = vector.new(options)
+    elseif options.velocity then
+      velocity = vector.new(options.velocity)
+      opt_table = options
+    elseif options.vel then
+      velocity = vector.new(options.vel)
+      opt_table = options
+    elseif options.vx or options.vy or options.vz then
+      velocity = vector.new(options.vx or 0, options.vy or 0, options.vz or 0)
+      opt_table = options
+    else
+      opt_table = options
+    end
+  end
+
+  local color = opt_table.color or opt_table.rgb
+  local r = color and (color.r or color[1] or 1) or opt_table.r
+  local g = color and (color.g or color[2] or 1) or opt_table.g
+  local b = color and (color.b or color[3] or 1) or opt_table.b
+  local scale = opt_table.scale or opt_table.size or 1
+
+  return _shyne_particle_spawn(
+    tostring(id or "minecraft:crit"),
+    position.x, position.y, position.z,
+    velocity.x, velocity.y, velocity.z,
+    r and tonumber(r) or nil,
+    g and tonumber(g) or nil,
+    b and tonumber(b) or nil,
+    scale and tonumber(scale) or nil
+  )
 end
 
 -- ------------------------------------------------------------------------------

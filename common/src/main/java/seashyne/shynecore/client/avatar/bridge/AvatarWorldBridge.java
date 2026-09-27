@@ -86,6 +86,9 @@ public final class AvatarWorldBridge {
                         .unwrapKey().map(entryKey -> entryKey.identifier().toString()).orElse(""));
                     case "client.paused" -> LuaValue.valueOf(client.isPaused());
                     case "client.first_person" -> LuaValue.valueOf(client.options.getCameraType().isFirstPerson());
+                    case "client.chat_open" -> LuaValue.valueOf(client.gui != null && client.gui.screen() instanceof net.minecraft.client.gui.screens.ChatScreen);
+                    case "player.voice_level" -> LuaValue.valueOf(seashyne.shynecore.voice.ShyneMicrophoneState.getSpeakerSnapshot(player.getUUID()).level());
+                    case "player.speaking" -> LuaValue.valueOf(seashyne.shynecore.voice.ShyneMicrophoneState.getSpeakerSnapshot(player.getUUID()).speaking());
                     default -> LuaValue.NIL;
                 };
             }

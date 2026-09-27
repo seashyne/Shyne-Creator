@@ -283,6 +283,26 @@ function player:isGliding() return _shyne_read("player.fall_flying") or false en
 function player:isSwingingArm() return _shyne_read("player.using_item") or false end
 function player:getName() return _shyne_read("player.name") or "Player" end
 
+---@class FiguraHost
+host = host or {}
+function host:isHost() return true end
+function host:isChatOpen() return _shyne_read("client.chat_open") or false end
+function host:isVoiceActive() return microphone and microphone.speaking and microphone.speaking() or false end
+function host:isMuted() return microphone and microphone.muted and microphone.muted() or false end
+function host:getVoiceLevel() return microphone and microphone.level and microphone.level() or 0 end
+function host:getPos() return player:getPos() end
+function host:isSneaking() return player:isSneaking() end
+function host:isSprinting() return player:isSprinting() end
+function host:isFlying() return player:isGliding() end
+function host:getAir() return 300 end
+
+if avatar then
+  function avatar:isSpeaking() return microphone and microphone.speaking and microphone.speaking() or false end
+  function avatar:getVoiceLevel() return microphone and microphone.level and microphone.level() or 0 end
+  function avatar:canRender() return true end
+  function avatar:isLoaded() return true end
+end
+
 ---@class FiguraWorld
 world = world or {}
 function world.getTime() return _shyne_read("world.time") or 0 end
@@ -301,15 +321,11 @@ function particles:newParticle(particle_type, pos, vel)
   pos = pos or { 0, 0, 0 }
   vel = vel or { 0, 0, 0 }
   if particle and particle.spawn then
-    return particle.spawn(tostring(particle_type or "minecraft:crit"), {
-      x = pos.x or pos[1] or 0,
-      y = pos.y or pos[2] or 0,
-      z = pos.z or pos[3] or 0
-    }, {
-      vx = vel.x or vel[1] or 0,
-      vy = vel.y or vel[2] or 0,
-      vz = vel.z or vel[3] or 0
-    })
+    return particle.spawn(
+      tostring(particle_type or "minecraft:crit"),
+      vector.new(pos.x or pos[1] or 0, pos.y or pos[2] or 0, pos.z or pos[3] or 0),
+      vector.new(vel.x or vel[1] or 0, vel.y or vel[2] or 0, vel.z or vel[3] or 0)
+    )
   end
 end
 

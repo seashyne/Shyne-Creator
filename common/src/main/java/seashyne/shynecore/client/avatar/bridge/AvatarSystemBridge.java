@@ -1,10 +1,12 @@
 package seashyne.shynecore.client.avatar.bridge;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import java.util.UUID;
 import org.luaj.vm2.Globals;
 import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaTable;
@@ -192,13 +194,37 @@ public final class AvatarSystemBridge {
                 if (!state.permissionAllowed(AvatarPermission.PARTICLE)) return LuaValue.FALSE;
                 Minecraft client = Minecraft.getInstance();
                 if (client.level == null || particlesThisTick >= 256) return LuaValue.FALSE;
-                var id = Identifier.tryParse(args.arg(1).optjstring(""));
+                String rawId = args.arg(1).optjstring("");
+                if (rawId.isBlank()) return LuaValue.FALSE;
+                if (!rawId.contains(":")) rawId = "minecraft:" + rawId;
+                var id = Identifier.tryParse(rawId);
                 if (id == null) return LuaValue.FALSE;
+
+                double posX = args.arg(2).optdouble(0);
+                double posY = args.arg(3).optdouble(0);
+                double posZ = args.arg(4).optdouble(0);
+                double velX = args.arg(5).optdouble(0);
+                double velY = args.arg(6).optdouble(0);
+                double velZ = args.arg(7).optdouble(0);
+
+                if ("minecraft:dust".equals(rawId)) {
+                    float r = (float) Math.max(0.0, Math.min(1.0, args.arg(8).optdouble(1.0)));
+                    float g = (float) Math.max(0.0, Math.min(1.0, args.arg(9).optdouble(1.0)));
+                    float b = (float) Math.max(0.0, Math.min(1.0, args.arg(10).optdouble(1.0)));
+                    float scale = (float) Math.max(0.1, Math.min(4.0, args.arg(11).optdouble(1.0)));
+                    int rInt = Math.max(0, Math.min(255, (int) (r * 255)));
+                    int gInt = Math.max(0, Math.min(255, (int) (g * 255)));
+                    int bInt = Math.max(0, Math.min(255, (int) (b * 255)));
+                    int packedColor = (rInt << 16) | (gInt << 8) | bInt;
+                    DustParticleOptions dust = new DustParticleOptions(packedColor, scale);
+                    client.level.addParticle(dust, posX, posY, posZ, velX, velY, velZ);
+                    particlesThisTick++;
+                    return LuaValue.TRUE;
+                }
+
                 var type = BuiltInRegistries.PARTICLE_TYPE.get(id).map(ref -> ref.value()).orElse(null);
                 if (!(type instanceof SimpleParticleType particle)) return LuaValue.FALSE;
-                client.level.addParticle(particle,
-                    args.arg(2).optdouble(0), args.arg(3).optdouble(0), args.arg(4).optdouble(0),
-                    args.arg(5).optdouble(0), args.arg(6).optdouble(0), args.arg(7).optdouble(0));
+                client.level.addParticle(particle, posX, posY, posZ, velX, velY, velZ);
                 particlesThisTick++;
                 return LuaValue.TRUE;
             }
@@ -207,11 +233,21 @@ public final class AvatarSystemBridge {
         globals.set("_microphone_available", new ZeroArgFunction() {
             @Override public LuaValue call() { return LuaValue.valueOf(state.permissionAllowed(AvatarPermission.MICROPHONE) && ShyneMicrophoneState.snapshot().available()); }
         });
-        globals.set("_microphone_level", new ZeroArgFunction() {
-            @Override public LuaValue call() { return LuaValue.valueOf(state.permissionAllowed(AvatarPermission.MICROPHONE) ? ShyneMicrophoneState.snapshot().level() : 0.0D); }
+        globals.set("_microphone_level", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                if (!state.permissionAllowed(AvatarPermission.MICROPHONE)) return LuaValue.ZERO;
+                String idStr = args.arg(1).optjstring(null);
+                UUID target = idStr != null && !idStr.isBlank() ? parseUuidSafe(idStr) : state.boundEntityId();
+                return LuaValue.valueOf(ShyneMicrophoneState.getSpeakerSnapshot(target).level());
+            }
         });
-        globals.set("_microphone_speaking", new ZeroArgFunction() {
-            @Override public LuaValue call() { return LuaValue.valueOf(state.permissionAllowed(AvatarPermission.MICROPHONE) && ShyneMicrophoneState.snapshot().speaking()); }
+        globals.set("_microphone_speaking", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                if (!state.permissionAllowed(AvatarPermission.MICROPHONE)) return LuaValue.FALSE;
+                String idStr = args.arg(1).optjstring(null);
+                UUID target = idStr != null && !idStr.isBlank() ? parseUuidSafe(idStr) : state.boundEntityId();
+                return LuaValue.valueOf(ShyneMicrophoneState.getSpeakerSnapshot(target).speaking());
+            }
         });
         globals.set("_microphone_muted", new ZeroArgFunction() {
             @Override public LuaValue call() { return LuaValue.valueOf(!state.permissionAllowed(AvatarPermission.MICROPHONE) || ShyneMicrophoneState.snapshot().muted()); }
@@ -371,5 +407,14 @@ public final class AvatarSystemBridge {
             }
         } catch (Throwable ignored) {}
         return Component.literal(json);
+    }
+
+    private static UUID parseUuidSafe(String str) {
+        if (str == null || str.isBlank()) return null;
+        try {
+            return UUID.fromString(str);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

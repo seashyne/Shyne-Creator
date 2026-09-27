@@ -2,6 +2,7 @@ package seashyne.shynecore.voice;
 
 import de.maxhenkel.voicechat.api.VoicechatApi;
 import de.maxhenkel.voicechat.api.VoicechatPlugin;
+import de.maxhenkel.voicechat.api.events.ClientReceiveSoundEvent;
 import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
 import de.maxhenkel.voicechat.api.events.ClientVoicechatConnectionEvent;
 import de.maxhenkel.voicechat.api.events.EventRegistration;
@@ -24,6 +25,16 @@ public final class ShyneVoicechatPlugin implements VoicechatPlugin {
         registration.registerEvent(ClientSoundEvent.class, event ->
             ShyneMicrophoneState.acceptAudio(event.getRawAudio(), event.isWhispering())
         );
+        registration.registerEvent(ClientReceiveSoundEvent.EntitySound.class, event -> {
+            if (event.getId() != null) {
+                ShyneMicrophoneState.acceptRemoteAudio(event.getId(), event.getRawAudio(), false);
+            }
+        });
+        registration.registerEvent(ClientReceiveSoundEvent.LocationalSound.class, event -> {
+            if (event.getId() != null) {
+                ShyneMicrophoneState.acceptRemoteAudio(event.getId(), event.getRawAudio(), false);
+            }
+        });
         registration.registerEvent(MicrophoneMuteEvent.class, event ->
             ShyneMicrophoneState.setMuted(event.isDisabled())
         );
