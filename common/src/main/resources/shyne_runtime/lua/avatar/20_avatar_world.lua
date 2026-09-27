@@ -84,6 +84,20 @@ function minecraft.player.rotation() return qvec("player.rot") end
 function minecraft.player.look() return qvec("player.look") end
 function minecraft.player.health() return read("player.health") or 0 end
 function minecraft.player.max_health() return read("player.max_health") or 0 end
+function minecraft.player.alive() return read("player.alive") or (minecraft.player.health() > 0) end
+function minecraft.player.set_velocity(vx, vy, vz)
+  if type(vx) == "table" then
+    return _shyne_player_set_velocity(vx.x or vx[1] or 0, vx.y or vx[2] or 0, vx.z or vx[3] or 0)
+  end
+  return _shyne_player_set_velocity(vx, vy, vz)
+end
+function minecraft.player.add_velocity(vx, vy, vz)
+  local cur = minecraft.player.velocity()
+  if type(vx) == "table" then
+    return minecraft.player.set_velocity(cur.x + (vx.x or vx[1] or 0), cur.y + (vx.y or vx[2] or 0), cur.z + (vx.z or vx[3] or 0))
+  end
+  return minecraft.player.set_velocity(cur.x + (vx or 0), cur.y + (vy or 0), cur.z + (vz or 0))
+end
 function minecraft.player.body_yaw() return read("player.body_yaw") or 0 end
 function minecraft.player.pose() return read("player.pose") or "STANDING" end
 

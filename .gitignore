@@ -16,3 +16,5 @@ docs-site/dist/
 docs-site/*.tsbuildinfo
 __pycache__/
 *.pyc
+logs/
+**/logs/

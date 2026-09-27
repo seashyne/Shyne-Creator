@@ -91,10 +91,23 @@ public final class AvatarWorldBridge {
                     case "client.chat_open" -> LuaValue.valueOf(client.gui != null && client.gui.screen() instanceof net.minecraft.client.gui.screens.ChatScreen);
                     case "player.voice_level" -> LuaValue.valueOf(seashyne.shynecore.voice.ShyneMicrophoneState.getSpeakerSnapshot(player.getUUID()).level());
                     case "player.speaking" -> LuaValue.valueOf(seashyne.shynecore.voice.ShyneMicrophoneState.getSpeakerSnapshot(player.getUUID()).speaking());
+                    case "player.alive" -> LuaValue.valueOf(player.isAlive());
                     case "world.players" -> nearbyPlayers(player, args.arg(2).optdouble(32.0), args.arg(3).optboolean(false));
                     case "world.entities" -> nearbyEntities(player, args.arg(2).optdouble(16.0));
                     default -> LuaValue.NIL;
                 };
+            }
+        });
+
+        globals.set("_shyne_player_set_velocity", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                Minecraft client = Minecraft.getInstance();
+                if (client.player == null) return LuaValue.FALSE;
+                double vx = args.arg(1).optdouble(client.player.getDeltaMovement().x);
+                double vy = args.arg(2).optdouble(client.player.getDeltaMovement().y);
+                double vz = args.arg(3).optdouble(client.player.getDeltaMovement().z);
+                client.player.setDeltaMovement(vx, vy, vz);
+                return LuaValue.TRUE;
             }
         });
     }

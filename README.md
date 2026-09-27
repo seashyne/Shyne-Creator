@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.10.3-alpha-26.3`
+- Shyne Creator: `2.10.4-alpha-26.3`
 - Minecraft: `26.3`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -21,7 +21,7 @@ Shyne Creator เป็น runtime สำหรับใช้ Avatar และ 
 1. เลือก JAR ให้ตรงกับ Fabric หรือ NeoForge; Fabric ต้องติดตั้ง Fabric API เพิ่ม
 2. ใส่ JAR ในโฟลเดอร์ `mods` แล้วเปิด Minecraft 26.3
 3. เข้าโลกแล้วกด `H` หรือเปิด `Esc → อวตาร`
-4. กด `เปิดโฟลเดอร์` เพื่อนำ Avatar มาไว้ใน `shyne-mods/avatars` หรือเปิด Cloud จากปุ่มด้านบนเมื่อเปิดใช้งานไว้
+4. กด `เปิดโฟลเดอร์` เพื่อนำ Avatar (ทั้งแบบโฟลเดอร์ หรือไฟล์ `.zip` สำเร็จรูป วางได้โดยตรงทันที) มาไว้ใน `shyne-mods/avatars` หรือเปิด Cloud จากปุ่มด้านบนเมื่อเปิดใช้งานไว้
 5. ถ้าเพิ่มไฟล์เอง ให้กลับเข้าเกมแล้วกด `สแกนไฟล์` จากนั้นกด `เลือกใช้` โดยไม่ต้องตั้งค่า Avatar เพิ่ม
 6. กด `G` เพื่อเปิดท่าทางหรือคำสั่งที่ Avatar นั้นเตรียมไว้ และกด `O` เพื่อเปิดการตั้งค่า Shyne
 
@@ -47,6 +47,23 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 `accessory` เป็นค่าเริ่มต้นแบบ overlay ที่ปลอดภัยและไม่ซ่อนตัวผู้เล่น vanilla มาตรฐานนี้ใช้ Shyne runtime โดยตรง ไม่พึ่ง Figura และไม่รับรอง compatibility กับสคริปต์ Figura/สคริปต์ legacy อ่านสัญญาและตัวอย่างทั้งหมดที่ [SHYNE_STANDARD_2_TH.md](SHYNE_STANDARD_2_TH.md)
 
 เครื่องมือตั้ง profile, attachment, role, animation state และ export manifest จาก Blockbench อยู่ที่ [Shyne Blockbench Plugin](tools/blockbench/README_TH.md)
+
+## 2.10.4-alpha Modular Scripting, Direct ZIP, Signature Weapons & Physics Velocity
+
+- **โหลดไฟล์ `.zip` อวตารได้โดยตรง**: ผู้เล่นสามารถนำไฟล์แพ็กอวตาร `.zip` มาวางไว้ใน `.minecraft/shyne-mods/avatars/` ได้ทันทีโดยไม่ต้องแตกไฟล์ ระบบจะตรวจสอบความปลอดภัย (Zip-Slip protection), ตรวจ manifest และแคชเพื่อโหลดเข้าสู่เกมอัตโนมัติ
+- **เขียนสคริปต์ Lua แบบแยกโมดูล (`require`)**: รองรับการแยกโค้ดสคริปต์เป็นโฟลเดอร์ย่อย เช่น `skills/`, `ui/`, `weapons/`, `config.lua` ผ่านระบบ `require(...)` พร้อมการป้องกัน circular dependency และ recursive hot-reload เมื่อกดรีโหลดอวตาร
+- **Player Physics & Velocity API**: เพิ่มฟังก์ชัน `player:setVelocity(vx, vy, vz)` และ `player:addVelocity(vx, vy, vz)` ทั้งใน Shyne Lua และ Figura Compatibility Layer สามารถทำระบบ Super Jump, Anti-Gravity Hover (ลอยตัว), และ Sky Dash / Flight ได้อย่างสมจริง
+- **ตรวจจับผู้เล่นและเอนทิตีรอบตัว**: เพิ่ม API `world.getPlayers(radius)` และ `world.getEntities(radius)` สำหรับสแกนหาเพื่อนร่วมทีมและมอนสเตอร์ในระยะ พร้อมข้อมูลพิกัด ระยะห่าง และพลังชีวิต (HP)
+- **ระบบอาวุธประจำตัว (Signature Weapon)**: รองรับการผูกชิ้นส่วนอาวุธ 3D เข้ากับกระดูกมือหรือหลัง สลับสถานะเก็บดาบ/ชักดาบ พร้อมท่าทางโจมตีและคลื่นดาบฟันระยะไกล (Blade Wave)
+- **วัดความเร็วและการเสียชีวิต**: วัดความเร็วจริงของผู้เล่น (m/s) และสถานะ `player:isAlive()` สำหรับเอฟเฟกต์แดช ท่าวิ่งลมกรด และการจัดการตอนเกิดใหม่
+- **Avatar Showcase**: เพิ่มตัวอย่าง `modular-signature-weapon-avatar` (ทั้งแบบโฟลเดอร์และ `.zip`) ใน `tools/examples/`
+
+## 2.10.3-alpha Radial Action Wheel & Custom Sound Player
+
+- **8-Slot Radial Action Wheel GUI**: เมนูวงล้อทางลัด 8 ช่อง กด `B` (ตั้งปุ่มได้ใน Controls) รองรับการเลือกด้วยเมาส์, ปุ่มตัวเลข 1-8, เลื่อนหน้าด้วยล้อเมาส์ และ badge บอกสถานะเปิด/ปิด
+- **Custom Sound Player**: เล่นไฟล์เสียง `.ogg` จากโฟลเดอร์ `sounds/` ของอวตารได้โดยตรงผ่าน `sounds:playSound("name")` ไม่ต้องทำ Resource Pack
+- **First-Person Custom Arm**: เรนเดอร์แขน 3D จากโมเดล Blockbench ในมุมมองบุคคลที่หนึ่ง
+- **ตัวอย่างโมเดล Showcase**: เพิ่ม `action-wheel-showcase-avatar` ใน `tools/examples/`
 
 ## 2.9.1-alpha Creator Details
 

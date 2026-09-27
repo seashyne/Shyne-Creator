@@ -47,11 +47,21 @@ public final class AvatarLoader {
     private static void collectAvatarRoots(Path container, Set<Path> roots) {
         Path normalized = container.toAbsolutePath().normalize();
         if (!Files.isDirectory(normalized)) return;
+        Path extractedCache = normalized.resolve(".extracted");
         try (var stream = Files.list(normalized)) {
-            stream.filter(Files::isDirectory)
-                .map(path -> path.toAbsolutePath().normalize())
-                .filter(path -> Files.isRegularFile(path.resolve("avatar.json")))
-                .forEach(roots::add);
+            for (Path path : stream.toList()) {
+                Path abs = path.toAbsolutePath().normalize();
+                if (Files.isDirectory(abs)) {
+                    if (!abs.getFileName().toString().startsWith(".") && Files.isRegularFile(abs.resolve("avatar.json"))) {
+                        roots.add(abs);
+                    }
+                } else if (Files.isRegularFile(abs) && abs.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".zip")) {
+                    Path root = AvatarZipExtractor.extractIfZip(abs, extractedCache);
+                    if (root != null && Files.isRegularFile(root.resolve("avatar.json"))) {
+                        roots.add(root);
+                    }
+                }
+            }
         } catch (IOException e) {
             ShyneCore.LOGGER.warn("[AvatarLoader] Could not list avatars in {}: {}", normalized, e.getMessage());
         }

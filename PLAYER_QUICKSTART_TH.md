@@ -29,21 +29,20 @@ Shyne Creator เป็น runtime สำหรับเปิดใช้ Avata
 
 ### วิธีติดตั้งไฟล์ Avatar ที่มีอยู่
 
-1. ในคลังอวตาร กด `เปิดโฟลเดอร์` ที่ด้านล่าง
-2. ถ้าได้รับไฟล์ ZIP ให้แตกไฟล์ก่อน
-3. วางโฟลเดอร์ Avatar ลงใน `shyne-mods/avatars/<avatar-id>/`
-4. ภายในโฟลเดอร์ต้องมีอย่างน้อย `avatar.json` และ `model.bbmodel`
-5. กลับเข้าเกมแล้วกด `สแกนไฟล์`
+1. ในคลังอวตาร กด `เปิดโฟลเดอร์` ที่ด้านล่าง (จะเปิดโฟลเดอร์ `.minecraft/shyne-mods/avatars/`)
+2. **รองรับไฟล์ `.zip` โดยตรง**: สามารถวางไฟล์ `my-avatar.zip` ลงในโฟลเดอร์ `shyne-mods/avatars/` ได้ทันทีโดยไม่ต้องแตกไฟล์! ระบบจะตรวจสอบและโหลดให้โดยอัตโนมัติ
+3. หรือวางแบบโฟลเดอร์ปกติ `shyne-mods/avatars/<avatar-id>/` ที่มี `avatar.json` และ `model.bbmodel`
+4. กลับเข้าเกมแล้วกด `สแกนไฟล์`
 
 โครงสร้างที่ถูกต้อง:
 
 ```text
-.minecraft/shyne-mods/avatars/my-avatar/
-├─ avatar.json
-└─ model.bbmodel
+.minecraft/shyne-mods/avatars/
+├─ my-avatar.zip           (แบบ ZIP วางได้โดยตรง)
+└─ my-avatar/              (หรือแบบโฟลเดอร์)
+   ├─ avatar.json
+   └─ model.bbmodel
 ```
-
-อย่าวางไฟล์ ZIP ไว้ในโฟลเดอร์ Avatar โดยไม่แตกไฟล์ และอย่าให้เกิดโฟลเดอร์ซ้อน เช่น `my-avatar/my-avatar/avatar.json`
 
 ### วิธีเสริม: ค้นหาจาก Cloud
 

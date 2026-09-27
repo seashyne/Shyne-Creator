@@ -282,6 +282,22 @@ function player:isOnGround() return _shyne_read("player.on_ground") or false end
 function player:isGliding() return _shyne_read("player.fall_flying") or false end
 function player:isSwingingArm() return _shyne_read("player.using_item") or false end
 function player:getName() return _shyne_read("player.name") or "Player" end
+function player:isAlive() return _shyne_read("player.alive") or (self:getHealth() > 0) end
+function player:getHealth() return _shyne_read("player.health") or 20 end
+function player:getMaxHealth() return _shyne_read("player.max_health") or 20 end
+function player:setVelocity(vx, vy, vz)
+  if type(vx) == "table" then
+    return _shyne_player_set_velocity(vx.x or vx[1] or 0, vx.y or vx[2] or 0, vx.z or vx[3] or 0)
+  end
+  return _shyne_player_set_velocity(vx, vy, vz)
+end
+function player:addVelocity(vx, vy, vz)
+  local cur = self:getVelocity()
+  if type(vx) == "table" then
+    return self:setVelocity(cur.x + (vx.x or vx[1] or 0), cur.y + (vx.y or vx[2] or 0), cur.z + (vx.z or vx[3] or 0))
+  end
+  return self:setVelocity(cur.x + (vx or 0), cur.y + (vy or 0), cur.z + (vz or 0))
+end
 
 ---@class FiguraHost
 host = host or {}

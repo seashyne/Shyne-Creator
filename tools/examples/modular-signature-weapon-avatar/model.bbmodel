@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "format_version": "4.10",
+    "model_format": "free"
+  },
+  "name": "Modular Signature Weapon Avatar",
+  "resolution": {
+    "width": 64,
+    "height": 64
+  },
+  "textures": [],
+  "elements": [
+    {
+      "name": "HeadCube",
+      "uuid": "elem-head",
+      "type": "cube",
+      "from": [-4, 24, -4],
+      "to": [4, 32, 4],
+      "origin": [0, 24, 0],
+      "faces": {
+        "north": {"uv": [8, 8, 16, 16]},
+        "south": {"uv": [24, 8, 32, 16]},
+        "east": {"uv": [0, 8, 8, 16]},
+        "west": {"uv": [16, 8, 24, 16]},
+        "up": {"uv": [8, 0, 16, 8]},
+        "down": {"uv": [16, 0, 24, 8]}
+      }
+    },
+    {
+      "name": "BodyCube",
+      "uuid": "elem-body",
+      "type": "cube",
+      "from": [-4, 12, -2],
+      "to": [4, 24, 2],
+      "origin": [0, 12, 0],
+      "faces": {
+        "north": {"uv": [20, 20, 28, 32]},
+        "south": {"uv": [32, 20, 40, 32]},
+        "east": {"uv": [16, 20, 20, 32]},
+        "west": {"uv": [28, 20, 32, 32]},
+        "up": {"uv": [20, 16, 28, 20]},
+        "down": {"uv": [28, 16, 36, 20]}
+      }
+    },
+    {
+      "name": "SheathedBladeCube",
+      "uuid": "elem-sheath",
+      "type": "cube",
+      "from": [-1, 10, 2.5],
+      "to": [1, 26, 3.5],
+      "origin": [0, 18, 3],
+      "rotation": [0, 0, -25],
+      "faces": {
+        "north": {"uv": [0, 0, 2, 16]},
+        "south": {"uv": [2, 0, 4, 16]},
+        "east": {"uv": [4, 0, 5, 16]},
+        "west": {"uv": [5, 0, 6, 16]},
+        "up": {"uv": [0, 0, 2, 1]},
+        "down": {"uv": [2, 0, 4, 1]}
+      }
+    },
+    {
+      "name": "RightArmCube",
+      "uuid": "elem-right-arm",
+      "type": "cube",
+      "from": [-8, 12, -2],
+      "to": [-4, 24, 2],
+      "origin": [-5, 22, 0],
+      "faces": {
+        "north": {"uv": [44, 20, 48, 32]},
+        "south": {"uv": [52, 20, 56, 32]},
+        "east": {"uv": [40, 20, 44, 32]},
+        "west": {"uv": [48, 20, 52, 32]},
+        "up": {"uv": [44, 16, 48, 20]},
+        "down": {"uv": [48, 16, 52, 20]}
+      }
+    },
+    {
+      "name": "HandBladeCube",
+      "uuid": "elem-hand-blade",
+      "type": "cube",
+      "from": [-6.5, 4, -18],
+      "to": [-5.5, 6, 8],
+      "origin": [-6, 12, 0],
+      "faces": {
+        "north": {"uv": [0, 0, 1, 2]},
+        "south": {"uv": [1, 0, 2, 2]},
+        "east": {"uv": [0, 0, 16, 2]},
+        "west": {"uv": [0, 2, 16, 4]},
+        "up": {"uv": [0, 4, 16, 5]},
+        "down": {"uv": [0, 5, 16, 6]}
+      }
+    },
+    {
+      "name": "LeftArmCube",
+      "uuid": "elem-left-arm",
+      "type": "cube",
+      "from": [4, 12, -2],
+      "to": [8, 24, 2],
+      "origin": [5, 22, 0],
+      "faces": {
+        "north": {"uv": [36, 52, 40, 64]},
+        "south": {"uv": [44, 52, 48, 64]},
+        "east": {"uv": [32, 52, 36, 64]},
+        "west": {"uv": [40, 52, 44, 64]},
+        "up": {"uv": [36, 48, 40, 52]},
+        "down": {"uv": [40, 48, 44, 52]}
+      }
+    }
+  ],
+  "outliner": [
+    {
+      "name": "root",
+      "uuid": "bone-root",
+      "origin": [0, 0, 0],
+      "children": [
+        {
+          "name": "Body",
+          "uuid": "bone-body",
+          "origin": [0, 12, 0],
+          "children": [
+            "elem-body",
+            {
+              "name": "SheathedBlade",
+              "uuid": "bone-sheath",
+              "origin": [0, 18, 3],
+              "children": ["elem-sheath"]
+            }
+          ]
+        },
+        {
+          "name": "Head",
+          "uuid": "bone-head",
+          "origin": [0, 24, 0],
+          "children": ["elem-head"]
+        },
+        {
+          "name": "RightArm",
+          "uuid": "bone-right-arm",
+          "origin": [-5, 22, 0],
+          "children": [
+            "elem-right-arm",
+            {
+              "name": "SignatureBlade",
+              "uuid": "bone-signature-blade",
+              "origin": [-6, 12, 0],
+              "children": ["elem-hand-blade"]
+            }
+          ]
+        },
+        {
+          "name": "LeftArm",
+          "uuid": "bone-left-arm",
+          "origin": [5, 22, 0],
+          "children": ["elem-left-arm"]
+        }
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "name": "idle",
+      "length": 2.0,
+      "loop": "loop",
+      "animators": {
+        "bone-body": {
+          "name": "Body",
+          "position": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 1.0, "vector": [0, 0.3, 0]},
+            {"time": 2.0, "vector": [0, 0, 0]}
+          ]
+        }
+      }
+    },
+    {
+      "name": "slash_attack",
+      "length": 0.5,
+      "loop": "once",
+      "animators": {
+        "bone-right-arm": {
+          "name": "RightArm",
+          "rotation": [
+            {"time": 0.0, "vector": [-30, 45, 0]},
+            {"time": 0.2, "vector": [60, -45, 0]},
+            {"time": 0.5, "vector": [0, 0, 0]}
+          ]
+        }
+      }
+    },
+    {
+      "name": "flight_pose",
+      "length": 1.0,
+      "loop": "loop",
+      "animators": {
+        "bone-body": {
+          "name": "Body",
+          "rotation": [
+            {"time": 0.0, "vector": [50, 0, 0]},
+            {"time": 1.0, "vector": [50, 0, 0]}
+          ]
+        },
+        "bone-right-arm": {
+          "name": "RightArm",
+          "rotation": [
+            {"time": 0.0, "vector": [30, 0, 20]},
+            {"time": 1.0, "vector": [30, 0, 20]}
+          ]
+        },
+        "bone-left-arm": {
+          "name": "LeftArm",
+          "rotation": [
+            {"time": 0.0, "vector": [30, 0, -20]},
+            {"time": 1.0, "vector": [30, 0, -20]}
+          ]
+        }
+      }
+    },
+    {
+      "name": "hover_pose",
+      "length": 1.5,
+      "loop": "loop",
+      "animators": {
+        "bone-body": {
+          "name": "Body",
+          "position": [
+            {"time": 0.0, "vector": [0, 1.5, 0]},
+            {"time": 0.75, "vector": [0, 2.5, 0]},
+            {"time": 1.5, "vector": [0, 1.5, 0]}
+          ]
+        }
+      }
+    }
+  ]
+}

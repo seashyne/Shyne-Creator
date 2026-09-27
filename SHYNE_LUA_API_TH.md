@@ -1,6 +1,6 @@
 # Shyne Native Lua API — Standard 2.0
 
-เอกสารนี้ตรงกับ Shyne Creator `2.10.3-alpha-26.3`
+เอกสารนี้ตรงกับ Shyne Creator `2.10.4-alpha-26.3`
 
 Lua เป็นชั้นควบคุมหลักสำหรับงานอิสระและงานขั้นสูงของ Shyne Avatar Standard 2.0 ส่วน Avatar แบบ model-first ทั่วไปเริ่มได้โดยไม่ต้องมี `script.lua` หากต้องใช้ procedural rig, physics, UI หรือ logic เฉพาะ ให้ระบุ `main` และใช้ API ของ Shyne โดยตรง โดยไม่พึ่ง Figura:
 
@@ -474,6 +474,71 @@ render.clear()
 เปิด `Shyne Settings → Advanced → Avatar Profiler` เพื่อดู Lua load/tick/render/event, model render, task render, FPS, frame time, heap, ขนาดอวตาร และการประเมิน FPS loss แบบ rolling 240 samples ปุ่ม Export JSON บันทึกรายงานไว้ใน `.minecraft/shyne-logs/profiler/` ดูขั้นตอนสร้างโปรเจกต์และเครื่องมือ validate เพิ่มเติมที่ `CREATOR_QUICKSTART_TH.md`
 
 Lua อ่านค่าเดียวกันได้ด้วย `local profile = profiler.snapshot()` โดยมี `fps`, `frame_ms`, `avatar_frame_ms`, `estimated_fps_loss`, `heap_bytes`, `avatar_bytes`, `task_count` และ `metrics`
+
+## การเขียนสคริปต์แบบแยกโมดูล (`require`)
+
+Avatar ของ Shyne รองรับการแยกโค้ดเป็นไฟล์ย่อยในโฟลเดอร์ เช่น `skills/`, `ui/`, `weapons/`, `config.lua` ผ่านฟังก์ชัน `require(...)` ใน Sandbox ที่ปลอดภัย:
+
+```lua
+-- โหลดโมดูล config.lua
+local config = require("config")
+
+-- โหลดโมดูลจากโฟลเดอร์ย่อย (รองรับทั้ง / หรือ . เช่นเดียวกับ Lua มาตรฐาน)
+local jump_skill = require("skills/jump")
+local hud = require("ui.hud")
+
+-- ส่งออกตารางหรือฟังก์ชันจากโมดูลย่อย
+-- ใน skills/jump.lua:
+local M = {}
+function M.super_jump() ... end
+return M
+```
+
+- มีระบบตรวจจับ Circular Dependency ป้องกัน Infinite Recursion
+- เมื่อรีโหลด Avatar ในเกม (Hot-reload) Cache ของโมดูลจะถูกล้างเพื่อให้โหลดโค้ดใหม่ทั้งหมดอย่างถูกต้อง
+
+## ฟิสิกส์และความเร็วของผู้เล่น (Player Velocity & Physics)
+
+ใช้สำหรับทำท่ากระโดดสูง (Super Jump), ลอยตัวต้านแรงโน้มถ่วง (Anti-Gravity Hover), หรือพุ่งบิน (Sky Dash/Flight):
+
+```lua
+-- กำหนดความเร็วแบบเจาะจง (Vector 3D ในหน่วย blocks/tick)
+player:setVelocity(0, 1.2, 0) -- พุ่งขึ้นฟ้าทันที (Super Jump)
+
+-- เพิ่มแรงผลักจากทิศทางที่ผู้เล่นกำลังมอง
+local look = player:getLookDir()
+player:addVelocity(look.x * 1.5, 0.4, look.z * 1.5) -- พุ่งไปข้างหน้า (Dash)
+
+-- ต้านแรงโน้มถ่วง / ลอยตัวอยู่กับที่ (เรียกใน tick loop)
+local vel = player:getVelocity()
+player:setVelocity(vel.x * 0.9, 0.04, vel.z * 0.9) -- ชดเชยแรงโน้มถ่วง Minecraft (-0.08)
+```
+
+## การตรวจจับความเร็ว สถานะชีวิต และเพื่อน/เอนทิตีรอบตัว
+
+```lua
+-- ตรวจจับความเร็วการเคลื่อนที่จริง (m/s)
+local vel = player:getVelocity()
+local speed_horizontal = math.sqrt(vel.x * vel.x + vel.z * vel.z) * 20 -- blocks/sec (m/s)
+local is_sprinting = player:isSprinting()
+
+-- ตรวจจับการมีชีวิตและการเกิดใหม่
+if not player:isAlive() then
+  -- ผู้เล่นเสียชีวิต -> รีเซ็ตสถานะสกิล/ปิด HUD
+end
+
+-- สแกนหาผู้เล่น/เพื่อนร่วมทีมรอบตัว (ระบุรัศมีในหน่วยบล็อก)
+local nearby_players = world.getPlayers(16)
+for _, p in ipairs(nearby_players) do
+  print("พบเพื่อน: " .. p.name .. " ที่ระยะ: " .. p.distance .. " บล็อก, HP: " .. p.health)
+end
+
+-- สแกนหามอนสเตอร์และเอนทิตีรอบตัว
+local nearby_entities = world.getEntities(12)
+for _, ent in ipairs(nearby_entities) do
+  print("Entity: " .. ent.type .. " ระยะ: " .. ent.distance .. " HP: " .. ent.health)
+end
+```
 
 ## Gameplay/server script
 
