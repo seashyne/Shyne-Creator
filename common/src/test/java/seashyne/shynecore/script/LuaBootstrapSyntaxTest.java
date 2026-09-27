@@ -20,12 +20,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class LuaBootstrapSyntaxTest {
     private static final List<String> AVATAR_MODULES = List.of(
         "/shyne_runtime/lua/avatar/00_core.lua",
+        "/shyne_runtime/lua/avatar/01_shyne_core.lua",
+        "/shyne_runtime/lua/avatar/05_events_scheduler.lua",
         "/shyne_runtime/lua/avatar/10_model_animation.lua",
         "/shyne_runtime/lua/avatar/20_avatar_world.lua",
         "/shyne_runtime/lua/avatar/30_render_tasks.lua",
         "/shyne_runtime/lua/avatar/31_render_shapes.lua",
         "/shyne_runtime/lua/avatar/40_optional_systems.lua",
-        "/shyne_runtime/lua/avatar/50_easy_api.lua"
+        "/shyne_runtime/lua/avatar/50_easy_api.lua",
+        "/shyne_runtime/lua/avatar/59_figura_vectors.lua",
+        "/shyne_runtime/lua/avatar/60_figura_compat.lua",
+        "/shyne_runtime/lua/compat/squapi/squapi_core.lua",
+        "/shyne_runtime/lua/compat/squapi/squapi_math.lua",
+        "/shyne_runtime/lua/compat/squapi/squapi_springs.lua",
+        "/shyne_runtime/lua/compat/squapi/squapi_locomotion.lua",
+        "/shyne_runtime/lua/compat/squapi/squapi_features.lua"
     );
 
     @Test
@@ -74,6 +83,12 @@ final class LuaBootstrapSyntaxTest {
             });
             globals.set("_avatar_part_mutate", new VarArgFunction() {
                 @Override public Varargs invoke(Varargs args) { return LuaValue.NIL; }
+            });
+            globals.set("_avatar_action_add", new VarArgFunction() {
+                @Override public Varargs invoke(Varargs args) { return LuaValue.TRUE; }
+            });
+            globals.set("_avatar_action_register", new VarArgFunction() {
+                @Override public Varargs invoke(Varargs args) { return LuaValue.TRUE; }
             });
             globals.set("_avatar_vanilla_transform", new OneArgFunction() {
                 @Override public LuaValue call(LuaValue arg) {

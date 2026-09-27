@@ -3,6 +3,7 @@ package seashyne.shynecore.client;
 import net.fabricmc.api.ClientModInitializer;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
+import seashyne.shynecore.client.avatar.AvatarRuntimeLoaderAdapter;
 import seashyne.shynecore.client.avatar.ShyneCloudClient;
 import seashyne.shynecore.client.config.ShyneClientSettings;
 import seashyne.shynecore.client.network.ShyneClientNetworking;
@@ -18,7 +19,7 @@ public class ShyneCoreClient implements ClientModInitializer {
         ShyneClientSettings.load();
         ShyneCloudClient.init();
         ShyneClientNetworking.init();
-        AvatarRuntime.init();
+        AvatarRuntimeLoaderAdapter.init();
         BbModelEntityRenderer.init();
         AvatarRenderTasks.init();
         ShyneKeybinds.init();

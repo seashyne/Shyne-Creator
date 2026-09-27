@@ -23,10 +23,9 @@ public abstract class PlayerModelMaskMixin {
         VanillaRenderMask.bind(state, entity.getUUID());
         boolean player = VanillaRenderMask.visible(state, "PLAYER");
         if (!player) {
-            // Keep the render-layer pass alive so Shyne's native model layer can
-            // still draw, while the vanilla base model itself gets no render type.
-            state.isInvisible = true;
-            state.isInvisibleToPlayer = true;
+            // PlayerModelPartMaskMixin already hides all vanilla player model parts
+            // when PLAYER is masked out. Leaving isInvisible untouched preserves
+            // first-person hand rendering in FirstPersonHandsAndItemsRenderer.
             state.arrowCount = 0;
             state.stingerCount = 0;
             state.parrotOnLeftShoulder = null;

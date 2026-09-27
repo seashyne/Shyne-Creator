@@ -258,7 +258,7 @@ public final class AvatarLoader {
             json.has("replace_vanilla") ? json.get("replace_vanilla").getAsBoolean() : (importObj != null && importObj.has("replace_vanilla") ? importObj.get("replace_vanilla").getAsBoolean() : profile.replaceVanilla()),
             !json.has("online_sync") || json.get("online_sync").getAsBoolean(),
             json.has("description") ? json.get("description").getAsString() : "",
-            json.has("first_person_masking") ? json.get("first_person_masking").getAsBoolean() : profile.firstPersonMasking(),
+            json.has("first_person_arm") ? json.get("first_person_arm").getAsBoolean() : (json.has("first_person_masking") ? json.get("first_person_masking").getAsBoolean() : profile.firstPersonMasking()),
             json.has("local_camera") ? json.get("local_camera").getAsBoolean() : profile.localCamera(),
             json.has("texture_sync_mode") ? json.get("texture_sync_mode").getAsString() : "manifest",
             json.has("synced_schema") ? json.get("synced_schema").getAsString() : "",

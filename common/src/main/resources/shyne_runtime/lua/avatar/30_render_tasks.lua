@@ -1,20 +1,33 @@
--- Render options are retained in Lua so a task can be updated without rebuilding
--- every field. Only the resolved, permission-checked task crosses into Java.
+-- ==============================================================================
+-- Shyne Avatar Runtime: Render Tasks Module (avatar/30_render_tasks.lua)
+-- Manages 2D HUD and 3D world billboard rendering tasks (text, sprites, items, blocks, shapes).
+-- ==============================================================================
+
+render = {
+  api_version = "1.3",
+  _tasks = {},
+  _groups = {},
+  _collections = {}
+}
+
 local function render_copy(value)
   local result = {}
   for key, item in pairs(value or {}) do result[key] = item end
   return result
 end
+
 local function render_merge(target, patch)
   local result = render_copy(target)
   for key, value in pairs(patch or {}) do result[key] = value end
   return result
 end
+
 local function render_number(value, fallback)
   value = tonumber(value)
   if value == nil then return fallback end
   return value
 end
+
 local function render_group_options(options)
   local result = render_copy(options)
   local position = result.position or result.pos or result.from or {}
@@ -34,7 +47,6 @@ local function render_group_options(options)
   local visited = {}
   local depth = 0
 
-  -- Groups are resolved from child to parent with a depth/cycle guard.
   while group_id ~= nil and render._groups[group_id] ~= nil and depth < 16 and not visited[group_id] do
     visited[group_id] = true
     depth = depth + 1
@@ -65,6 +77,7 @@ local function render_group_options(options)
   result.opacity, result.z_index = opacity, z_index
   return result
 end
+
 local function render_push(id, kind, options)
   local resolved = render_group_options(options)
   local attached_to = resolved.attach or resolved.bone
@@ -72,6 +85,7 @@ local function render_push(id, kind, options)
   local local_offset = vector.new(resolved.local_offset or { x = 0, y = 0, z = 0 })
   local local_to = vector.new(resolved.local_to or { x = 0, y = 0, z = 0 })
   local has_local_to = resolved.local_to ~= nil
+
   if attached_to ~= nil and tostring(attached_to) ~= "" then
     if type(attached_to) == "table" and type(attached_to.path) == "string" then
       attachment_path = attached_to.path
@@ -80,14 +94,14 @@ local function render_push(id, kind, options)
     end
     local offset = vector.new(resolved.offset or { x = resolved.x or 0, y = resolved.y or 0, z = resolved.z or 0 })
     resolved.world = true
-    -- Java resolves the current renderer matrix at submission time. This keeps
-    -- attachments on the same frame as the bone and can inherit its rotation.
     resolved.x, resolved.y, resolved.z = offset.x, offset.y, offset.z
   end
+
   local billboard = resolved.billboard
   if billboard == nil then
     billboard = not (attachment_path ~= "" and (kind == "item" or kind == "block"))
   end
+
   local ok = _shyne_render_task(id, kind, resolved.world == true,
     resolved.text or resolved.content or "", resolved.texture or resolved.item or resolved.block or resolved.resource or "",
     resolved.x or 0, resolved.y or 0, resolved.z or 0,
@@ -98,9 +112,11 @@ local function render_push(id, kind, options)
     attachment_path, local_offset.x, local_offset.y, local_offset.z,
     local_to.x, local_to.y, local_to.z, has_local_to, billboard,
     resolved.fullbright == true or resolved.light == "fullbright")
+
   if ok then return id end
   return false
 end
+
 local function render_task(id, kind, options)
   local stored = render_copy(options)
   render._tasks[id] = { kind = kind, options = stored }
@@ -108,16 +124,38 @@ local function render_task(id, kind, options)
   if result == false then render._tasks[id] = nil end
   return result
 end
-local function render_refresh_all()
+
+function render._refresh_all()
   for id, task in pairs(render._tasks) do render_push(id, task.kind, task.options) end
 end
+
+-- Export helper functions for shapes module
+render._copy = render_copy
+render._merge = render_merge
+render._push = render_push
+
+--- Creates or updates a text rendering task.
 function render.text(id, options) return render_task(id, "text", options) end
+
+--- Creates or updates an item model rendering task.
 function render.item(id, options) return render_task(id, "item", options) end
+
+--- Creates or updates a block model rendering task.
 function render.block(id, options) return render_task(id, "block", options) end
+
+--- Creates or updates a custom sprite texture rendering task.
 function render.sprite(id, options) return render_task(id, "sprite", options) end
+
+--- Creates or updates a 2D/3D line rendering task.
 function render.line(id, options) return render_task(id, "line", options) end
+
+--- Creates or updates a filled 2D rectangle rendering task.
 function render.rect(id, options) return render_task(id, "rect", options) end
+
+--- Creates or updates an outlined rectangle rendering task.
 function render.outline(id, options) return render_task(id, "outline", options) end
+
+--- Creates or updates a world-anchored rendering task.
 function render.world(id, options)
   local world_options = render_copy(options)
   world_options.world = true

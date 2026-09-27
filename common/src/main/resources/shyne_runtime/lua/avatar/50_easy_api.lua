@@ -1,11 +1,26 @@
--- Shyne Easy API keeps common scripts declarative without hiding the detailed
--- model, animation, event, scheduler, or UI objects used by advanced rigs.
+-- ==============================================================================
+-- Shyne Avatar Runtime: Easy Declarative API (avatar/50_easy_api.lua)
+-- Provides high-level declarative syntax for quick avatar authoring.
+-- Exposes global helpers `part`, `anim`, `on`, and `shyne.setup({...})`.
+-- ==============================================================================
+
 local function copy_options(source)
   local target = {}
   for key, value in pairs(source or {}) do target[key] = value end
   return target
 end
+
+local function bool(value) return value and true or false end
+
+--- Resolves a model part proxy. Equivalent to model.part(path).
+---@param path string
+---@return PartProxy
 function shyne.part(path) return model.part(path) end
+
+--- Plays or configures an animation on the Blockbench model.
+---@param name string Animation name
+---@param options boolean|table True to play immediately, or options table
+---@return AnimationProxy
 function shyne.anim(name, options)
   local animation = model.animation.get(name)
   if options == true then animation:play(); return animation end
@@ -23,16 +38,41 @@ function shyne.anim(name, options)
   if options.play or options.autoplay then animation:play() end
   return animation
 end
+
+--- Subscribes to an event. Equivalent to events.on(name, callback).
+---@param name string
+---@param callback function
+---@return function
 function shyne.on(name, callback) return events.on(name, callback) end
+
+--- Subscribes a one-shot event handler. Equivalent to events.once(name, callback).
+---@param name string
+---@param callback function
+---@return function
 function shyne.once(name, callback) return events.once(name, callback) end
+
+--- Schedules a callback after delay ticks. Equivalent to task.after(ticks, callback).
+---@param ticks number
+---@param callback function
+---@return number
 function shyne.after(ticks, callback) return task.after(ticks, callback) end
+
+--- Schedules a repeating callback. Equivalent to task.every(ticks, callback, options).
+---@param ticks number
+---@param callback function
+---@param options table|nil
+---@return number
 function shyne.every(ticks, callback, options) return task.every(ticks, callback, options) end
+
+--- Registers a UI palette action.
 function shyne.action(id, title, callback, options)
   if type(id) == "table" then return ui.action(id) end
   local value = copy_options(options)
   value.id, value.title, value.on_use = id, title or id, callback
   return ui.action(value)
 end
+
+--- Registers a UI palette toggle action.
 function shyne.toggle(id, title, default, callback, options)
   if type(id) == "table" then return ui.toggle(id) end
   local value = copy_options(options)
@@ -50,10 +90,14 @@ local function configure_part(path, options)
   if options.color ~= nil then value:color(options.color) end
   if options.opacity ~= nil then value:opacity(options.opacity) end
   if options.emissive ~= nil then value:emissive(options.emissive) end
+  if options.physics ~= nil then value:setPhysics(options.physics) end
   if options.vanilla_parent ~= nil then value:vanilla_parent(options.vanilla_parent, options.parent_mode) end
   return value
 end
 
+--- Declarative avatar initialization in a single structured configuration call.
+---@param options table { parts, animations, events, actions, toggles, hide_vanilla, camera, nameplate }
+---@return table Configured objects
 function shyne.setup(options)
   options = options or {}
   local result = { parts = {}, animations = {}, events = {}, actions = {} }
@@ -68,10 +112,11 @@ function shyne.setup(options)
   return result
 end
 
--- The shyne namespace is optional: concise globals and namespaced access are equivalent.
+-- Export core namespaces to shyne table
 shyne.vector, shyne.state, shyne.storage, shyne.model, shyne.avatar = vector, state, storage, model, avatar
 shyne.minecraft, shyne.events, shyne.task, shyne.ui = minecraft, events, task, ui
 shyne.emote, shyne.diagnostics, shyne.profiler = emote, diagnostics, profiler
+shyne.sounds, shyne.sound = sounds, sound
 
--- Short globals are intentionally small and can be overwritten by Avatar code.
+-- Concise globals for fast scripting
 part, anim, on = shyne.part, shyne.anim, shyne.on

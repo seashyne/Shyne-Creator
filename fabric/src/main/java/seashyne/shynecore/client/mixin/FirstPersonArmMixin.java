@@ -4,15 +4,33 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.HumanoidArm;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import seashyne.shynecore.client.avatar.AvatarRuntime;
 import seashyne.shynecore.client.render.BbModelEntityRenderer;
 
 @Mixin(FirstPersonHandsAndItemsRenderer.class)
 public abstract class FirstPersonArmMixin {
+    @Redirect(
+        method = "submitArmWithItem",
+        at = @At(
+            value = "FIELD",
+            target = "Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;isInvisible:Z",
+            opcode = org.objectweb.asm.Opcodes.GETFIELD
+        ),
+        require = 0
+    )
+    private boolean shyne$overrideFirstPersonInvisible(AvatarRenderState state) {
+        if (AvatarRuntime.active() != null && AvatarRuntime.shouldMaskFirstPerson()) {
+            return false;
+        }
+        return state.isInvisible;
+    }
+
     @Redirect(
         method = "renderPlayerHand",
         at = @At(

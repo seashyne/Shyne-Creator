@@ -153,10 +153,12 @@ public final class BbModelEntityRenderer {
 
         BbBoneDefinition armBone = findFirstPersonArm(model, arm);
         boolean dedicatedFirstPersonArm = armBone != null && isDedicatedFirstPersonArm(armBone);
-        // Overlay avatars only replace a first-person arm when the creator explicitly
-        // supplied a dedicated FP hierarchy.  This keeps ordinary accessory avatars
-        // from unexpectedly replacing the player's vanilla hand.
-        if (armBone == null || (!AvatarRuntime.shouldHideLocalPlayer() && !dedicatedFirstPersonArm)) return false;
+        boolean replaceFirstPersonArm = dedicatedFirstPersonArm
+            || AvatarRuntime.shouldHideLocalPlayer()
+            || !AvatarRuntime.isVanillaPartVisible(arm == HumanoidArm.RIGHT ? "RIGHT_ARM" : "LEFT_ARM")
+            || AvatarRuntime.firstPersonArmEnabled();
+
+        if (armBone == null || !replaceFirstPersonArm) return false;
 
         UUID entityId = client.player.getUUID();
         Map<String, BonePose> bonePoses = prepareFirstPersonBonePoses(model, entityId, armBone, dedicatedFirstPersonArm);

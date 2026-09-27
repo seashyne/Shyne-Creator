@@ -7,6 +7,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
+import seashyne.shynecore.client.avatar.AvatarRuntimeLoaderAdapter;
 import seashyne.shynecore.client.avatar.ShyneCloudClient;
 import seashyne.shynecore.client.config.ShyneClientSettings;
 import seashyne.shynecore.client.network.ShyneClientNetworking;
@@ -23,7 +24,7 @@ public class ShyneCoreClient {
         ShyneClientSettings.load();
         ShyneCloudClient.init();
         ShyneClientNetworking.init();
-        AvatarRuntime.init();
+        AvatarRuntimeLoaderAdapter.init();
         BbModelEntityRenderer.init(modEventBus);
         AvatarRenderTasks.init();
         ShyneKeybinds.init(modEventBus);

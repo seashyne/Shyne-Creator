@@ -61,4 +61,39 @@ final class AvatarPhysicsControllerTest {
             () -> assertEquals(0f, part.additiveRotZ())
         );
     }
+
+    @Test
+    void dynamicBonePhysicsAllowsCustomSpringDampingGravityAndRemoval() {
+        BbModelDefinition model = new BbModelDefinition(
+            "test", "test", "test", Path.of("test.bbmodel"), 1, 16, 16, "",
+            List.of(), List.of(), List.of(), List.of()
+        );
+        AvatarState state = new AvatarState("test", "test", Path.of("test"), true, Set.of(), Set.of());
+        AvatarPhysicsController controller = new AvatarPhysicsController(model);
+        assertFalse(controller.active());
+
+        // Enable dynamic physics on tail with custom spring, damping, and gravity
+        AvatarPhysicsController.PhysicsConfig config = new AvatarPhysicsController.PhysicsConfig(
+            0.4, 0.7, -0.05, 35.0, 0.5, 0.5, "tail"
+        );
+        controller.setBonePhysics("model.tail", config);
+
+        assertTrue(controller.active());
+        assertEquals(1, controller.nodeCount());
+        assertEquals(config, controller.getBonePhysics("model.tail"));
+
+        // Tick with motion
+        controller.tick(new AvatarPhysicsController.Signals(0, 0, 0, 0, 0, true, false, 0), state);
+        controller.tick(new AvatarPhysicsController.Signals(0.20, 0.05, 0, 10, 2, false, false, 1), state);
+
+        assertTrue(state.getPart("model.tail").additiveRotationLayers().containsKey(AvatarPhysicsController.ROTATION_LAYER));
+        float angleX = state.getPart("model.tail").additiveRotX();
+        assertNotEquals(0.0f, angleX, 0.0001f);
+
+        // Remove physics
+        controller.removeBonePhysics("model.tail", state);
+        assertEquals(0, controller.nodeCount());
+        assertNull(controller.getBonePhysics("model.tail"));
+        assertFalse(state.getPart("model.tail").additiveRotationLayers().containsKey(AvatarPhysicsController.ROTATION_LAYER));
+    }
 }

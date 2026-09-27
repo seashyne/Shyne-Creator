@@ -22,9 +22,9 @@ final class ShyneNetworkSafetyTest {
     }
 
     @Test
-    void legacySubclassByteRateLimiterMaintainsCompatibility() {
+    void byteRateLimiterMaintainsCompatibility() {
         long start = 1_000_000_000L;
-        ShyneNetwork.ByteRateLimiter limiter = new ShyneNetwork.ByteRateLimiter(1_000L, 500L, start);
+        ByteRateLimiter limiter = new ByteRateLimiter(1_000L, 500L, start);
 
         assertTrue(limiter.tryConsume(500L, start));
         assertFalse(limiter.tryConsume(501L, start));
@@ -50,8 +50,8 @@ final class ShyneNetworkSafetyTest {
 
     @Test
     void trackingDistanceConstantsAreSensible() {
-        assertEquals(160.0, ShyneNetwork.MAX_AVATAR_TRACKING_DISTANCE);
-        assertEquals(25600.0, ShyneNetwork.MAX_AVATAR_TRACKING_DISTANCE_SQR);
+        assertEquals(160.0, ShyneNetworkProtocol.MAX_AVATAR_TRACKING_DISTANCE);
+        assertEquals(25600.0, ShyneNetworkProtocol.MAX_AVATAR_TRACKING_DISTANCE_SQR);
     }
 
     @Test
@@ -81,7 +81,7 @@ final class ShyneNetworkSafetyTest {
 
     @Test
     void serverCapabilitiesIncludeCompression() {
-        assertTrue(ShyneNetwork.SERVER_CAPABILITIES.contains(ShyneNetwork.CAP_PACKET_COMPRESSION));
+        assertTrue(ShyneNetworkProtocol.SERVER_CAPABILITIES.contains(ShyneNetworkProtocol.CAP_PACKET_COMPRESSION));
     }
 }
 

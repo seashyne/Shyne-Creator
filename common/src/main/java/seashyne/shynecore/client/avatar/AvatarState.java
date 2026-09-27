@@ -28,6 +28,7 @@ public final class AvatarState {
     private boolean automaticApi = true;
     private Map<String, String> apiRequirements = Map.of();
     private boolean firstPersonMasking;
+    private boolean firstPersonArm = true;
     private boolean localCameraOnly;
     private boolean hideHeadInFirstPerson;
     private float cameraOffsetX, cameraOffsetY, cameraOffsetZ;
@@ -127,6 +128,8 @@ public final class AvatarState {
     public Map<String, Object> vars() { return vars; }
     public boolean firstPersonMasking() { return firstPersonMasking; }
     public void setFirstPersonMasking(boolean value) { this.firstPersonMasking = value; markSnapshotDirty(); }
+    public boolean firstPersonArm() { return firstPersonArm; }
+    public void setFirstPersonArm(boolean value) { this.firstPersonArm = value; markSnapshotDirty(); }
     public boolean localCameraOnly() { return localCameraOnly; }
     public void setLocalCameraOnly(boolean value) { this.localCameraOnly = value; }
     public boolean hideHeadInFirstPerson() { return hideHeadInFirstPerson; }
