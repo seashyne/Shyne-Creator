@@ -329,7 +329,30 @@ final class LuaBootstrapSyntaxTest {
                 local figura_particle_ok = particle_spawned ~= nil and particle_spawned.id == "minecraft:portal"
                   and particle_spawned.pos.x == 7 and particle_spawned.vel.y == 1
 
-                return host_ok and avatar_voice_ok and flame_ok and dust_ok and figura_particle_ok
+                -- Test world.getPlayers and world.getEntities (Shyne & Figura compat)
+                _shyne_read = function(key, ...)
+                  if key == "world.players" then
+                    return {
+                      { name = "Friend1", uuid = "uuid-1", pos = { x = 10, y = 64, z = 10 }, distance = 5, health = 20, max_health = 20, crouching = false, sprinting = true, on_ground = true, is_self = false }
+                    }
+                  elseif key == "world.entities" then
+                    return {
+                      { name = "Zombie", uuid = "uuid-z", type = "minecraft:zombie", pos = { x = 12, y = 64, z = 12 }, distance = 6, health = 15, max_health = 20, is_living = true, is_monster = true, is_player = false, on_ground = true }
+                    }
+                  end
+                  return nil
+                end
+
+                local players = world.getPlayers(32)
+                local p_ok = #players == 1 and players[1]:getName() == "Friend1" and players[1]:getPos().x == 10 and players[1]:isSprinting() == true
+
+                local entities = world.getEntities(32)
+                local e_ok = #entities == 1 and entities[1]:getType() == "minecraft:zombie" and entities[1]:isMonster() == true
+
+                local mc_players = minecraft.world.players(32)
+                local mc_p_ok = #mc_players == 1 and mc_players[1].name == "Friend1"
+
+                return host_ok and avatar_voice_ok and flame_ok and dust_ok and figura_particle_ok and p_ok and e_ok and mc_p_ok
                 """, "figura-host-and-particle-test").call();
             assertTrue(figuraHostAndParticle.toboolean());
     }

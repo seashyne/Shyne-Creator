@@ -311,6 +311,57 @@ function world.getBlockState(pos)
   return _shyne_read("block", pos.x or pos[1], pos.y or pos[2], pos.z or pos[3])
 end
 
+--- Returns list of nearby players (Figura compatible)
+---@param radius number|nil Optional search radius in blocks (default 64)
+---@return table Array of player proxies
+function world.getPlayers(radius)
+  local list = _shyne_read("world.players", tonumber(radius) or 64, true) or {}
+  local result = {}
+  for _, p in ipairs(list) do
+    local obj = {
+      _data = p,
+      getPos = function(self) return vectors.vec3(self._data.pos.x, self._data.pos.y, self._data.pos.z) end,
+      getName = function(self) return self._data.name end,
+      getUUID = function(self) return self._data.uuid end,
+      getHealth = function(self) return self._data.health end,
+      getMaxHealth = function(self) return self._data.max_health end,
+      isSneaking = function(self) return self._data.crouching end,
+      isSprinting = function(self) return self._data.sprinting end,
+      isOnGround = function(self) return self._data.on_ground end,
+      isLoaded = function(self) return true end
+    }
+    table.insert(result, setmetatable(obj, { __index = p }))
+  end
+  return result
+end
+
+--- Returns list of nearby entities (Figura compatible)
+---@param pos table|number|nil Center position or radius
+---@param radius number|nil Optional radius in blocks (default 32)
+---@return table Array of entity proxies
+function world.getEntities(pos, radius)
+  local rad = tonumber(radius) or (type(pos) == "number" and pos or 32)
+  local list = _shyne_read("world.entities", rad) or {}
+  local result = {}
+  for _, e in ipairs(list) do
+    local obj = {
+      _data = e,
+      getPos = function(self) return vectors.vec3(self._data.pos.x, self._data.pos.y, self._data.pos.z) end,
+      getName = function(self) return self._data.name end,
+      getUUID = function(self) return self._data.uuid end,
+      getType = function(self) return self._data.type end,
+      getHealth = function(self) return self._data.health end,
+      getMaxHealth = function(self) return self._data.max_health end,
+      isLiving = function(self) return self._data.is_living end,
+      isMonster = function(self) return self._data.is_monster end,
+      isPlayer = function(self) return self._data.is_player end,
+      isOnGround = function(self) return self._data.on_ground end
+    }
+    table.insert(result, setmetatable(obj, { __index = e }))
+  end
+  return result
+end
+
 -- ------------------------------------------------------------------------------
 -- 6. PARTICLES PROXY (particles:newParticle)
 -- ------------------------------------------------------------------------------

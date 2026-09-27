@@ -220,6 +220,17 @@ local function cast_ultimate()
     })
   end
 
+  -- ตรวจจับและระเบิดพลังใส่มอนสเตอร์ในระยะ 6 บล็อก (Entity Detection)
+  if world and world.getEntities then
+    local nearby_entities = world.getEntities(6)
+    for _, ent in ipairs(nearby_entities) do
+      if ent.is_monster then
+        local epos = ent:getPos()
+        particle.spawn("minecraft:crit", epos, { velocity = { 0, 0.4, 0 } })
+      end
+    end
+  end
+
   if animations and animations.cast_ultimate then
     animations.cast_ultimate:restart()
   end
@@ -239,6 +250,23 @@ local function cast_shield()
 
   local pos = player:getPos()
   sounds:playSound("minecraft:block.beacon.activate", pos, 1.0, 1.3)
+
+  -- ตรวจจับเพื่อนรอบตัวในระยะ 8 บล็อกเพื่อส่งละอองเกราะคุ้มกันให้ (Co-op Team Shield)
+  if world and world.getPlayers then
+    local nearby_friends = world.getPlayers(8)
+    for _, friend in ipairs(nearby_friends) do
+      if not friend.is_self then
+        local fpos = friend:getPos()
+        particle.spawn("minecraft:totem_of_undying", {
+          x = fpos.x,
+          y = fpos.y + 1.0,
+          z = fpos.z
+        }, { velocity = { 0, 0.2, 0 } })
+        sounds:playSound("minecraft:block.amethyst_block.chime", fpos, 0.8, 1.4)
+        print("§b[Magic Barrier] §aGranted protective aura to teammate: §e" .. friend:getName())
+      end
+    end
+  end
 
   if magic_shield then
     magic_shield:setVisible(true)

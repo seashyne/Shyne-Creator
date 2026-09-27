@@ -116,6 +116,8 @@ function minecraft.world.probe(origin, direction, distance, radius)
   return read("world.probe", origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, tonumber(distance) or 1, tonumber(radius) or 0) or { hit = false, type = "MISS" }
 end
 function minecraft.world.biome(position) position = vector.new(position or minecraft.player.position()); return read("world.biome", position.x, position.y, position.z) or "" end
+function minecraft.world.players(radius, include_self) return read("world.players", tonumber(radius) or 32, include_self == true) or {} end
+function minecraft.world.entities(radius) return read("world.entities", tonumber(radius) or 16) or {} end
 
 function minecraft.client.paused() return read("client.paused") or false end
 function minecraft.client.singleplayer() return read("client.singleplayer") or false end

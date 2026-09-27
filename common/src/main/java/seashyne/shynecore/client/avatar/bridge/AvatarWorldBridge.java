@@ -7,6 +7,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
@@ -89,6 +91,8 @@ public final class AvatarWorldBridge {
                     case "client.chat_open" -> LuaValue.valueOf(client.gui != null && client.gui.screen() instanceof net.minecraft.client.gui.screens.ChatScreen);
                     case "player.voice_level" -> LuaValue.valueOf(seashyne.shynecore.voice.ShyneMicrophoneState.getSpeakerSnapshot(player.getUUID()).level());
                     case "player.speaking" -> LuaValue.valueOf(seashyne.shynecore.voice.ShyneMicrophoneState.getSpeakerSnapshot(player.getUUID()).speaking());
+                    case "world.players" -> nearbyPlayers(player, args.arg(2).optdouble(32.0), args.arg(3).optboolean(false));
+                    case "world.entities" -> nearbyEntities(player, args.arg(2).optdouble(16.0));
                     default -> LuaValue.NIL;
                 };
             }
@@ -278,6 +282,75 @@ public final class AvatarWorldBridge {
         return player.level().clip(new ClipContext(
             start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player
         ));
+    }
+
+    public static LuaTable nearbyPlayers(Player viewer, double radius, boolean includeSelf) {
+        double boundedRadius = Math.max(0.5, Math.min(256.0, radius));
+        double rSq = boundedRadius * boundedRadius;
+        LuaTable list = new LuaTable();
+        int index = 1;
+        for (Player p : viewer.level().players()) {
+            if (!includeSelf && p.getUUID().equals(viewer.getUUID())) continue;
+            double distSq = viewer.distanceToSqr(p);
+            if (distSq <= rSq) {
+                list.set(index++, playerToLua(viewer, p, Math.sqrt(distSq)));
+            }
+        }
+        return list;
+    }
+
+    public static LuaTable nearbyEntities(Player viewer, double radius) {
+        double boundedRadius = Math.max(0.5, Math.min(128.0, radius));
+        AABB box = viewer.getBoundingBox().inflate(boundedRadius);
+        List<Entity> entities = viewer.level().getEntities(viewer, box, e -> e != null && e.isAlive() && !e.isSpectator());
+        LuaTable list = new LuaTable();
+        int index = 1;
+        for (Entity e : entities) {
+            double dist = viewer.distanceTo(e);
+            if (dist <= boundedRadius) {
+                list.set(index++, entityToLua(e, dist));
+            }
+        }
+        return list;
+    }
+
+    private static LuaTable playerToLua(Player viewer, Player target, double distance) {
+        LuaTable table = new LuaTable();
+        table.set("uuid", LuaValue.valueOf(target.getStringUUID()));
+        table.set("name", LuaValue.valueOf(target.getName().getString()));
+        table.set("pos", vec3(target.getX(), target.getY(), target.getZ()));
+        table.set("distance", LuaValue.valueOf(distance));
+        table.set("health", LuaValue.valueOf(target.getHealth()));
+        table.set("max_health", LuaValue.valueOf(target.getMaxHealth()));
+        table.set("crouching", LuaValue.valueOf(target.isCrouching()));
+        table.set("sprinting", LuaValue.valueOf(target.isSprinting()));
+        table.set("gliding", LuaValue.valueOf(target.isFallFlying()));
+        table.set("in_water", LuaValue.valueOf(target.isInWater()));
+        table.set("on_ground", LuaValue.valueOf(target.onGround()));
+        table.set("is_self", LuaValue.valueOf(target.getUUID().equals(viewer.getUUID())));
+        return table;
+    }
+
+    private static LuaTable entityToLua(Entity e, double distance) {
+        LuaTable table = new LuaTable();
+        table.set("uuid", LuaValue.valueOf(e.getStringUUID()));
+        table.set("name", LuaValue.valueOf(e.getName().getString()));
+        table.set("type", LuaValue.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString()));
+        table.set("pos", vec3(e.getX(), e.getY(), e.getZ()));
+        table.set("distance", LuaValue.valueOf(distance));
+        if (e instanceof LivingEntity living) {
+            table.set("health", LuaValue.valueOf(living.getHealth()));
+            table.set("max_health", LuaValue.valueOf(living.getMaxHealth()));
+            table.set("is_living", LuaValue.TRUE);
+        } else {
+            table.set("health", LuaValue.ZERO);
+            table.set("max_health", LuaValue.ZERO);
+            table.set("is_living", LuaValue.FALSE);
+        }
+        table.set("is_player", LuaValue.valueOf(e instanceof Player));
+        table.set("is_monster", LuaValue.valueOf(e instanceof Monster));
+        table.set("on_ground", LuaValue.valueOf(e.onGround()));
+        return table;
     }
 
     private record BlockProbeHit(BlockHitResult hit, double distance) {}
