@@ -21,6 +21,7 @@ import luaTwoExample from '../../tools/examples/lua-api-2.0-avatar/README.md?raw
 import advancedExample from '../../tools/examples/advanced-render-avatar/README_TH.md?raw'
 import hudExample from '../../tools/examples/responsive-hud-avatar/README_TH.md?raw'
 import profilerExample from '../../tools/examples/render-profiler-avatar/README_TH.md?raw'
+import actionWheelExample from '../../tools/examples/action-wheel-showcase-avatar/README.md?raw'
 
 export type DocIcon = 'book' | 'download' | 'sparkles' | 'box' | 'play' | 'layers' | 'braces' | 'palette' | 'gamepad' | 'cloud' | 'shield' | 'users' | 'wrench' | 'workflow'
 export type DocItem = {
@@ -126,6 +127,7 @@ export const docs: DocItem[] = [
 export const exampleDocs = [
   { title: 'Zero-Lua Avatar', description: 'Avatar แบบ Model-first ที่ใช้ Standard 2.0 และ Auto Animation โดยไม่ต้องมี script', permission: 'ไม่ต้องใช้ Lua', content: zeroLuaExample },
   { title: 'Lua API 2.0', description: 'Vector, event, scheduled task และการตรวจ permission ก่อนวาด HUD', permission: 'hud_render (optional)', content: luaTwoExample },
+  { title: 'Action Wheel Showcase', description: 'วงล้อ Action Wheel 8 ช่อง, เล่นเสียง .ogg, แขนมุมมองบุคคลที่หนึ่ง และ Bone Physics', permission: 'sound, particle, hud_render, camera', content: actionWheelExample },
   { title: 'Advanced Custom Render', description: 'Rect, outline, polyline, render group, responsive HUD และ world-anchored task', permission: 'hud_render + world_render', content: advancedExample, image: 'integration-avatar.png' },
   { title: 'Responsive HUD', description: 'HUD ที่จัดตำแหน่งตามความกว้างหน้าจอและ GUI scale', permission: 'hud_render', content: hudExample },
   { title: 'Render Profiler', description: 'ตัวอย่างตรวจงบ render และวิเคราะห์ task ของ Avatar', permission: 'profiler', content: profilerExample },
