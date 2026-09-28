@@ -75,7 +75,7 @@ if ([string]::IsNullOrWhiteSpace($ApiToken)) {
         if (Test-Path $cand) {
             $match = Get-Content $cand | Where-Object { $_ -match "^\s*CURSEFORGE_API_TOKEN\s*=\s*(.+)$" } | Select-Object -First 1
             if ($match) {
-                $ApiToken = ($match -split "=", 2)[1].Trim(' "', "'")
+                $ApiToken = ($match -split "=", 2)[1].Trim().Trim('"').Trim("'")
                 break
             }
         }
@@ -221,8 +221,15 @@ if ($jarsToUpload.Count -eq 0) {
 if (-not $Changelog) {
     $changelogFile = Join-Path $ScriptDir "CHANGELOG.md"
     if (Test-Path $changelogFile) {
-        $Changelog = Get-Content $changelogFile -Raw -Encoding UTF8
-        Write-Ok "Loaded changelog from CHANGELOG.md"
+        $raw = Get-Content $changelogFile -Raw -Encoding UTF8
+        $match = [regex]::Match($raw, "(?ms)## Shyne Creator v$ModVersion.*?(?=(?:^## Shyne Creator |\Z))")
+        if ($match.Success) {
+            $Changelog = $match.Value.Trim()
+            Write-Ok "Extracted v$ModVersion section from CHANGELOG.md"
+        } else {
+            $Changelog = $raw
+            Write-Ok "Loaded changelog from CHANGELOG.md"
+        }
     } else {
         $Changelog = "$ModName v$ModVersion"
         $ChangelogType = "text"
