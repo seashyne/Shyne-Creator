@@ -8,6 +8,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -110,6 +111,54 @@ public final class ShyneCommand {
                 return Command.SINGLE_SUCCESS;
             }))
             .then(literal("reload").requires(ShyneCommand::isAdmin).executes(ctx -> reloadContent(ctx.getSource(), modLoader, skillRegistry, equipmentRuntime, itemRuntime, profileRuntime, diagnostics)))
+            .then(literal("policy").requires(ShyneCommand::isAdmin)
+                .executes(ctx -> showPolicy(ctx.getSource()))
+                .then(literal("reload").executes(ctx -> {
+                    seashyne.shynecore.admin.ShyneServerPolicy.load();
+                    feedback(ctx.getSource(), "Server policy reloaded from disk.");
+                    return Command.SINGLE_SUCCESS;
+                }))
+                .then(literal("set").then(argument("key", StringArgumentType.word())
+                    .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(new String[] {
+                        "block_damage", "fire_spread", "pvp_skills", "friendly_fire", "custom_flight",
+                        "audio_streams", "max_damage", "max_projectiles", "max_summons", "anti_cheat",
+                        "max_casts_per_sec", "max_reach", "punishment"
+                    }, builder))
+                    .then(argument("value", StringArgumentType.word())
+                        .suggests((ctx, builder) -> {
+                            String key = StringArgumentType.getString(ctx, "key").toLowerCase(Locale.ROOT);
+                            return switch (key) {
+                                case "block_damage", "fire_spread", "pvp_skills", "friendly_fire", "custom_flight", "audio_streams", "anti_cheat" ->
+                                    SharedSuggestionProvider.suggest(new String[] {"true", "false"}, builder);
+                                case "max_damage", "max_reach", "max_projectiles", "max_summons", "max_casts_per_sec" ->
+                                    SharedSuggestionProvider.suggest(new String[] {"unlimited", "50", "100", "500"}, builder);
+                                case "punishment" ->
+                                    SharedSuggestionProvider.suggest(new String[] {"LOG_ONLY", "CANCEL_ACTION", "KICK"}, builder);
+                                default -> SharedSuggestionProvider.suggest(new String[] {"unlimited"}, builder);
+                            };
+                        })
+                        .executes(ctx -> {
+                            String key = StringArgumentType.getString(ctx, "key");
+                            String val = StringArgumentType.getString(ctx, "value");
+                            var policy = seashyne.shynecore.admin.ShyneServerPolicy.get();
+                            boolean ok = policy.set(key, val);
+                            return ok
+                                ? success(ctx.getSource(), "Policy '" + key + "' set to " + policy.getFormatted(key))
+                                : fail(ctx.getSource(), "Invalid value for '" + key + "': '" + val + "'. Use a positive number (> 0) or 'unlimited' / '-1' to remove limits.");
+                        })))))
+            .then(literal("antihack").requires(ShyneCommand::isAdmin)
+                .executes(ctx -> showAntiHackStatus(ctx.getSource()))
+                .then(literal("status").executes(ctx -> showAntiHackStatus(ctx.getSource())))
+                .then(literal("resetall").executes(ctx -> {
+                    seashyne.shynecore.admin.ShyneAntiCheat.resetAll();
+                    return success(ctx.getSource(), "Reset all anti-cheat strikes and trackers.");
+                }))
+                .then(literal("reset").then(argument("player", StringArgumentType.word()).executes(ctx -> {
+                    ServerPlayer target = resolvePlayer(ctx.getSource(), StringArgumentType.getString(ctx, "player"));
+                    if (target == null) return fail(ctx.getSource(), "Player not found.");
+                    seashyne.shynecore.admin.ShyneAntiCheat.resetStrikes(target.getUUID());
+                    return success(ctx.getSource(), "Reset anti-cheat strikes for " + target.getName().getString());
+                }))))
             .then(literal("setteam").requires(ShyneCommand::isAdmin).then(argument("entity", StringArgumentType.word()).then(argument("team", StringArgumentType.word()).executes(ctx -> {
                 Entity entity = resolveEntity(ctx.getSource(), StringArgumentType.getString(ctx, "entity"));
                 if (entity == null) return fail(ctx.getSource(), "Entity not found.");
@@ -459,6 +508,48 @@ public final class ShyneCommand {
         if (entity == null) return fail(source, "Entity not found.");
         animationRuntime.stop(entity);
         return success(source, "Stopped animation on " + entity.getName().getString());
+    }
+
+    private static int showPolicy(CommandSourceStack source) {
+        var p = seashyne.shynecore.admin.ShyneServerPolicy.get();
+        feedback(source, Component.literal("=== Shyne Server Policy ===").withStyle(ChatFormatting.AQUA));
+        feedback(source, Component.literal("Block Damage: ").withStyle(ChatFormatting.YELLOW)
+            .append(Component.literal(String.valueOf(p.isBlockDamageAllowed())).withStyle(ChatFormatting.WHITE))
+            .append(Component.literal(" | Fire Spread: ").withStyle(ChatFormatting.DARK_GRAY))
+            .append(Component.literal(String.valueOf(p.isFireSpreadAllowed())).withStyle(ChatFormatting.WHITE)));
+        feedback(source, Component.literal("PvP Skills: ").withStyle(ChatFormatting.YELLOW)
+            .append(Component.literal(String.valueOf(p.isPvpSkillsAllowed())).withStyle(ChatFormatting.WHITE))
+            .append(Component.literal(" | Friendly Fire: ").withStyle(ChatFormatting.DARK_GRAY))
+            .append(Component.literal(String.valueOf(p.isFriendlyFireAllowed())).withStyle(ChatFormatting.WHITE)));
+        feedback(source, Component.literal("Max Damage Cap: ").withStyle(ChatFormatting.YELLOW)
+            .append(Component.literal(p.getMaxSkillDamageCap() <= 0 ? "UNLIMITED" : String.valueOf(p.getMaxSkillDamageCap())).withStyle(ChatFormatting.WHITE))
+            .append(Component.literal(" | Max Reach: ").withStyle(ChatFormatting.DARK_GRAY))
+            .append(Component.literal(p.getMaxTargetReachDistance() <= 0 ? "UNLIMITED" : String.valueOf(p.getMaxTargetReachDistance())).withStyle(ChatFormatting.WHITE)));
+        feedback(source, Component.literal("Max Projectiles: ").withStyle(ChatFormatting.YELLOW)
+            .append(Component.literal(p.getMaxProjectilesPerPlayer() <= 0 ? "UNLIMITED" : String.valueOf(p.getMaxProjectilesPerPlayer())).withStyle(ChatFormatting.WHITE))
+            .append(Component.literal(" | Max Summons: ").withStyle(ChatFormatting.DARK_GRAY))
+            .append(Component.literal(p.getMaxSummonsPerPlayer() <= 0 ? "UNLIMITED" : String.valueOf(p.getMaxSummonsPerPlayer())).withStyle(ChatFormatting.WHITE)));
+        feedback(source, Component.literal("Anti-Cheat: ").withStyle(ChatFormatting.YELLOW)
+            .append(Component.literal(p.isAntiCheatEnabled() ? "ENABLED" : "DISABLED (Open Freedom)").withStyle(p.isAntiCheatEnabled() ? ChatFormatting.GREEN : ChatFormatting.GOLD))
+            .append(Component.literal(" | Cast Limit: ").withStyle(ChatFormatting.DARK_GRAY))
+            .append(Component.literal(p.getMaxSkillCastsPerSecond() <= 0 ? "UNLIMITED" : (p.getMaxSkillCastsPerSecond() + " casts/sec")).withStyle(ChatFormatting.WHITE))
+            .append(Component.literal(" | Punishment: ").withStyle(ChatFormatting.DARK_GRAY))
+            .append(Component.literal(p.getAntiCheatPunishment()).withStyle(ChatFormatting.WHITE)));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int showAntiHackStatus(CommandSourceStack source) {
+        var p = seashyne.shynecore.admin.ShyneServerPolicy.get();
+        feedback(source, Component.literal("=== Shyne Anti-Cheat Status ===").withStyle(ChatFormatting.AQUA));
+        feedback(source, Component.literal("System Status: ").withStyle(ChatFormatting.YELLOW)
+            .append(Component.literal(p.isAntiCheatEnabled() ? "ACTIVE" : "DISABLED (Open Freedom)").withStyle(p.isAntiCheatEnabled() ? ChatFormatting.GREEN : ChatFormatting.GOLD)));
+        feedback(source, Component.literal("Total Blocked Packets: ").withStyle(ChatFormatting.YELLOW)
+            .append(Component.literal(String.valueOf(seashyne.shynecore.admin.ShyneAntiCheat.getTotalBlockedPackets())).withStyle(ChatFormatting.RED)));
+        feedback(source, Component.literal("Max Cast Rate: ").withStyle(ChatFormatting.YELLOW)
+            .append(Component.literal(p.getMaxSkillCastsPerSecond() <= 0 ? "UNLIMITED" : (p.getMaxSkillCastsPerSecond() + " casts/sec")).withStyle(ChatFormatting.WHITE)));
+        feedback(source, Component.literal("Punishment Mode: ").withStyle(ChatFormatting.YELLOW)
+            .append(Component.literal(p.getAntiCheatPunishment()).withStyle(ChatFormatting.WHITE)));
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int success(CommandSourceStack source, String message) {

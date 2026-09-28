@@ -275,3 +275,92 @@ function matrix4.inverse(matrix)
   inverse[13], inverse[14], inverse[15] = translation.x, translation.y, translation.z
   return inverse
 end
+
+-- ------------------------------------------------------------------------------
+-- OPERATOR ENHANCEMENT: '+' FOR STRING CONCATENATION
+-- Allows intuitive string concatenation using '+' (e.g. "Hello " + "World" or Color.red + "Boss")
+-- ------------------------------------------------------------------------------
+local string_meta = getmetatable("")
+if string_meta then
+  string_meta.__add = function(a, b)
+    return tostring(a) .. tostring(b)
+  end
+end
+
+-- ------------------------------------------------------------------------------
+-- MINECRAFT COLOR & FORMATTING CHEAT SHEET HELPER (Color / color)
+-- Supports 3 styles:
+--  1) Dual Value: Color.red is both string "§c" AND function Color.red("text")
+--  2) Operator '+': Color.red + Color.bold + "TEXT" or "HP: " + 100
+--  3) Tag Formatter: Color.fmt("<red><bold>...</bold></red>")
+-- ------------------------------------------------------------------------------
+local function make_color_node(code)
+  local node = { code = code }
+  local mt = {
+    __tostring = function() return code end,
+    __concat   = function(a, b) return tostring(a) .. tostring(b) end,
+    __add      = function(a, b) return tostring(a) .. tostring(b) end,
+    __call     = function(self, text) return code .. tostring(text) .. "§r" end
+  }
+  return setmetatable(node, mt)
+end
+
+Color = {
+  black        = make_color_node("§0"),
+  dark_blue    = make_color_node("§1"),
+  dark_green   = make_color_node("§2"),
+  dark_aqua    = make_color_node("§3"),
+  dark_red     = make_color_node("§4"),
+  dark_purple  = make_color_node("§5"),
+  gold         = make_color_node("§6"),
+  gray         = make_color_node("§7"),
+  dark_gray    = make_color_node("§8"),
+  blue         = make_color_node("§9"),
+  green        = make_color_node("§a"),
+  aqua         = make_color_node("§b"),
+  red          = make_color_node("§c"),
+  light_purple = make_color_node("§d"),
+  yellow       = make_color_node("§e"),
+  white        = make_color_node("§f"),
+
+  matrix       = make_color_node("§k"),
+  bold         = make_color_node("§l"),
+  strike       = make_color_node("§m"),
+  underline    = make_color_node("§n"),
+  italic       = make_color_node("§o"),
+  reset        = make_color_node("§r"),
+
+  skull        = "☠",
+  sword        = "🗡",
+  shield       = "🛡",
+  lightning    = "⚡",
+  heart        = "❤",
+  star         = "★",
+  fire         = "🔥",
+  arrow        = "➜",
+}
+
+function Color.fmt(text)
+  local s = tostring(text)
+  s = s:gsub("<red>", tostring(Color.red)):gsub("</red>", tostring(Color.reset))
+  s = s:gsub("<green>", tostring(Color.green)):gsub("</green>", tostring(Color.reset))
+  s = s:gsub("<yellow>", tostring(Color.yellow)):gsub("</yellow>", tostring(Color.reset))
+  s = s:gsub("<aqua>", tostring(Color.aqua)):gsub("</aqua>", tostring(Color.reset))
+  s = s:gsub("<gold>", tostring(Color.gold)):gsub("</gold>", tostring(Color.reset))
+  s = s:gsub("<gray>", tostring(Color.gray)):gsub("</gray>", tostring(Color.reset))
+  s = s:gsub("<white>", tostring(Color.white)):gsub("</white>", tostring(Color.reset))
+  s = s:gsub("<bold>", tostring(Color.bold)):gsub("</bold>", tostring(Color.reset))
+  s = s:gsub("<italic>", tostring(Color.italic)):gsub("</italic>", tostring(Color.reset))
+  s = s:gsub("<reset>", tostring(Color.reset))
+  s = s:gsub("<skull>", Color.skull)
+  s = s:gsub("<lightning>", Color.lightning)
+  s = s:gsub("<sword>", Color.sword)
+  s = s:gsub("<shield>", Color.shield)
+  s = s:gsub("<heart>", Color.heart)
+  s = s:gsub("<star>", Color.star)
+  s = s:gsub("<fire>", Color.fire)
+  s = s:gsub("&([0-9a-fk-or])", "§%1")
+  return s
+end
+
+color = Color

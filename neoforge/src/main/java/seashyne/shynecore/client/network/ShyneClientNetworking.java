@@ -37,6 +37,7 @@ public final class ShyneClientNetworking {
             serverCapabilities = Set.of();
             ClientAnimationState.clearRemoteSession();
             ShyneTabStatusIcons.clear();
+            seashyne.shynecore.client.state.ClientPowerConfig.reset();
         });
     }
 
@@ -58,6 +59,7 @@ public final class ShyneClientNetworking {
             else if (type.equals(ShyneNetwork.SYNC_AVATAR_VARS_PAYLOAD)) ClientAnimationState.handleAvatarVarSync(json);
             else if (type.equals(ShyneNetwork.SYNC_AVATAR_SNAPSHOTS_PAYLOAD)) ClientAnimationState.handleAvatarSnapshotSync(json);
             else if (type.equals(ShyneNetwork.SYNC_PLAYER_PRESENCE_PAYLOAD)) ShyneTabStatusIcons.handlePresenceSync(json);
+            else if (type.equals(ShyneNetwork.SYNC_POWER_CONFIG_PAYLOAD)) seashyne.shynecore.client.state.ClientPowerConfig.handleSync(json);
         });
     }
 
@@ -104,6 +106,13 @@ public final class ShyneClientNetworking {
     public static void sendSkillKey(String skill, int slot) {
         if (serverSupports(ShyneNetwork.CAP_SERVER_AUTHORITATIVE_GAMEPLAY) && canSend(ShyneNetwork.SKILL_KEY)) {
             ClientPacketDistributor.sendToServer(new ShyneNetwork.SkillKeyPayload(skill, slot));
+        }
+    }
+
+    public static void sendEquipSkill(String skillId, String slot) {
+        if (canSend(ShyneNetwork.EQUIP_SKILL)) {
+            String json = ShyneNetwork.GSON.toJson(new ShyneNetwork.EquipRequest(skillId, slot));
+            ClientPacketDistributor.sendToServer(new ShyneNetwork.JsonPayload(ShyneNetwork.EQUIP_SKILL_PAYLOAD, json));
         }
     }
 

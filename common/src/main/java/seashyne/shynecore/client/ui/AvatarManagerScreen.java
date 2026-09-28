@@ -237,9 +237,8 @@ public class AvatarManagerScreen extends Screen {
         mask.active = active != null;
 
         Button wheel = Button.builder(Component.translatable("screen.shyne_core.avatars.actions"), btn -> {
-            if (this.minecraft != null) this.minecraft.gui.setScreen(new ShynePaletteScreen(this));
+            if (this.minecraft != null) this.minecraft.gui.setScreen(new AvatarActionWheelScreen(this));
         }).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.actions.tooltip"))).build();
-        wheel.active = active != null && !active.actions().isEmpty();
 
         Button folder = Button.builder(Component.translatable("screen.shyne_core.avatars.folder"), btn -> openAvatarFolder())
             .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.folder.tooltip"))).build();

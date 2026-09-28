@@ -91,11 +91,18 @@ public class PlayerProfileRuntime {
     }
 
     public boolean equipSkill(ServerPlayer player, SkillSlot slot, String skillId) {
-        if (slot == null || skillRegistry.get(skillId) == null) return false;
+        if (slot == null) return false;
         PlayerProfile current = getOrCreate(player);
-        if (!current.unlockedSkills().contains(skillId)) return false;
         Map<String, String> equipped = new HashMap<>(current.equippedSkills());
-        equipped.put(slot.name().toLowerCase(), skillId);
+        if (skillId == null || skillId.isBlank()) {
+            equipped.remove(slot.name().toLowerCase(Locale.ROOT));
+        } else {
+            if (skillRegistry.get(skillId) == null) return false;
+            boolean allow = seashyne.shynecore.power.PowerServerConfig.get().isFreeSelection()
+                || current.unlockedSkills().contains(skillId);
+            if (!allow) return false;
+            equipped.put(slot.name().toLowerCase(Locale.ROOT), skillId);
+        }
         profiles.put(player.getUUID(), new PlayerProfile(player.getUUID(), player.getName().getString(), current.level(), current.experience(), current.statPoints(), current.skillPoints(), current.playerClass(), current.unlockedSkills(), Map.copyOf(equipped), current.attributes(), current.teamId(), System.currentTimeMillis()));
         notifyListeners();
         return true;

@@ -565,7 +565,9 @@ public final class ClientAnimationState {
     }
     public static PowerState getPowerState(UUID entityId) { return POWER_STATES.get(entityId); }
     public static SkillDefinition getSkill(String skillId) { return SKILLS.get(skillId); }
+    public static Collection<SkillDefinition> allSkills() { return List.copyOf(SKILLS.values()); }
     public static PlayerProfile getProfile(UUID playerId) { return PROFILES.get(playerId); }
+    public static Collection<PlayerProfile> allProfiles() { return List.copyOf(PROFILES.values()); }
     public static WeaponDefinition getWeapon(String weaponId) { return WEAPONS.get(weaponId); }
     public static EquipmentLoadout getLoadout(UUID entityId) { return LOADOUTS.get(entityId); }
     public static Object getAvatarSyncedVar(String playerId, String key) {

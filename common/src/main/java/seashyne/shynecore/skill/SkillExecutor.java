@@ -16,7 +16,7 @@ import java.util.Map;
 
 /** Server-authoritative gateway for every player skill cast. */
 public final class SkillExecutor {
-    public enum Status { CAST, SCRIPT_ONLY, UNKNOWN_SKILL, REQUIREMENT_FAILED, NOT_ENOUGH_MANA, ON_COOLDOWN }
+    public enum Status { CAST, SCRIPT_ONLY, UNKNOWN_SKILL, REQUIREMENT_FAILED, NOT_ENOUGH_MANA, ON_COOLDOWN, RATE_LIMITED, POLICY_BLOCKED }
 
     private final SkillRegistry skills;
     private final PlayerProfileRuntime profiles;
@@ -42,11 +42,34 @@ public final class SkillExecutor {
 
     public Status execute(ServerPlayer player, String skillId, SkillSlot slot, String rawKey, int rawSlot) {
         String resolvedId = skillId == null ? "" : skillId.trim();
+
+        // 1. Anti-Cheat & Rate Limit Verification
+        seashyne.shynecore.admin.ShyneAntiCheat.ValidationResult antiCheat =
+            seashyne.shynecore.admin.ShyneAntiCheat.checkSkillCast(
+                player.getUUID(),
+                player.getName().getString(),
+                () -> player.connection.disconnect(net.minecraft.network.chat.Component.literal("[Shyne Anti-Cheat] Disconnected for suspicious activity.").withStyle(net.minecraft.ChatFormatting.RED))
+            );
+        if (!antiCheat.allowed()) {
+            return Status.RATE_LIMITED;
+        }
+
         SkillDefinition definition = skills.get(resolvedId);
         if (definition == null) {
             // Preserve script-defined skills: hooks can still implement them without inventing core costs.
             fireCastHook(player, resolvedId, slot, rawKey, rawSlot, null, false);
             return resolvedId.isBlank() ? Status.UNKNOWN_SKILL : Status.SCRIPT_ONLY;
+        }
+
+        seashyne.shynecore.power.PowerServerConfig serverConfig = seashyne.shynecore.power.PowerServerConfig.get();
+        if (serverConfig.isBanned(resolvedId)) {
+            fireRejectedHook(player, definition, "server_banned");
+            return Status.POLICY_BLOCKED;
+        }
+        String dim = player.level().dimension().identifier().toString();
+        if (serverConfig.isDimensionBanned(dim, resolvedId)) {
+            fireRejectedHook(player, definition, "dimension_banned");
+            return Status.POLICY_BLOCKED;
         }
 
         if (!meetsRequirements(player, definition)) {
@@ -55,7 +78,9 @@ public final class SkillExecutor {
         }
 
         String cooldownKey = "skill:" + definition.skillId();
-        CombatStatManager.UseResult use = combat.tryUse(player.getUUID(), cooldownKey, definition.manaCost(), definition.cooldownTicks());
+        double effectiveMana = definition.manaCost() * serverConfig.getGlobalManaCostMultiplier();
+        int effectiveCooldown = Math.round(definition.cooldownTicks() * serverConfig.getGlobalCooldownMultiplier());
+        CombatStatManager.UseResult use = combat.tryUse(player.getUUID(), cooldownKey, effectiveMana, effectiveCooldown);
         if (use != CombatStatManager.UseResult.SUCCESS) {
             powers.syncResources(player.getUUID());
             String reason = use == CombatStatManager.UseResult.ON_COOLDOWN ? "on_cooldown" : "not_enough_mana";
@@ -66,6 +91,13 @@ public final class SkillExecutor {
         int maxStage = definition.hasTag("combo") ? intPayload(definition, "max_combo_stage", 3) : 1;
         powers.recordSkillUse(player, definition.skillId(), slot.name().toLowerCase(Locale.ROOT), maxStage,
             definition.comboWindowTicks(), definition.modelId(), definition.animation());
+
+        // Decoupled presentation fallback: If no bbmodel animation is attached to this skill,
+        // trigger a vanilla arm swing so the action feels responsive on any avatar/skin.
+        if (definition.modelId() == null || definition.modelId().isBlank()) {
+            player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, true);
+        }
+
         fireCastHook(player, definition.skillId(), slot, rawKey, rawSlot, definition, true);
         return Status.CAST;
     }

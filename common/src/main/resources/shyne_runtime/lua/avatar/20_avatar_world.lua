@@ -8,32 +8,15 @@ local function bool(value) return value and true or false end
 local function read(key, ...) return _shyne_read(key, ...) end
 
 -- ------------------------------------------------------------------------------
--- VANILLA PLAYER MODEL
--- ------------------------------------------------------------------------------
-local function vanilla_proxy(part)
-  local proxy = { part = tostring(part or "PLAYER") }
-  function proxy:visible(value) if value == nil then return _avatar_vanilla_transform(self.part).visible end _avatar_vanilla_visible(self.part, bool(value)) return self end
-  function proxy:show() return self:visible(true) end
-  function proxy:hide() return self:visible(false) end
-  function proxy:setVisible(value) return self:visible(value) end
-  function proxy:getVisible() return self:visible() end
-  function proxy:position() return vector.new(_avatar_vanilla_transform(self.part).position) end
-  function proxy:rotation() return vector.new(_avatar_vanilla_transform(self.part).rotation) end
-  return proxy
-end
-
-vanilla_model = setmetatable({}, {
-  __index = function(_, part) return vanilla_proxy(part) end
-})
-
--- ------------------------------------------------------------------------------
 -- AVATAR CONFIGURATION & NETWORK
 -- ------------------------------------------------------------------------------
-avatar = { camera = {}, texture = {}, network = {}, state = state }
+avatar = avatar or {}
+avatar.camera = avatar.camera or {}
+avatar.texture = avatar.texture or {}
+avatar.network = avatar.network or {}
+avatar.state = state
 function avatar.id() return SHYNE_AVATAR_ID end
 function avatar.path() return SHYNE_AVATAR_PATH end
-function avatar.vanilla(part) return vanilla_proxy(part) end
-function avatar.hide_vanilla(value) _avatar_vanilla_visible("PLAYER", not bool(value)) end
 
 function avatar.camera.configure(options)
   options = options or {}
@@ -69,11 +52,13 @@ function avatar.network.allow(key) _avatar_sync_policy("allow_var", key or "", t
 function avatar.network.local_part(path, value) _avatar_sync_policy("local_only_part", path or "", value == nil or bool(value)) end
 function avatar.network.local_vanilla(part, value) _avatar_sync_policy("local_only_vanilla", part or "", value == nil or bool(value)) end
 
--- ------------------------------------------------------------------------------
--- MINECRAFT STATE
--- ------------------------------------------------------------------------------
-minecraft = { player = {}, world = {}, client = {} }
+minecraft = { player = {}, world = {}, client = {}, settings = {} }
 local function qvec(key) return vector.new(read(key) or {}) end
+
+function minecraft.settings.powers_enabled() return read("settings.powers_enabled") ~= false end
+function minecraft.settings.weapons_enabled() return read("settings.weapons_enabled") ~= false end
+function minecraft.settings.hud_enabled() return read("settings.hud_enabled") ~= false end
+avatar.settings = minecraft.settings
 
 function minecraft.player.loaded() return read("player.loaded") or false end
 function minecraft.player.name() return read("player.name") or "Player" end
@@ -172,6 +157,45 @@ function sound.play(id, options, pitch, pos)
     p and (p.y or p[2]) or nil,
     p and (p.z or p[3]) or nil
   )
+end
+
+--- Starts an asynchronous audio stream from a web URL (HTTP/HTTPS) or file.
+---@param url string Audio stream URL
+---@param options table|nil Stream options { volume, pitch, loop, pos, auto_play }
+---@return table Stream handle with controls and real-time audio reactive metrics
+function sound.stream(url, options)
+  options = options or {}
+  local p = options.pos or options.position
+  local vol = options.volume or options.vol or 1.0
+  local pitch = options.pitch or 1.0
+  local loop = options.loop == true
+  local auto_play = options.auto_play ~= false
+  local stream_id = type(_shyne_audio_stream_create) == "function"
+    and _shyne_audio_stream_create(url, vol, pitch, loop,
+      p and (p.x or p[1]) or nil, p and (p.y or p[2]) or nil, p and (p.z or p[3]) or nil, auto_play)
+    or 0
+
+  local handle = { id = stream_id }
+  function handle:play() if self.id > 0 and _shyne_audio_stream_play then _shyne_audio_stream_play(self.id) end; return self end
+  function handle:pause() if self.id > 0 and _shyne_audio_stream_pause then _shyne_audio_stream_pause(self.id) end; return self end
+  function handle:stop(fade) if self.id > 0 and _shyne_audio_stream_stop then _shyne_audio_stream_stop(self.id, fade or 0) end; return self end
+  function handle:setVolume(v) if self.id > 0 and _shyne_audio_stream_set_volume then _shyne_audio_stream_set_volume(self.id, v) end; return self end
+  function handle:setPitch(pt) if self.id > 0 and _shyne_audio_stream_set_pitch then _shyne_audio_stream_set_pitch(self.id, pt) end; return self end
+  function handle:setPos(x, y, z)
+    if self.id > 0 and _shyne_audio_stream_set_pos then
+      if type(x) == "table" then _shyne_audio_stream_set_pos(self.id, x.x or x[1], x.y or x[2], x.z or x[3])
+      else _shyne_audio_stream_set_pos(self.id, x, y, z) end
+    end
+    return self
+  end
+  function handle:getLevel() return (self.id > 0 and _shyne_audio_stream_get_level) and _shyne_audio_stream_get_level(self.id) or 0 end
+  function handle:getPeak() return (self.id > 0 and _shyne_audio_stream_get_peak) and _shyne_audio_stream_get_peak(self.id) or 0 end
+  function handle:isBeat() return (self.id > 0 and _shyne_audio_stream_is_beat) and _shyne_audio_stream_is_beat(self.id) or false end
+  function handle:isPlaying() return (self.id > 0 and _shyne_audio_stream_is_playing) and _shyne_audio_stream_is_playing(self.id) or false end
+  function handle:isBuffering() return (self.id > 0 and _shyne_audio_stream_is_buffering) and _shyne_audio_stream_is_buffering(self.id) or false end
+  function handle:isPaused() return (self.id > 0 and _shyne_audio_stream_is_paused) and _shyne_audio_stream_is_paused(self.id) or false end
+  function handle:isStopped() return (self.id > 0 and _shyne_audio_stream_is_stopped) and _shyne_audio_stream_is_stopped(self.id) or true end
+  return handle
 end
 
 -- ------------------------------------------------------------------------------

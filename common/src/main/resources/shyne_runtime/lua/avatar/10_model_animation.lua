@@ -42,9 +42,100 @@ local function part_proxy(path)
 
       -- Appearance & Shading
       if key == "color" then return function(self, r, g, b) if r == nil then return vector.new(_avatar_part_read(path, "color")) end r, g, b = coordinates(r, g, b, 1); _avatar_part_mutate(path, "color", r, g, b) return self end end
+      if key == "setColor" then return function(self, r, g, b) return self:color(r, g, b) end end
+      if key == "getColor" then return function(self) return self:color() end end
       if key == "opacity" then return function(self, value) if value == nil then return _avatar_part_read(path, "opacity") end _avatar_part_mutate(path, "opacity", value) return self end end
+      if key == "setOpacity" then return function(self, value) return self:opacity(value) end end
+      if key == "getOpacity" then return function(self) return self:opacity() end end
       if key == "emissive" then return function(self, value) if value == nil then return _avatar_part_read(path, "emissive") end _avatar_part_mutate(path, "emissive", bool(value)) return self end end
+      if key == "setEmissive" then return function(self, value) return self:emissive(value) end end
+      if key == "isEmissive" then return function(self) return self:emissive() end end
+      if key == "light" or key == "setLight" then
+        return function(self, block, sky)
+          if block == nil then return _avatar_part_read(path, "light") end
+          _avatar_part_mutate(path, "light", block, sky or block)
+          return self
+        end
+      end
+      if key == "getLight" then return function(self) return self:light() end end
+      if key == "render_type" or key == "setRenderType" then
+        return function(self, rtype)
+          if rtype == nil then return _avatar_part_read(path, "render_type") end
+          _avatar_part_mutate(path, "render_type", tostring(rtype))
+          return self
+        end
+      end
+      if key == "getRenderType" then return function(self) return self:render_type() end end
       if key == "reset" then return function(self) _avatar_part_mutate(path, "reset") return self end end
+
+      -- 3D Text & Sprite Attachments (Figura Parity)
+      if key == "newText" then
+        return function(self, text_id)
+          local tid = tostring(text_id or ("txt_" .. path:gsub("[^%w_]", "_")))
+          local proxy = {
+            _text = "", _pos = { x = 0, y = 0, z = 0 }, _scale = 1, _color = { 1, 1, 1 }, _visible = true, _billboard = true
+          }
+          function proxy:_sync()
+            if not proxy._visible or proxy._text == "" then
+              if render and render.remove then render.remove(tid) end
+              return
+            end
+            if render and render.text then
+              render.text(tid, proxy._text, {
+                attach = path,
+                offset = proxy._pos,
+                scale = proxy._scale,
+                color = proxy._color,
+                billboard = proxy._billboard,
+                world = true
+              })
+            end
+          end
+          function proxy:setText(t) proxy._text = tostring(t or ""); proxy:_sync(); return proxy end
+          function proxy:text(t) return proxy:setText(t) end
+          function proxy:setPos(x, y, z) proxy._pos = { x = x or 0, y = y or 0, z = z or 0 }; proxy:_sync(); return proxy end
+          function proxy:setScale(s) proxy._scale = tonumber(s) or 1; proxy:_sync(); return proxy end
+          function proxy:setColor(r, g, b) proxy._color = { r or 1, g or 1, b or 1 }; proxy:_sync(); return proxy end
+          function proxy:setVisible(v) proxy._visible = bool(v); proxy:_sync(); return proxy end
+          function proxy:setBillboard(b) proxy._billboard = bool(b); proxy:_sync(); return proxy end
+          function proxy:remove() if render and render.remove then render.remove(tid) end end
+          return proxy
+        end
+      end
+
+      if key == "newSprite" then
+        return function(self, sprite_id)
+          local sid = tostring(sprite_id or ("spr_" .. path:gsub("[^%w_]", "_")))
+          local proxy = {
+            _tex = "", _pos = { x = 0, y = 0, z = 0 }, _scale = 1, _color = { 1, 1, 1 }, _visible = true, _billboard = true
+          }
+          function proxy:_sync()
+            if not proxy._visible or proxy._tex == "" then
+              if render and render.remove then render.remove(sid) end
+              return
+            end
+            if render and render.sprite then
+              render.sprite(sid, proxy._tex, {
+                attach = path,
+                offset = proxy._pos,
+                scale = proxy._scale,
+                color = proxy._color,
+                billboard = proxy._billboard,
+                world = true
+              })
+            end
+          end
+          function proxy:setTexture(t) proxy._tex = tostring(t or ""); proxy:_sync(); return proxy end
+          function proxy:texture(t) return proxy:setTexture(t) end
+          function proxy:setPos(x, y, z) proxy._pos = { x = x or 0, y = y or 0, z = z or 0 }; proxy:_sync(); return proxy end
+          function proxy:setScale(s) proxy._scale = tonumber(s) or 1; proxy:_sync(); return proxy end
+          function proxy:setColor(r, g, b) proxy._color = { r or 1, g or 1, b or 1 }; proxy:_sync(); return proxy end
+          function proxy:setVisible(v) proxy._visible = bool(v); proxy:_sync(); return proxy end
+          function proxy:setBillboard(b) proxy._billboard = bool(b); proxy:_sync(); return proxy end
+          function proxy:remove() if render and render.remove then render.remove(sid) end end
+          return proxy
+        end
+      end
 
       -- Metadata & Hierarchy
       if key == "name" then return function() return _avatar_part_info(path).name end end
@@ -171,7 +262,27 @@ function animation_proxy:restart() _avatar_anim_stop(self.name); return self:pla
 function animation_proxy:playing() return _avatar_anim_playing(self.name) end
 function animation_proxy:isPlaying() return self:playing() end
 function animation_proxy:state() return _avatar_anim_info(self.name) end
-function animation_proxy:time() return self:state().time or 0 end
+function animation_proxy:time(sec)
+  if sec == nil then
+    return _avatar_anim_time and _avatar_anim_time(self.name) or (self:state().time or 0)
+  end
+  if _avatar_anim_time then _avatar_anim_time(self.name, tonumber(sec) or 0) end
+  return self
+end
+function animation_proxy:setTime(sec) return self:time(sec) end
+function animation_proxy:getTime() return self:time() end
+function animation_proxy:pause()
+  if _avatar_anim_pause then _avatar_anim_pause(self.name, true) end
+  return self
+end
+function animation_proxy:resume()
+  if _avatar_anim_pause then _avatar_anim_pause(self.name, false) end
+  return self
+end
+function animation_proxy:isPaused()
+  local s = self:state()
+  return s and s.paused == true
+end
 function animation_proxy:length() local value = self:state().length or 0; return value > 0 and value or _avatar_anim_length(self.name) end
 function animation_proxy:looping() return self:state().looping or false end
 

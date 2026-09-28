@@ -206,6 +206,10 @@ public class ActionDispatcher {
     }
 
     private void actSetBlock(JsonObject args, MinecraftServer s) {
+        if (!seashyne.shynecore.admin.ShyneServerPolicy.get().isBlockDamageAllowed()) {
+            ShyneCore.LOGGER.warn("[ActionDispatcher] Block modification rejected by ShyneServerPolicy (block_damage_allowed=false)");
+            return;
+        }
         int x = args.has("x") ? args.get("x").getAsInt() : 0;
         int y = args.has("y") ? args.get("y").getAsInt() : 64;
         int z = args.has("z") ? args.get("z").getAsInt() : 0;
@@ -264,6 +268,17 @@ public class ActionDispatcher {
         Entity owner = resolveEntity(server, str(args, "owner", str(args, "player", str(args, "entity", ""))));
         if (owner == null) return;
         if (!(owner.level() instanceof ServerLevel world)) return;
+
+        // Quota check (value <= 0 means UNLIMITED)
+        int maxAllowed = seashyne.shynecore.admin.ShyneServerPolicy.get().getMaxSummonsPerPlayer();
+        if (maxAllowed > 0) {
+            long current = summonRuntime.all().stream().filter(s -> s.ownerEntityId().equals(owner.getUUID())).count();
+            if (current >= maxAllowed) {
+                ShyneCore.LOGGER.warn("[ActionDispatcher] Summon rejected for {}: quota ({}) reached", owner.getName().getString(), maxAllowed);
+                return;
+            }
+        }
+
         Identifier typeId = Identifier.tryParse(str(args, "entity_type", "minecraft:armor_stand"));
         if (typeId == null) return;
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(typeId).map(reference -> reference.value()).orElse(null);
@@ -314,6 +329,17 @@ public class ActionDispatcher {
         Entity owner = resolveEntity(server, str(args, "owner", str(args, "player", str(args, "entity", ""))));
         if (owner == null) return;
         if (!(owner.level() instanceof ServerLevel world)) return;
+
+        // Quota check (value <= 0 means UNLIMITED)
+        int maxAllowed = seashyne.shynecore.admin.ShyneServerPolicy.get().getMaxProjectilesPerPlayer();
+        if (maxAllowed > 0) {
+            long current = projectileRuntime.all().stream().filter(p -> p.ownerEntityId().equals(owner.getUUID())).count();
+            if (current >= maxAllowed) {
+                ShyneCore.LOGGER.warn("[ActionDispatcher] Projectile launch rejected for {}: quota ({}) reached", owner.getName().getString(), maxAllowed);
+                return;
+            }
+        }
+
         Identifier typeId = Identifier.tryParse(str(args, "entity_type", "minecraft:armor_stand"));
         if (typeId == null) return;
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(typeId).map(reference -> reference.value()).orElse(null);

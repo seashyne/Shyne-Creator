@@ -3,6 +3,7 @@ package seashyne.shynecore.client.ui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -14,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import seashyne.shynecore.client.avatar.AvatarAction;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
 import seashyne.shynecore.client.avatar.AvatarState;
+import seashyne.shynecore.client.config.ShyneClientSettings;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +23,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * 8-slot Radial Action Wheel GUI for avatars.
+ * Unified 8-slot action wheel for avatar actions and Shyne controls.
  *
  * <p>Provides smooth circular mouse navigation, slot hover highlights,
  * item/glyph icons, toggle badges, and mouse-scroll page navigation.</p>
@@ -60,33 +62,25 @@ public class AvatarActionWheelScreen extends Screen {
 
         AvatarState state = AvatarRuntime.active();
         if (state == null) {
-            avatarName = "";
-            totalPages = 1;
-            return;
-        }
-
-        avatarName = AvatarRuntime.catalog().stream()
-            .filter(entry -> entry.id().equalsIgnoreCase(state.avatarId()))
-            .map(entry -> entry.name().isBlank() ? state.avatarId() : entry.name())
-            .findFirst()
-            .orElse(state.avatarId());
-
-        Map<String, List<AvatarAction>> actionsByPage = state.actionsByPage();
-        if (actionsByPage.isEmpty()) {
-            pages.add(new Page("main", List.of()));
+            avatarName = Component.translatable("screen.shyne_core.palette.no_avatar").getString();
         } else {
+            avatarName = AvatarRuntime.catalog().stream()
+                .filter(entry -> entry.id().equalsIgnoreCase(state.avatarId()))
+                .map(entry -> entry.name().isBlank() ? state.avatarId() : entry.name())
+                .findFirst()
+                .orElse(state.avatarId());
+
+            Map<String, List<AvatarAction>> actionsByPage = state.actionsByPage();
             for (Map.Entry<String, List<AvatarAction>> entry : actionsByPage.entrySet()) {
                 List<AvatarAction> list = entry.getValue();
-                if (list.isEmpty()) {
-                    pages.add(new Page(entry.getKey(), List.of()));
-                } else {
-                    for (int start = 0; start < list.size(); start += SLOTS_PER_PAGE) {
-                        int end = Math.min(start + SLOTS_PER_PAGE, list.size());
-                        pages.add(new Page(entry.getKey(), list.subList(start, end)));
-                    }
+                for (int start = 0; start < list.size(); start += SLOTS_PER_PAGE) {
+                    int end = Math.min(start + SLOTS_PER_PAGE, list.size());
+                    pages.add(new Page(entry.getKey(), List.copyOf(list.subList(start, end))));
                 }
             }
         }
+
+        pages.add(new Page(Component.translatable("screen.shyne_core.action_wheel.controls").getString(), systemActions(state != null)));
 
         totalPages = Math.max(1, pages.size());
         if (currentPage >= totalPages) currentPage = 0;
@@ -103,67 +97,80 @@ public class AvatarActionWheelScreen extends Screen {
 
         int cx = this.width / 2;
         int cy = this.height / 2;
-        int wheelRadius = Math.min(95, Math.max(70, this.height / 3));
+        int wheelRadius = wheelRadius();
 
         List<AvatarAction> currentActions = getCurrentActions();
-        updateHoveredSlot(cx, cy, mouseX, mouseY, currentActions.size());
+        updateHoveredSlot(cx, cy, wheelRadius, mouseX, mouseY, currentActions.size());
 
-        drawCenterHub(graphics, cx, cy, currentActions);
+        drawCenterHub(graphics, cx, cy, mouseX, mouseY);
         drawRadialSlots(graphics, cx, cy, wheelRadius, currentActions);
+        drawPageInformation(graphics, cx, cy, wheelRadius, currentActions);
+        if (totalPages > 1) {
+            graphics.fill(this.width - 27, 4, this.width - 4, 26, SURFACE_CARD);
+            graphics.outline(this.width - 27, 4, 23, 22, ACCENT_CYAN);
+            graphics.text(this.font, Component.literal("⚙"), this.width - 21, 11, ACCENT_CYAN, true);
+        }
 
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
-    private void updateHoveredSlot(int cx, int cy, int mouseX, int mouseY, int actionCount) {
-        double dx = mouseX - cx;
-        double dy = mouseY - cy;
-        double dist = Math.sqrt(dx * dx + dy * dy);
+    private int wheelRadius() {
+        return Math.min(95, Math.max(48, (this.height - 84) / 2));
+    }
 
-        if (dist >= 35 && dist <= 145 && actionCount > 0) {
-            double angle = Math.atan2(dy, dx);
-            double normalized = (angle + Math.PI / 2.0 + 2.0 * Math.PI) % (2.0 * Math.PI);
-            int slot = (int) Math.round(normalized / (2.0 * Math.PI / SLOTS_PER_PAGE)) % SLOTS_PER_PAGE;
-            hoveredSlot = slot < actionCount ? slot : -1;
-        } else {
-            hoveredSlot = -1;
+    private void updateHoveredSlot(int cx, int cy, int radius, int mouseX, int mouseY, int actionCount) {
+        hoveredSlot = -1;
+        for (int slot = 0; slot < actionCount; slot++) {
+            double angle = -Math.PI / 2.0 + slot * (2.0 * Math.PI / SLOTS_PER_PAGE);
+            int x = cx + (int) (Math.cos(angle) * radius);
+            int y = cy + (int) (Math.sin(angle) * radius);
+            if (mouseX >= x - 27 && mouseX < x + 27 && mouseY >= y - 17 && mouseY < y + 17) {
+                hoveredSlot = slot;
+                return;
+            }
         }
     }
 
-    private void drawCenterHub(GuiGraphicsExtractor graphics, int cx, int cy, List<AvatarAction> currentActions) {
-        int hubRadius = 38;
+    private void drawCenterHub(GuiGraphicsExtractor graphics, int cx, int cy, int mouseX, int mouseY) {
+        int hubRadius = 36;
         graphics.fill(cx - hubRadius, cy - hubRadius, cx + hubRadius, cy + hubRadius, SURFACE_BG);
-        graphics.outline(cx - hubRadius, cy - hubRadius, hubRadius * 2, hubRadius * 2, 0x553DD9E8);
+        graphics.outline(cx - hubRadius, cy - hubRadius, hubRadius * 2, hubRadius * 2,
+            hoveredSlot >= 0 ? 0x773DD9E8 : 0x553DD9E8);
 
-        if (hoveredSlot >= 0 && hoveredSlot < currentActions.size()) {
-            AvatarAction action = currentActions.get(hoveredSlot);
-            Component title = Component.literal(action.title());
-            int titleColor = action.hoverColor() != null ? action.hoverColor() : ACCENT_CYAN;
-            graphics.text(this.font, title, cx - this.font.width(title) / 2, cy - 18, titleColor, true);
-
-            if (!action.description().isBlank()) {
-                Component desc = Component.literal(action.description());
-                graphics.text(this.font, desc, cx - this.font.width(desc) / 2, cy - 6, TEXT_MUTED, false);
-            }
-
-            if (action.isToggle()) {
-                String status = action.isToggled() ? "● ACTIVE" : "○ INACTIVE";
-                int color = action.isToggled() ? TOGGLE_ON : TOGGLE_OFF;
-                graphics.text(this.font, Component.literal(status), cx - this.font.width(status) / 2, cy + 6, color, true);
-            } else {
-                String hint = action.hasSecondaryCallback() ? "L-Click: Use  •  R-Click" : "Click to activate";
-                graphics.text(this.font, Component.literal(hint), cx - this.font.width(hint) / 2, cy + 7, TEXT_MUTED, false);
-            }
+        boolean showAvatar = ShyneClientSettings.actionWheelCenterAvatar
+            && this.minecraft != null && this.minecraft.player != null;
+        if (showAvatar) {
+            InventoryScreen.extractEntityInInventoryFollowsMouse(
+                graphics, cx - 31, cy - 33, cx + 31, cy + 33,
+                28, 0.0625F, mouseX, mouseY, this.minecraft.player
+            );
         } else {
-            String nameText = avatarName.isBlank() ? "Shyne Avatar" : avatarName;
-            Component nameComp = Component.literal(nameText);
-            graphics.text(this.font, nameComp, cx - this.font.width(nameComp) / 2, cy - 14, 0xFFF0F4FC, true);
-
-            String pageText = currentActions.isEmpty() ? "No Actions" : "Page " + (currentPage + 1) + "/" + totalPages;
-            graphics.text(this.font, Component.literal(pageText), cx - this.font.width(pageText) / 2, cy - 2, ACCENT_CYAN, false);
-
-            String scrollHint = totalPages > 1 ? "Scroll: Change Page" : "Select Action";
-            graphics.text(this.font, Component.literal(scrollHint), cx - this.font.width(scrollHint) / 2, cy + 10, TEXT_MUTED, false);
+            Component name = Component.literal(this.font.plainSubstrByWidth(avatarName, 62));
+            graphics.text(this.font, name, cx - this.font.width(name) / 2, cy - 4, ACCENT_CYAN, true);
         }
+    }
+
+    private void drawPageInformation(GuiGraphicsExtractor graphics, int cx, int cy, int radius,
+                                     List<AvatarAction> actions) {
+        AvatarAction selected = hoveredSlot >= 0 && hoveredSlot < actions.size() ? actions.get(hoveredSlot) : null;
+        String heading = selected == null ? avatarName : selected.title();
+        String detail = selected == null ? pages.get(currentPage).name() : selected.description();
+        if (selected != null && selected.isToggle()) detail = (selected.isToggled() ? "● ON  " : "○ OFF  ") + detail;
+        if (selected != null && selected.localOnly()) {
+            detail += "  ·  " + Component.translatable("screen.shyne_core.palette.local_only").getString();
+        }
+        int top = Math.max(3, cy - radius - 39);
+        Component title = Component.literal(this.font.plainSubstrByWidth(heading, this.width - 12));
+        Component subtitle = Component.literal(this.font.plainSubstrByWidth(detail, this.width - 12));
+        graphics.text(this.font, title, cx - this.font.width(title) / 2, top, ACCENT_CYAN, true);
+        graphics.text(this.font, subtitle, cx - this.font.width(subtitle) / 2, top + 11, TEXT_MUTED, false);
+
+        String footer = totalPages > 1
+            ? "‹  " + (currentPage + 1) + "/" + totalPages + "  " + pages.get(currentPage).name() + "  ›"
+            : pages.get(currentPage).name();
+        Component page = Component.literal(this.font.plainSubstrByWidth(footer, this.width - 12));
+        graphics.text(this.font, page, cx - this.font.width(page) / 2,
+            Math.min(this.height - 11, cy + radius + 22), 0xFFF0F4FC, true);
     }
 
     private void drawRadialSlots(GuiGraphicsExtractor graphics, int cx, int cy, int radius, List<AvatarAction> currentActions) {
@@ -202,6 +209,37 @@ public class AvatarActionWheelScreen extends Screen {
                 graphics.text(this.font, Component.literal("·"), left + cardW / 2 - 2, top + cardH / 2 - 4, 0x446D7D93, false);
             }
         }
+    }
+
+    private List<AvatarAction> systemActions(boolean hasAvatar) {
+        List<AvatarAction> actions = new ArrayList<>();
+        actions.add(systemAction("screen.shyne_core.avatars", "screen.shyne_core.avatars.tooltip", "player_head",
+            () -> openScreen(new AvatarManagerScreen(this))));
+        if (hasAvatar) {
+            actions.add(systemAction("screen.shyne_core.avatars.outfit", "screen.shyne_core.avatars.outfit.tooltip", "leather_chestplate",
+                () -> openScreen(new AvatarOutfitScreen(this))));
+        }
+        actions.add(systemAction("screen.shyne_core.settings", "screen.shyne_core.action_wheel.settings_hint", "comparator",
+            () -> openScreen(new ShyneSettingsScreen(this))));
+        if (hasAvatar) {
+            actions.add(systemAction("screen.shyne_core.action_wheel.reload", "screen.shyne_core.action_wheel.reload_hint", "clock",
+                () -> {
+                    if (this.minecraft != null) {
+                        AvatarRuntime.reloadActive(this.minecraft);
+                        this.minecraft.gui.setScreen(new AvatarActionWheelScreen(parent));
+                    }
+                }));
+        }
+        return List.copyOf(actions);
+    }
+
+    private AvatarAction systemAction(String titleKey, String descriptionKey, String icon, Runnable callback) {
+        return new AvatarAction(titleKey, Component.translatable(titleKey).getString(),
+            Component.translatable(descriptionKey).getString(), "system", icon, false, false, callback);
+    }
+
+    private void openScreen(Screen screen) {
+        if (this.minecraft != null) this.minecraft.gui.setScreen(screen);
     }
 
     private void renderActionIcon(GuiGraphicsExtractor graphics, AvatarAction action, int x, int y) {
@@ -245,7 +283,21 @@ public class AvatarActionWheelScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (totalPages > 1 && event.button() == 0 && event.x() >= this.width - 27 && event.y() >= 4 && event.y() < 26) {
+            currentPage = totalPages - 1;
+            hoveredSlot = -1;
+            playUiScrollSound();
+            return true;
+        }
+        if (totalPages > 1 && event.button() == 0 && event.y() >= this.height - 24) {
+            if (event.x() < this.width / 3) changePage(-1);
+            else if (event.x() > this.width * 2 / 3) changePage(1);
+            else return super.mouseClicked(event, doubleClick);
+            return true;
+        }
         List<AvatarAction> currentActions = getCurrentActions();
+        updateHoveredSlot(this.width / 2, this.height / 2, wheelRadius(),
+            (int) event.x(), (int) event.y(), currentActions.size());
         if (hoveredSlot >= 0 && hoveredSlot < currentActions.size()) {
             AvatarAction action = currentActions.get(hoveredSlot);
             playUiClickSound();
@@ -270,12 +322,7 @@ public class AvatarActionWheelScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (totalPages > 1 && verticalAmount != 0) {
-            if (verticalAmount < 0) {
-                currentPage = (currentPage + 1) % totalPages;
-            } else {
-                currentPage = (currentPage - 1 + totalPages) % totalPages;
-            }
-            playUiScrollSound();
+            changePage(verticalAmount < 0 ? 1 : -1);
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
@@ -284,6 +331,20 @@ public class AvatarActionWheelScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         int keyCode = event.key();
+        if (totalPages > 1 && keyCode == 258) {
+            currentPage = totalPages - 1;
+            hoveredSlot = -1;
+            playUiScrollSound();
+            return true;
+        }
+        if (totalPages > 1 && (keyCode == 262 || keyCode == 267)) {
+            changePage(1);
+            return true;
+        }
+        if (totalPages > 1 && (keyCode == 263 || keyCode == 266)) {
+            changePage(-1);
+            return true;
+        }
         // Number keys 1-8 quickly trigger radial slots
         if (keyCode >= 49 && keyCode <= 56) {
             int slot = keyCode - 49;
@@ -303,6 +364,17 @@ public class AvatarActionWheelScreen extends Screen {
     private List<AvatarAction> getCurrentActions() {
         if (pages.isEmpty() || currentPage >= pages.size()) return List.of();
         return pages.get(currentPage).actions;
+    }
+
+    private void changePage(int direction) {
+        currentPage = (currentPage + direction + totalPages) % totalPages;
+        hoveredSlot = -1;
+        playUiScrollSound();
+    }
+
+    @Override
+    public void onClose() {
+        if (this.minecraft != null) this.minecraft.gui.setScreen(parent);
     }
 
     private void playUiClickSound() {

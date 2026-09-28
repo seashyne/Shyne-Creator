@@ -40,6 +40,9 @@ public final class AvatarWorldBridge {
                 String key = args.arg(1).optjstring("");
                 if ("client.singleplayer".equals(key)) return LuaValue.valueOf(client.hasSingleplayerServer());
                 if ("world.loaded".equals(key)) return LuaValue.valueOf(client.level != null);
+                if ("settings.powers_enabled".equals(key)) return LuaValue.valueOf(seashyne.shynecore.client.config.ShyneClientSettings.avatarPowersEnabled);
+                if ("settings.weapons_enabled".equals(key)) return LuaValue.valueOf(seashyne.shynecore.client.config.ShyneClientSettings.signatureWeaponsEnabled);
+                if ("settings.hud_enabled".equals(key)) return LuaValue.valueOf(seashyne.shynecore.client.config.ShyneClientSettings.combatHudEnabled);
                 if (player == null) return LuaValue.NIL;
                 return switch (key) {
                     case "player.loaded" -> LuaValue.TRUE;
@@ -80,15 +83,38 @@ public final class AvatarWorldBridge {
                     case "world.time" -> LuaValue.valueOf(player.level().getGameTime());
                     case "world.day_time" -> LuaValue.valueOf(player.level().getGameTime() % 24_000L);
                     case "world.raining" -> LuaValue.valueOf(player.level().isRaining());
+                    case "player.item" -> itemBySlot(player, args.arg(2));
                     case "world.light" -> LuaValue.valueOf(player.level().getMaxLocalRawBrightness(BlockPos.containing(args.arg(2).optdouble(player.getX()), args.arg(3).optdouble(player.getY()), args.arg(4).optdouble(player.getZ()))));
                     case "world.block" -> LuaValue.valueOf(BuiltInRegistries.BLOCK.getKey(player.level().getBlockState(BlockPos.containing(args.arg(2).optdouble(player.getX()), args.arg(3).optdouble(player.getY()), args.arg(4).optdouble(player.getZ()))).getBlock()).toString());
-                    case "world.block_info" -> blockInfo(player, args.arg(2).optdouble(player.getX()), args.arg(3).optdouble(player.getY()), args.arg(4).optdouble(player.getZ()));
-                    case "world.probe" -> physicsProbe(player, args);
+                    case "world.block_info" -> AvatarProbeHelper.blockInfo(player, args.arg(2).optdouble(player.getX()), args.arg(3).optdouble(player.getY()), args.arg(4).optdouble(player.getZ()));
+                    case "world.probe" -> AvatarProbeHelper.physicsProbe(player, args);
+                    case "world.raycast_block" -> AvatarProbeHelper.raycastBlock(player, args);
+                    case "world.raycast_entity" -> AvatarProbeHelper.raycastEntity(player, args);
+                    case "world.block_light" -> LuaValue.valueOf(player.level().getBrightness(net.minecraft.world.level.LightLayer.BLOCK, BlockPos.containing(args.arg(2).optdouble(player.getX()), args.arg(3).optdouble(player.getY()), args.arg(4).optdouble(player.getZ()))));
+                    case "world.sky_light" -> LuaValue.valueOf(player.level().getBrightness(net.minecraft.world.level.LightLayer.SKY, BlockPos.containing(args.arg(2).optdouble(player.getX()), args.arg(3).optdouble(player.getY()), args.arg(4).optdouble(player.getZ()))));
+                    case "world.redstone" -> LuaValue.valueOf(player.level().getBestNeighborSignal(BlockPos.containing(args.arg(2).optdouble(player.getX()), args.arg(3).optdouble(player.getY()), args.arg(4).optdouble(player.getZ()))));
+                    case "world.thundering" -> LuaValue.valueOf(player.level().isThundering());
                     case "world.biome" -> LuaValue.valueOf(player.level().getBiome(BlockPos.containing(args.arg(2).optdouble(player.getX()), args.arg(3).optdouble(player.getY()), args.arg(4).optdouble(player.getZ())))
                         .unwrapKey().map(entryKey -> entryKey.identifier().toString()).orElse(""));
                     case "client.paused" -> LuaValue.valueOf(client.isPaused());
                     case "client.first_person" -> LuaValue.valueOf(client.options.getCameraType().isFirstPerson());
+                    case "client.camera_is_player" -> LuaValue.valueOf(client.getCameraEntity() == player);
+                    case "client.camera_backwards" -> LuaValue.valueOf(client.options.getCameraType().isMirrored());
                     case "client.chat_open" -> LuaValue.valueOf(client.gui != null && client.gui.screen() instanceof net.minecraft.client.gui.screens.ChatScreen);
+                    case "client.fps" -> LuaValue.valueOf(client.getFps());
+                    case "client.mouse_x" -> LuaValue.valueOf(client.mouseHandler.xpos());
+                    case "client.mouse_y" -> LuaValue.valueOf(client.mouseHandler.ypos());
+                    case "client.window_w" -> LuaValue.valueOf(client.getWindow().getGuiScaledWidth());
+                    case "client.window_h" -> LuaValue.valueOf(client.getWindow().getGuiScaledHeight());
+                    case "client.camera_pos" -> {
+                        var cam = client.gameRenderer.mainCamera();
+                        yield vec3(cam.position().x, cam.position().y, cam.position().z);
+                    }
+                    case "client.camera_rot" -> {
+                        var cam = client.gameRenderer.mainCamera();
+                        yield vec3(cam.xRot(), cam.yRot(), 0);
+                    }
+                    case "client.fov" -> LuaValue.valueOf(client.options.fov().get());
                     case "player.voice_level" -> LuaValue.valueOf(seashyne.shynecore.voice.ShyneMicrophoneState.getSpeakerSnapshot(player.getUUID()).level());
                     case "player.speaking" -> LuaValue.valueOf(seashyne.shynecore.voice.ShyneMicrophoneState.getSpeakerSnapshot(player.getUUID()).speaking());
                     case "player.alive" -> LuaValue.valueOf(player.isAlive());
@@ -101,6 +127,9 @@ public final class AvatarWorldBridge {
 
         globals.set("_shyne_player_set_velocity", new VarArgFunction() {
             @Override public Varargs invoke(Varargs args) {
+                if (!seashyne.shynecore.client.config.ShyneClientSettings.avatarPowersEnabled) {
+                    return LuaValue.FALSE;
+                }
                 Minecraft client = Minecraft.getInstance();
                 if (client.player == null) return LuaValue.FALSE;
                 double vx = args.arg(1).optdouble(client.player.getDeltaMovement().x);
@@ -116,11 +145,13 @@ public final class AvatarWorldBridge {
         LuaTable value = new LuaTable();
         String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
         value.set("id", LuaValue.valueOf(itemId));
+        value.set("name", LuaValue.valueOf(stack.getHoverName().getString()));
         value.set("material", LuaValue.valueOf(armorMaterial(itemId)));
         value.set("count", LuaValue.valueOf(stack.getCount()));
         value.set("empty", LuaValue.valueOf(stack.isEmpty()));
         value.set("damage", LuaValue.valueOf(stack.isDamageableItem() ? stack.getDamageValue() : 0));
         value.set("max_damage", LuaValue.valueOf(stack.isDamageableItem() ? stack.getMaxDamage() : 0));
+        value.set("glint", LuaValue.valueOf(stack.hasFoil()));
         var trim = stack.get(DataComponents.TRIM);
         if (trim != null) {
             value.set("trim_material", LuaValue.valueOf(trim.material().unwrapKey().map(key -> key.identifier().toString()).orElse("")));
@@ -209,92 +240,32 @@ public final class AvatarWorldBridge {
         return value;
     }
 
-    public static LuaTable blockInfo(Player player, double x, double y, double z) {
-        var position = BlockPos.containing(x, y, z);
-        var state = player.level().getBlockState(position);
-        LuaTable result = new LuaTable();
-        result.set("id", LuaValue.valueOf(BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString()));
-        result.set("solid", LuaValue.valueOf(!state.getCollisionShape(player.level(), position).isEmpty()));
-        result.set("fluid", LuaValue.valueOf(!state.getFluidState().isEmpty()));
-        result.set("position", vec3(position.getX(), position.getY(), position.getZ()));
-        return result;
-    }
-
-    public static LuaTable physicsProbe(Player player, Varargs args) {
-        var start = new Vec3(
-            args.arg(2).optdouble(player.getX()), args.arg(3).optdouble(player.getY()), args.arg(4).optdouble(player.getZ())
-        );
-        var rawDirection = new Vec3(args.arg(5).optdouble(0), args.arg(6).optdouble(0), args.arg(7).optdouble(0));
-        var direction = rawDirection.lengthSqr() < 0.000001 ? player.getLookAngle() : rawDirection.normalize();
-        double distance = Math.max(0.01, Math.min(16.0, args.arg(8).optdouble(1.0)));
-        double radius = Math.max(0.0, Math.min(2.0, args.arg(9).optdouble(0.0)));
-        var end = start.add(direction.scale(distance));
-        var sweptBlock = sweptBlockHit(player, start, end, radius);
-        var blockHit = sweptBlock.hit();
-        double nearestDistance = sweptBlock.distance();
-        Entity nearestEntity = null;
-        var search = new AABB(start, end).inflate(radius);
-        for (var entity : player.level().getEntities(player, search, entity -> entity.isPickable() && !entity.isSpectator())) {
-            var intersection = entity.getBoundingBox().inflate(radius).clip(start, end);
-            if (intersection.isEmpty()) continue;
-            double hitDistance = start.distanceTo(intersection.get());
-            if (hitDistance < nearestDistance) { nearestDistance = hitDistance; nearestEntity = entity; }
+    public static LuaTable itemBySlot(Player player, LuaValue slotArg) {
+        if (player == null) return itemStack(net.minecraft.world.item.ItemStack.EMPTY);
+        if (slotArg.isnumber()) {
+            int slot = slotArg.toint();
+            var stack = switch (slot) {
+                case 1 -> player.getMainHandItem();
+                case 2 -> player.getOffhandItem();
+                case 3 -> player.getItemBySlot(EquipmentSlot.FEET);
+                case 4 -> player.getItemBySlot(EquipmentSlot.LEGS);
+                case 5 -> player.getItemBySlot(EquipmentSlot.CHEST);
+                case 6 -> player.getItemBySlot(EquipmentSlot.HEAD);
+                default -> net.minecraft.world.item.ItemStack.EMPTY;
+            };
+            return itemStack(stack);
         }
-        LuaTable result = new LuaTable();
-        result.set("distance", LuaValue.valueOf(nearestDistance));
-        if (nearestEntity != null) {
-            result.set("hit", LuaValue.TRUE); result.set("type", LuaValue.valueOf("ENTITY"));
-            result.set("position", vec3(nearestEntity.getX(), nearestEntity.getY(), nearestEntity.getZ()));
-            result.set("entity_id", LuaValue.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(nearestEntity.getType()).toString()));
-            result.set("normal", vec3(-direction.x, -direction.y, -direction.z));
-            return result;
-        }
-        result.set("hit", LuaValue.valueOf(blockHit.getType() != HitResult.Type.MISS));
-        result.set("type", LuaValue.valueOf(blockHit.getType().name()));
-        result.set("position", vec3(blockHit.getLocation().x, blockHit.getLocation().y, blockHit.getLocation().z));
-        if (blockHit instanceof BlockHitResult hit) {
-            var face = hit.getDirection();
-            result.set("block", LuaValue.valueOf(BuiltInRegistries.BLOCK.getKey(player.level().getBlockState(hit.getBlockPos()).getBlock()).toString()));
-            result.set("normal", vec3(face.getStepX(), face.getStepY(), face.getStepZ()));
-        } else result.set("normal", vec3(0, 0, 0));
-        return result;
-    }
-
-    private static BlockProbeHit sweptBlockHit(Player player, Vec3 start, Vec3 end, double radius) {
-        var center = clipBlock(player, start, end);
-        double closestDistance = center.getType() == HitResult.Type.MISS
-            ? start.distanceTo(end) : start.distanceTo(center.getLocation());
-        if (radius <= 0.0001) return new BlockProbeHit(center, closestDistance);
-
-        var delta = end.subtract(start);
-        if (delta.lengthSqr() < 0.000001) return new BlockProbeHit(center, closestDistance);
-        var direction = delta.normalize();
-        var reference = Math.abs(direction.y) < 0.95 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
-        var right = direction.cross(reference).normalize().scale(radius);
-        var up = right.cross(direction).normalize().scale(radius);
-        var diagonalA = right.add(up).normalize().scale(radius);
-        var diagonalB = right.subtract(up).normalize().scale(radius);
-        Vec3[] offsets = {
-            right, right.scale(-1), up, up.scale(-1),
-            diagonalA, diagonalA.scale(-1), diagonalB, diagonalB.scale(-1)
+        String slotStr = slotArg.optjstring("mainhand").toLowerCase(java.util.Locale.ROOT);
+        var stack = switch (slotStr) {
+            case "mainhand", "main_hand", "hand" -> player.getMainHandItem();
+            case "offhand", "off_hand" -> player.getOffhandItem();
+            case "head", "helmet" -> player.getItemBySlot(EquipmentSlot.HEAD);
+            case "chest", "chestplate" -> player.getItemBySlot(EquipmentSlot.CHEST);
+            case "legs", "leggings" -> player.getItemBySlot(EquipmentSlot.LEGS);
+            case "feet", "boots" -> player.getItemBySlot(EquipmentSlot.FEET);
+            default -> net.minecraft.world.item.ItemStack.EMPTY;
         };
-        for (var offset : offsets) {
-            var sampleStart = start.add(offset);
-            var sample = clipBlock(player, sampleStart, end.add(offset));
-            if (sample.getType() == HitResult.Type.MISS) continue;
-            double sampledDistance = sampleStart.distanceTo(sample.getLocation());
-            if (center.getType() == HitResult.Type.MISS || sampledDistance < closestDistance) {
-                center = sample;
-                closestDistance = sampledDistance;
-            }
-        }
-        return new BlockProbeHit(center, closestDistance);
-    }
-
-    private static BlockHitResult clipBlock(Player player, Vec3 start, Vec3 end) {
-        return player.level().clip(new ClipContext(
-            start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player
-        ));
+        return itemStack(stack);
     }
 
     public static LuaTable nearbyPlayers(Player viewer, double radius, boolean includeSelf) {

@@ -22,6 +22,18 @@ function HUD.update(state, config, jump_mod, flight_mod, weapon_mod)
   local h_speed = math.sqrt(vel.x * vel.x + vel.z * vel.z) * 20.0 -- บล็อกต่อวินาที
   local total_speed = math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z) * 20.0
 
+  local hud_allowed = (config.loadout.hud_visible ~= false) and (not minecraft.settings or minecraft.settings.hud_enabled())
+  if not hud_allowed then
+    render.remove("mod_hud_bg")
+    render.remove("mod_hud_fill")
+    render.remove("mod_hud_text")
+    render.remove("mod_hud_speed")
+    render.remove("mod_hud_keys")
+    return
+  end
+
+  local powers_active = (config.loadout.powers_enabled ~= false) and (not minecraft.settings or minecraft.settings.powers_enabled())
+
   -- 1) พื้นหลัง Mana Bar
   render.rect("mod_hud_bg", {
     x = bar_x - 1,
@@ -33,18 +45,25 @@ function HUD.update(state, config, jump_mod, flight_mod, weapon_mod)
   })
 
   -- 2) หลอด Mana Fill
-  local mana_ratio = math.max(0, math.min(1, state.mana / config.mana.max))
+  local mana_ratio = powers_active and math.max(0, math.min(1, state.mana / config.mana.max)) or 0
   render.rect("mod_hud_fill", {
     x = bar_x,
     y = bar_y,
     width = math.floor(bar_w * mana_ratio),
     height = bar_h,
-    color = config.debug.infinite_mana and 0xFFFFD700 or config.colors.mana_bar,
+    color = not powers_active and 0xFF445566 or (config.debug.infinite_mana and 0xFFFFD700 or config.colors.mana_bar),
     z_index = 41
   })
 
   -- 3) ข้อความตัวเลข Mana + สถานะ Debug
-  local mana_txt = config.debug.infinite_mana and "MP: [INF] (GODMODE)" or string.format("MP: %d / %d", math.floor(state.mana), config.mana.max)
+  local mana_txt
+  if not powers_active then
+    mana_txt = "POWERS: [STANDBY]"
+  elseif config.debug.infinite_mana then
+    mana_txt = "MP: [INF] (GODMODE)"
+  else
+    mana_txt = string.format("MP: %d / %d", math.floor(state.mana), config.mana.max)
+  end
   render.text("mod_hud_text", {
     text = mana_txt,
     x = bar_x + (bar_w / 2) - (#mana_txt * 2.5),
@@ -71,11 +90,23 @@ function HUD.update(state, config, jump_mod, flight_mod, weapon_mod)
   })
 
   -- 5) สถานะอาวุธและสกิลลัด
-  local wp_status = weapon_mod.is_drawn and "§b[G] Blade: DRAWN" or "§7[G] Blade: SHEATHED"
-  local jmp_status = jump_mod.jump_cooldown > 0 and string.format("[X] %.1fs", jump_mod.jump_cooldown / 20) or "[X] Jump"
-  local flt_status = flight_mod.cooldown > 0 and string.format("[R] %.1fs", flight_mod.cooldown / 20) or "[R] Dash"
+  local wp_status
+  if weapon_mod.mode == "hidden" then
+    wp_status = Color.red("[G] Blade: OFF")
+  elseif weapon_mod.mode == "drawn" then
+    wp_status = Color.aqua("[G] Blade: DRAWN")
+  else
+    wp_status = Color.gray("[G] Blade: SHEATHED")
+  end
 
-  local info_row = string.format("%s  |  %s  |  %s", wp_status, jmp_status, flt_status)
+  local info_row
+  if not powers_active then
+    info_row = wp_status + "  |  " + Color.gray("POWERS: STANDBY (OFF)")
+  else
+    local jmp_status = jump_mod.jump_cooldown > 0 and string.format("[X] %.1fs", jump_mod.jump_cooldown / 20) or "[X] Jump"
+    local flt_status = flight_mod.cooldown > 0 and string.format("[R] %.1fs", flight_mod.cooldown / 20) or "[R] Dash"
+    info_row = string.format("%s  |  %s  |  %s", wp_status, jmp_status, flt_status)
+  end
   render.text("mod_hud_keys", {
     text = info_row,
     x = bar_x + (bar_w / 2) - (#info_row * 2.1),

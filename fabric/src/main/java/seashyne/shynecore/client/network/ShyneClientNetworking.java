@@ -41,12 +41,14 @@ public final class ShyneClientNetworking {
         ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_AVATAR_VARS_PAYLOAD, (payload, context) -> context.client().execute(() -> ClientAnimationState.handleAvatarVarSync(payload.json())));
         ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_AVATAR_SNAPSHOTS_PAYLOAD, (payload, context) -> context.client().execute(() -> ClientAnimationState.handleAvatarSnapshotSync(payload.json())));
         ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_PLAYER_PRESENCE_PAYLOAD, (payload, context) -> context.client().execute(() -> ShyneTabStatusIcons.handlePresenceSync(payload.json())));
+        ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_POWER_CONFIG_PAYLOAD, (payload, context) -> context.client().execute(() -> seashyne.shynecore.client.state.ClientPowerConfig.handleSync(payload.json())));
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> sendProtocolHello());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             protocolReady = false;
             serverCapabilities = Set.of();
             ClientAnimationState.clearRemoteSession();
             ShyneTabStatusIcons.clear();
+            seashyne.shynecore.client.state.ClientPowerConfig.reset();
         });
     }
 
@@ -93,6 +95,13 @@ public final class ShyneClientNetworking {
     public static void sendSkillKey(String skill, int slot) {
         if (serverSupports(ShyneNetwork.CAP_SERVER_AUTHORITATIVE_GAMEPLAY) && ClientPlayNetworking.canSend(ShyneNetwork.SKILL_KEY_PAYLOAD)) {
             ClientPlayNetworking.send(new ShyneNetwork.SkillKeyPayload(skill, slot));
+        }
+    }
+
+    public static void sendEquipSkill(String skillId, String slot) {
+        if (ClientPlayNetworking.canSend(ShyneNetwork.EQUIP_SKILL_PAYLOAD)) {
+            String json = ShyneNetwork.GSON.toJson(new ShyneNetwork.EquipRequest(skillId, slot));
+            ClientPlayNetworking.send(new ShyneNetwork.JsonPayload(ShyneNetwork.EQUIP_SKILL_PAYLOAD, json));
         }
     }
 

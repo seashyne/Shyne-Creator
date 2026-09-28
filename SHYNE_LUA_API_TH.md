@@ -1,6 +1,6 @@
 # Shyne Native Lua API — Standard 2.0
 
-เอกสารนี้ตรงกับ Shyne Creator `2.10.4-alpha-26.3`
+เอกสารนี้ตรงกับ Shyne Creator `2.12.0`
 
 Lua เป็นชั้นควบคุมหลักสำหรับงานอิสระและงานขั้นสูงของ Shyne Avatar Standard 2.0 ส่วน Avatar แบบ model-first ทั่วไปเริ่มได้โดยไม่ต้องมี `script.lua` หากต้องใช้ procedural rig, physics, UI หรือ logic เฉพาะ ให้ระบุ `main` และใช้ API ของ Shyne โดยตรง โดยไม่พึ่ง Figura:
 
@@ -131,6 +131,67 @@ ui.action({
 events.on("avatar_unload", function()
   avatar.hide_vanilla(false)
 end)
+```
+
+## ระบบแทนที่ Vanilla เฉพาะส่วน (Universal replace_vanilla / hide_vanilla)
+
+Shyne Creator รองรับการซ่อนและแทนที่ร่างกายผู้เล่นวานิลลาครบทุกรูปแบบ ทั้งใน `shyne.setup({...})`, `shyne.replace_vanilla(...)`, `avatar.replace_vanilla(...)`, และผ่าน `vanilla_model`:
+
+### 1. แบบ Boolean (แทนที่ทั้งหมด / แสดงทั้งหมด)
+```lua
+shyne.replace_vanilla(true)   -- ซ่อนร่างกายวานิลลาทั้งหมด
+shyne.replace_vanilla(false)  -- คืนค่าแสดงร่างกายวานิลลาทั้งหมด
+```
+
+### 2. แบบ String (ระบุชิ้นส่วน หรือคำจำกัดความสั้นๆ)
+```lua
+shyne.replace_vanilla("arms")        -- ซ่อนเฉพาะแขน 2 ข้าง (+ แขนเสื้อ)
+shyne.replace_vanilla("legs")        -- ซ่อนเฉพาะขา 2 ข้าง (+ ขากางเกง)
+shyne.replace_vanilla("head")        -- ซ่อนเฉพาะหัว (+ หมวก)
+shyne.replace_vanilla("body")        -- ซ่อนเฉพาะลำตัว (+ เสื้อแจ็คเก็ต) หรือใช้ "torso"
+shyne.replace_vanilla("right_arm")   -- ซ่อนเฉพาะแขนขวา (+ แขนเสื้อขวา)
+shyne.replace_vanilla("left_leg")    -- ซ่อนเฉพาะขาซ้าย (+ กางเกงซ้าย)
+shyne.replace_vanilla("arms, legs")  -- ซ่อนหลายส่วน คั่นด้วยจุลภาคหรือช่องว่าง
+```
+
+### 3. แบบ Array / List Table (เลือกหลายส่วนพร้อมกัน)
+```lua
+shyne.replace_vanilla({ "arms", "head" })
+shyne.replace_vanilla({ "right_arm", "right_leg" })
+```
+
+### 4. แบบ Key-Value Table (เปิด/ปิดอิสระแต่ละชิ้นส่วน)
+```lua
+shyne.replace_vanilla({
+  arms = true,     -- ซ่อนแขน (แทนที่ด้วยโมเดลคัสตอม)
+  legs = false,    -- คงขาเดิมไว้
+  head = false,    -- คงหัวเดิมไว้
+  body = false     -- คงตัวเดิมไว้
+})
+```
+
+### 5. กำหนดใน Declarative `shyne.setup`
+```lua
+shyne.setup {
+  -- รองรับทั้ง replace_vanilla และ hide_vanilla ทุกรูปแบบข้างต้น:
+  replace_vanilla = { "arms" },
+
+  parts = {
+    ["model.RightArm"] = { vanilla_parent = "RIGHT_ARM" },
+    ["model.LeftArm"]  = { vanilla_parent = "LEFT_ARM" }
+  }
+}
+```
+
+### 6. ควบคุมผ่าน `vanilla_model` และ Dynamic Runtime Toggle
+```lua
+-- เรียกใช้กลางเกม เช่น ตอนกดใช้สกิลแปลงร่าง หรือสวมเกราะจักรกล
+vanilla_model.ARMS:setVisible(false)  -- ซ่อนแขนทั้ง 2 ข้าง
+vanilla_model.ARMS:setVisible(true)   -- นำแขนกลับมา
+
+-- หรือใช้ฟังก์ชันพร้อมพารามิเตอร์ boolean ตัวที่สอง
+shyne.replace_vanilla("arms", false)  -- false = ไม่แทนที่ (แสดงกลับมา)
+shyne.replace_vanilla("arms", true)   -- true = แทนที่ (ซ่อน)
 ```
 
 ## โมเดล
@@ -388,6 +449,11 @@ local visible = head:visible()
 
 ```lua
 sound.play("minecraft:entity.axolotl.splash", { volume = 0.8, pitch = 1.1 })
+-- สตรีมเสียงผ่านอินเทอร์เน็ต (URL) แบบ Non-blocking พร้อมตัวชี้วัด Beat & Peak
+local stream = sound.stream("https://example.com/audio/theme.ogg", { volume = 0.8, loop = true })
+-- หรือใช้ sounds:playStream(url, options) ใน Figura compat
+-- stream:play(), stream:pause(), stream:stop(fadeSec), stream:getLevel(), stream:isBeat()
+
 particle.spawn("minecraft:bubble", minecraft.player.position(), {
   velocity = vector.new(0, 0.05, 0)
 })
@@ -497,6 +563,26 @@ return M
 - มีระบบตรวจจับ Circular Dependency ป้องกัน Infinite Recursion
 - เมื่อรีโหลด Avatar ในเกม (Hot-reload) Cache ของโมดูลจะถูกล้างเพื่อให้โหลดโค้ดใหม่ทั้งหมดอย่างถูกต้อง
 
+### ระบบคลัง Library แบบ Hybrid (3 ระดับ)
+
+Shyne Core ใช้ระบบค้นหาโมดูลตามลำดับ 3 ระดับ เมื่อเรียก `require("module_name")`:
+
+1. **ระดับที่ 1: Local Avatar Folder**
+   - ค้นหาในโฟลเดอร์ของ Avatar ตัวนั้นๆ ก่อนเสมอ (ให้สิทธิ์สคริปต์ของผู้สร้างสูงสุด)
+2. **ระดับที่ 2: Built-in Mod JAR (Base Libraries ติดมากับม็อด 0ms)**
+   - โหลดจากตัวม็อดโดยตรง ทำงานได้แม้ออฟไลน์ ไม่ต้องเชื่อมต่อเน็ต ได้แก่:
+     - `require("classic")`: ระบบ OOP / Class inheritance
+     - `require("tween")`: ระบบ Easing Animation ครบชุด
+     - `require("inspect")`: ระบบ Serialize / Debug Table
+     - `require("noise")`: ระบบ 1D/2D/3D Perlin & Simplex noise
+     - `require("vector")`: ระบบ 2D/3D Vector math (dot, cross, lerp, distance)
+     - `require("signal")`: ระบบ Observer / Event dispatcher
+3. **ระดับที่ 3: Local Library Cache (`.minecraft/shyne_creator/libs/`)**
+   - สำหรับ Library เสริมจาก Community หรือดาวน์โหลดจาก Seashyne Libraries Hub (`seashyne/Libraries`)
+   - ดาวน์โหลดเพียงครั้งเดียว เก็บไว้ในเครื่อง ถาวร โหลดซ้ำได้ 0ms และแชร์ให้ Avatar ทุกตัวในเครื่องใช้งานร่วมกันได้ทันที
+   - สามารถเปิดดูหรือนำไฟล์ `.lua` ไปวางเองได้ผ่านหน้าต่าง **Cloud Avatar Library > แท็บ Lua Libraries > Open Libs Folder**
+
+
 ## ฟิสิกส์และความเร็วของผู้เล่น (Player Velocity & Physics)
 
 ใช้สำหรับทำท่ากระโดดสูง (Super Jump), ลอยตัวต้านแรงโน้มถ่วง (Anti-Gravity Hover), หรือพุ่งบิน (Sky Dash/Flight):
@@ -538,6 +624,120 @@ local nearby_entities = world.getEntities(12)
 for _, ent in ipairs(nearby_entities) do
   print("Entity: " .. ent.type .. " ระยะ: " .. ent.distance .. " HP: " .. ent.health)
 end
+```
+
+## การแทนที่และซ่อนโมเดลวานิลลาแบบเจาะจงส่วน (Granular replace_vanilla)
+
+คุณสามารถเลือกซ่อนหรือแทนที่เฉพาะส่วนของตัวละครวานิลลาได้อย่างอิสระ เช่น ซ่อนเฉพาะแขนเพื่อใส่โมเดลแขนหุ่นยนต์ หรือซ่อนเฉพาะขา:
+
+```lua
+-- ซ่อนเฉพาะแขนทั้งสองข้าง (รวม sleeve)
+shyne.replace_vanilla("arms")
+
+-- หรือระบุเฉพาะเจาะจงผ่านตารางแบบ Key-Value
+shyne.replace_vanilla({
+  right_arm = true,   -- ซ่อนเฉพาะแขนขวา
+  left_arm = false,   -- แสดงแขนซ้ายตามปกติ
+  helmet = true       -- ซ่อนหมวกเกราะวานิลลา
+})
+
+-- หรือควบคุมผ่านออบเจ็กต์ vanilla_model โดยตรง
+vanilla_model.RIGHT_ARM:hide()
+vanilla_model.RIGHT_ARM:show()
+vanilla_model.CAPE:hide()
+```
+
+## Figura 100% Real-World Parity API Suite
+
+Shyne Creator รองรับ API มาตรฐานเดียวกับ Figura แบบสมบูรณ์ 100% โดยสามารถเรียกใช้งานได้ทันทีทั้งสคริปต์ที่แปลงมาจาก Figura หรือเขียนใหม่ใน Shyne:
+
+### 1. ระบบควบคุมกล้องและเรนเดอร์ (`renderer` & `client`)
+```lua
+-- ควบคุมเงาของตัวละครและมุมมองกล้อง
+renderer:setShadowRadius(0.8)       -- ปรับขนาดเงาตัวละคร
+renderer:setCameraPivot(0, 1.5, 0)  -- จุดหมุนกล้อง
+renderer:setCameraPos(0, 0, -3)     -- ตำแหน่ง Offset ของกล้อง
+renderer:setCameraRot(0, 15, 0)     -- หมุนกล้อง
+renderer:setFOV(90)                 -- ขยาย/แคบมุมมอง FOV
+
+-- อ่านสถานะไคลเอนต์
+local fps = client:getFPS()
+local is_first_person = client:isFirstPerson()
+local mouse = client:getMousePos()       -- { x, y }
+local window = client:getScaledWindowSize() -- { x, y }
+```
+
+### 2. ระบบตรวจจับการเล็งและฟิสิกส์เรย์คาสต์ (`raycast`)
+```lua
+-- Raycast ตรวจจับบล็อกข้างหน้า
+local hit_block = raycast:block(player:getPos(), player:getPos() + player:getLookDir() * 10)
+if hit_block then
+  print("เล็งโดนบล็อก:", hit_block.id, "ที่พิกัด:", hit_block.pos)
+end
+
+-- Raycast ตรวจจับเอนทิตีหรือผู้เล่น
+local hit_entity = raycast:entity(player:getPos(), player:getPos() + player:getLookDir() * 16)
+if hit_entity then
+  print("เป้าหมาย:", hit_entity.name, "HP:", hit_entity.health)
+end
+```
+
+### 3. ระบบแสงและความโปร่งใสของชิ้นส่วนโมเดล (`part:setLight`, `part:setRenderType`)
+```lua
+local my_part = model.body.glow_gem
+
+-- บังคับแสงให้ชิ้นส่วนสว่างจ้าในที่มืด (เรืองแสง)
+my_part:setLight(15, 15) -- block light = 15, sky light = 15
+-- รีเซ็ตกลับเป็นแสงธรรมชาติของโลก
+my_part:clearLight()
+
+-- ตั้งค่าโหมดการเรนเดอร์ (รองรับโปร่งใสทะลุได้)
+my_part:setRenderType("TRANSLUCENT") -- "TRANSLUCENT", "CUTOUT", หรือ "SOLID"
+```
+
+### 4. ระบบควบคุมและข้ามแอนิเมชัน (`anim:setTime`, `anim:pause`)
+```lua
+local anim = model.attack
+
+-- ข้ามเวลาแอนิเมชันไปยังวินาทีที่ต้องการ (Scrubbing)
+anim:setTime(1.25)
+print("ตำแหน่งเวลาปัจจุบัน:", anim:getTime())
+
+-- หยุดชั่วคราวและเล่นต่อ
+anim:pause()
+if anim:isPaused() then
+  anim:resume()
+end
+```
+
+### 5. ระบบส่องไอเทมและอุปกรณ์สวมใส่ (`player:getItem`, `player:getHeldItem`)
+```lua
+-- ดึงไอเทมในมือหลัก (Mainhand) และมือรอง (Offhand)
+local main_hand = player:getHeldItem()      -- หรือ player:getItem(1)
+local off_hand = player:getHeldItem(true)   -- หรือ player:getItem(2)
+
+-- ดึงชุดเกราะ: 3=เท้า(Boots), 4=กางเกง(Legs), 5=เสื้อ(Chest), 6=หัว(Head)
+local chest = player:getItem(5)
+if chest and not chest:isEmpty() then
+  print("สวมเสื้อเกราะ:", chest:getName(), "ความเสียหาย:", chest:getDamage(), "/", chest:getMaxDamage())
+  print("เอฟเฟกต์เรืองแสง Enchant:", chest:hasGlint())
+end
+```
+
+### 6. ระบบอ่านข้อมูลโลกและสภาพแวดล้อม (`world`)
+```lua
+local pos = player:getPos()
+local block_light = world.getBlockLight(pos)
+local sky_light = world.getSkyLight(pos)
+local biome = world.getBiome(pos)
+local is_raining = world.isRaining()
+
+-- ตรวจสอบสัญญาณ Redstone
+local redstone = world.getRedstonePower(pos)
+
+-- อ่าน BlockState เชิงลึก
+local state = world.getBlockState(pos)
+print("Block:", state.id, "Solid:", state.solid, "Fluid:", state.fluid)
 ```
 
 ## Gameplay/server script

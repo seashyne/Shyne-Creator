@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.10.4-alpha-26.3`
+- Shyne Creator: `2.12.0`
 - Minecraft: `26.3`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -20,10 +20,10 @@ Shyne Creator เป็น runtime สำหรับใช้ Avatar และ 
 
 1. เลือก JAR ให้ตรงกับ Fabric หรือ NeoForge; Fabric ต้องติดตั้ง Fabric API เพิ่ม
 2. ใส่ JAR ในโฟลเดอร์ `mods` แล้วเปิด Minecraft 26.3
-3. เข้าโลกแล้วกด `H` หรือเปิด `Esc → อวตาร`
+3. เข้าโลกแล้วกด `G` และเลือก `จัดการอวตาร` หรือเปิด `Esc → อวตาร`
 4. กด `เปิดโฟลเดอร์` เพื่อนำ Avatar (ทั้งแบบโฟลเดอร์ หรือไฟล์ `.zip` สำเร็จรูป วางได้โดยตรงทันที) มาไว้ใน `shyne-mods/avatars` หรือเปิด Cloud จากปุ่มด้านบนเมื่อเปิดใช้งานไว้
 5. ถ้าเพิ่มไฟล์เอง ให้กลับเข้าเกมแล้วกด `สแกนไฟล์` จากนั้นกด `เลือกใช้` โดยไม่ต้องตั้งค่า Avatar เพิ่ม
-6. กด `G` เพื่อเปิดท่าทางหรือคำสั่งที่ Avatar นั้นเตรียมไว้ และกด `O` เพื่อเปิดการตั้งค่า Shyne
+6. กด `G` เพื่อเปิดวงล้อคำสั่ง เลื่อนหน้าเพื่อใช้ท่าทางหรือเปิด Settings; เปิดวงล้อได้แม้ยังไม่เลือก Avatar
 
 ปุ่ม `Z`, `X`, `C` และ `V` เป็นช่องความสามารถจาก Content Pack จึงอาจไม่ทำอะไรหากโลกหรือเซิร์ฟเวอร์ไม่ได้ติดตั้งแพ็กที่รองรับ ส่วน **Shyne Creator Kit ใช้สำหรับสร้าง Avatar และห้ามนำไปใส่ในโฟลเดอร์ `mods`**
 
@@ -48,6 +48,23 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 
 เครื่องมือตั้ง profile, attachment, role, animation state และ export manifest จาก Blockbench อยู่ที่ [Shyne Blockbench Plugin](tools/blockbench/README_TH.md)
 
+## 2.11.0 Server Admin Policy, Unified Action Wheel & Web Audio Streaming
+
+- **ระบบ Server Admin Policy & Anti-Cheat (`/shyne policy`, `/shyne antihack`)**:
+  - **เปิดอิสระ 100% (UNLIMITED) เป็นค่าเริ่มต้น**: ปลดล็อกเพดานจำกัดตัวเลขทั้งหมด ดาเมจสูงสุด (`max_damage`), ระยะล็อกเป้า (`max_reach`), จำนวนกระสุน (`max_projectiles`), จำนวนซัมมอน (`max_summons`), และความถี่ร่ายสกิล (`max_casts_per_sec`) เป็น `UNLIMITED` ทั้งหมด
+  - **อนุญาตการทำลายบล็อกและไฟลุกลาม**: `block_damage`, `fire_spread`, `pvp_skills`, `friendly_fire`, และ `custom_flight` เปิดใช้งานตามปกติ ให้ฟิสิกส์และพลังของผู้สร้างแสดงผลได้อย่างเต็มที่
+  - **Anti-Cheat ปิดใช้งานเป็นค่าเริ่มต้น (`false`)**: สคริปต์หรือพลังแฟนตาซีจะไม่ถูกตัดทอนหรือ Cancel แอ็กชันกลางคัน และหากเปิดใช้งานจะเริ่มด้วยโหมด `LOG_ONLY`
+  - **Strict Validation & Tab Completion**: แอดมินปรับแต่งนโยบายได้ตลอดเวลาผ่าน `/shyne policy set <key> <val>` โดยระบบตรวจจับค่าอย่างรัดกุม รองรับเฉพาะเลขบวก (`> 0`) หรือคีย์เวิร์ด `unlimited`/`none`/`-1` (ปฏิเสธค่าติดลบแปลกๆ เช่น `-1999` ทันที) พร้อมระบบ Tab Suggestion แนะนำตัวเลือกในเกมอัตโนมัติ
+- **Web Audio Streaming API (`sound.stream` & `sounds:playStream`)**:
+  - สตรีมเสียงผ่านอินเทอร์เน็ต (URL HTTP/HTTPS รูปแบบ MP3 หรือ OGG) เข้ามาในเกมได้โดยตรงแบบ Non-blocking ไม่กระตุกเกม
+  - ควบคุมการเล่นสมบูรณ์แบบ: `play()`, `pause()`, `stop(fade)`, ปรับระดับเสียง `setVolume()`, ปรับความเร็วเสียง `setPitch()`, และกำหนดตำแหน่งเสียง 3D ในโลก `setPos(x, y, z)`
+  - ตัวชี้วัด Audio-reactive แบบเรียลไทม์: `getLevel()`, `getPeak()`, `isBeat()` สำหรับนำไปผูกกับแสงสี เอฟเฟกต์ และ Visualizer ของโมเดลอวตาร
+  - ควบคุมความปลอดภัยผ่าน Server Policy (`audio_streams`) และ Client Permissions
+- **กฎสถาปัตยกรรมและระเบียบโค้ด (`RULES.md`)**:
+  - กำหนดกฎสถาปัตยกรรม Single Responsibility Principle (SRP) แยกโมดูลอย่างเป็นสัดส่วน จำกัดความยาวไฟล์ไม่เกิน 350-400 บรรทัด
+  - บังคับการเขียน Javadoc และ EmmyLua ครบถ้วนทุกคลาสและเมธอด
+  - รักษา 100% MultiLoader parity ระหว่าง Fabric และ NeoForge อย่างเคร่งครัด
+
 ## 2.10.4-alpha Modular Scripting, Direct ZIP, Signature Weapons & Physics Velocity
 
 - **โหลดไฟล์ `.zip` อวตารได้โดยตรง**: ผู้เล่นสามารถนำไฟล์แพ็กอวตาร `.zip` มาวางไว้ใน `.minecraft/shyne-mods/avatars/` ได้ทันทีโดยไม่ต้องแตกไฟล์ ระบบจะตรวจสอบความปลอดภัย (Zip-Slip protection), ตรวจ manifest และแคชเพื่อโหลดเข้าสู่เกมอัตโนมัติ
@@ -60,7 +77,7 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 
 ## 2.10.3-alpha Radial Action Wheel & Custom Sound Player
 
-- **8-Slot Radial Action Wheel GUI**: เมนูวงล้อทางลัด 8 ช่อง กด `B` (ตั้งปุ่มได้ใน Controls) รองรับการเลือกด้วยเมาส์, ปุ่มตัวเลข 1-8, เลื่อนหน้าด้วยล้อเมาส์ และ badge บอกสถานะเปิด/ปิด
+- **8-Slot Radial Action Wheel GUI**: เมนูวงล้อทางลัด 8 ช่อง ปัจจุบันกด `G` (ตั้งปุ่มได้ใน Controls) รองรับการเลือกด้วยเมาส์, ปุ่มตัวเลข 1-8, เลื่อนหน้าด้วยล้อเมาส์ และ badge บอกสถานะเปิด/ปิด
 - **Custom Sound Player**: เล่นไฟล์เสียง `.ogg` จากโฟลเดอร์ `sounds/` ของอวตารได้โดยตรงผ่าน `sounds:playSound("name")` ไม่ต้องทำ Resource Pack
 - **First-Person Custom Arm**: เรนเดอร์แขน 3D จากโมเดล Blockbench ในมุมมองบุคคลที่หนึ่ง
 - **ตัวอย่างโมเดล Showcase**: เพิ่ม `action-wheel-showcase-avatar` ใน `tools/examples/`
@@ -175,6 +192,14 @@ Build และตรวจทั้งสอง Loader:
 
 ```powershell
 .\gradlew.bat releaseBundle
+```
+
+อัปโหลดทั้งสอง Loader ไปยัง CurseForge หลังตรวจ JAR และ checksum แล้ว โดยกำหนด
+`CURSEFORGE_API_TOKEN` ใน environment ของเครื่องก่อนเรียก `curseforge-upload.ps1`:
+
+```powershell
+.\curseforge-upload.ps1 -DryRun
+.\curseforge-upload.ps1
 ```
 
 Build แยก Loader:

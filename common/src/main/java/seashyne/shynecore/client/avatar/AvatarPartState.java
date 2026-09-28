@@ -31,6 +31,8 @@ public final class AvatarPartState {
     private boolean vanillaParentControlled;
     private int colorArgb = 0xFFFFFFFF;
     private boolean emissive;
+    private int overrideLight = -1;
+    private String renderType = "DEFAULT";
     private boolean renderControlled;
 
     public boolean visible() { return visible; }
@@ -137,6 +139,31 @@ public final class AvatarPartState {
     public boolean setEmissive(boolean value) {
         boolean changed = !renderControlled || emissive != value; renderControlled = true; emissive = value; return changed;
     }
+    public int overrideLight() { return overrideLight; }
+    public boolean hasOverrideLight() { return overrideLight >= 0; }
+    public boolean setLight(int block, int sky) {
+        int packed = ((sky & 15) << 20) | ((block & 15) << 4);
+        boolean changed = !renderControlled || this.overrideLight != packed;
+        this.renderControlled = true;
+        this.overrideLight = packed;
+        return changed;
+    }
+    public boolean clearLight() {
+        boolean changed = this.overrideLight != -1;
+        this.overrideLight = -1;
+        return changed;
+    }
+    public String renderType() { return renderType; }
+    public boolean setRenderType(String type) {
+        String norm = type == null ? "DEFAULT" : type.trim().toUpperCase(java.util.Locale.ROOT);
+        boolean changed = !renderControlled || !this.renderType.equals(norm);
+        this.renderControlled = true;
+        this.renderType = norm;
+        if ("EMISSIVE".equals(norm)) {
+            this.emissive = true;
+        }
+        return changed;
+    }
     public void setRenderState(int colorArgb, boolean emissive) { this.colorArgb = colorArgb; this.emissive = emissive; this.renderControlled = true; }
 
     public boolean sameValues(AvatarPartState other) {
@@ -148,7 +175,8 @@ public final class AvatarPartState {
             && additiveRotationControlled == other.additiveRotationControlled
             && additiveRotationLayers.equals(other.additiveRotationLayers)
             && vanillaParentControlled == other.vanillaParentControlled && vanillaParent.equals(other.vanillaParent) && vanillaAttachmentMode.equals(other.vanillaAttachmentMode)
-            && colorArgb == other.colorArgb && emissive == other.emissive && renderControlled == other.renderControlled
+            && colorArgb == other.colorArgb && emissive == other.emissive && overrideLight == other.overrideLight
+            && renderType.equals(other.renderType) && renderControlled == other.renderControlled
             && same(posX, other.posX) && same(posY, other.posY) && same(posZ, other.posZ)
             && same(rotX, other.rotX) && same(rotY, other.rotY) && same(rotZ, other.rotZ)
             && same(scaleX, other.scaleX) && same(scaleY, other.scaleY) && same(scaleZ, other.scaleZ)
@@ -184,6 +212,8 @@ public final class AvatarPartState {
         copy.vanillaAttachmentMode = this.vanillaAttachmentMode;
         copy.colorArgb = this.colorArgb;
         copy.emissive = this.emissive;
+        copy.overrideLight = this.overrideLight;
+        copy.renderType = this.renderType;
         copy.renderControlled = this.renderControlled;
         return copy;
     }

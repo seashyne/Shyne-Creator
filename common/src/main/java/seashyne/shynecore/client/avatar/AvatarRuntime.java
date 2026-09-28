@@ -68,6 +68,7 @@ public final class AvatarRuntime {
         lifecycle.syncAttachment(client);
         AvatarFileWatcher.tick(client);
         seashyne.shynecore.client.avatar.sound.AvatarCustomSoundManager.cleanupStoppedSources();
+        seashyne.shynecore.client.avatar.sound.AvatarAudioStreamManager.tick();
     }
 
     // Accessors
@@ -108,6 +109,22 @@ public final class AvatarRuntime {
     public static float cameraOffsetZ() { return lifecycle.active() == null ? 0f : lifecycle.active().cameraOffsetZ(); }
     public static float cameraRotationX() { return lifecycle.active() == null ? 0f : lifecycle.active().cameraRotationX(); }
     public static float cameraRotationY() { return lifecycle.active() == null ? 0f : lifecycle.active().cameraRotationY(); }
+    public static boolean cameraPivotControlled() { return lifecycle.active() != null && lifecycle.active().cameraPivotControlled(); }
+    public static float cameraPivotX() { return lifecycle.active() == null ? 0f : lifecycle.active().cameraPivotX(); }
+    public static float cameraPivotY() { return lifecycle.active() == null ? 0f : lifecycle.active().cameraPivotY(); }
+    public static float cameraPivotZ() { return lifecycle.active() == null ? 0f : lifecycle.active().cameraPivotZ(); }
+    public static boolean cameraAbsoluteRotationControlled() {
+        return lifecycle.active() != null && lifecycle.active().cameraAbsoluteRotationControlled();
+    }
+    public static float cameraAbsoluteRotationX() {
+        return lifecycle.active() == null ? 0f : lifecycle.active().cameraAbsoluteRotationX();
+    }
+    public static float cameraAbsoluteRotationY() {
+        return lifecycle.active() == null ? 0f : lifecycle.active().cameraAbsoluteRotationY();
+    }
+    public static float cameraFovMultiplier() {
+        return lifecycle.active() == null ? Float.NaN : lifecycle.active().cameraFovMultiplier();
+    }
     public static String localNameplateText() { return lifecycle.active() == null ? "" : lifecycle.active().nameplateText(); }
     public static boolean localNameplateVisible() { return lifecycle.active() == null || lifecycle.active().nameplateVisible(); }
 

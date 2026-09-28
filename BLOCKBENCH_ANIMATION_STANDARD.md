@@ -1,6 +1,6 @@
 # Shyne Blockbench Animation Standard
 
-เอกสารนี้ใช้กับ Shyne Creator `2.10.4-alpha-26.3` ซึ่งอ่าน `.bbmodel` ตามรูปแบบโปรเจกต์ Blockbench 5.1.5 โดยตรง และใช้ animation runtime เดียวกันบน Fabric กับ NeoForge
+เอกสารนี้ใช้กับ Shyne Creator `2.12.0` ซึ่งอ่าน `.bbmodel` ตามรูปแบบโปรเจกต์ Blockbench 5.1.5 โดยตรง และใช้ animation runtime เดียวกันบน Fabric กับ NeoForge
 
 ## รองรับแล้ว
 

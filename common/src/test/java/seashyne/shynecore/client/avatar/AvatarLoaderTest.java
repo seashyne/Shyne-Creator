@@ -51,6 +51,25 @@ final class AvatarLoaderTest {
     }
 
     @Test
+    void standardAliasesMapToLatestStandard() throws Exception {
+        Path root = temp.resolve("StandardAliases");
+        Files.createDirectories(root);
+        Files.writeString(root.resolve("model.bbmodel"), "{}");
+
+        // When standard is "latest"
+        Files.writeString(root.resolve("avatar.json"), "{\"name\":\"TestLatest\",\"standard\":\"latest\"}");
+        assertEquals("2.0", AvatarLoader.loadManifest(root).standard());
+
+        // When standard is "auto"
+        Files.writeString(root.resolve("avatar.json"), "{\"name\":\"TestAuto\",\"standard\":\"auto\"}");
+        assertEquals("2.0", AvatarLoader.loadManifest(root).standard());
+
+        // When standard is empty string
+        Files.writeString(root.resolve("avatar.json"), "{\"name\":\"TestBlank\",\"standard\":\"\"}");
+        assertEquals("2.0", AvatarLoader.loadManifest(root).standard());
+    }
+
+    @Test
     void explicitNativeLuaUsesApiTwoAndSemanticRequirementsAreChecked() throws Exception {
         Path root = temp.resolve("api-avatar");
         Files.createDirectories(root);

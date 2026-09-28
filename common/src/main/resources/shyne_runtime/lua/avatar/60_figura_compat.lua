@@ -65,115 +65,7 @@ events.ENTITY_INIT = make_figura_event_emitter("entity_init")
 events.DAMAGE = make_figura_event_emitter("damage")
 events.CHAT_SEND_MESSAGE = make_figura_event_emitter("chat_send_message")
 
--- ------------------------------------------------------------------------------
--- 2. ACTION WHEEL BRIDGE (action_wheel -> Shyne Palette Screen)
--- ------------------------------------------------------------------------------
-
----@class ActionWheel
-action_wheel = action_wheel or {
-  _pages = {},
-  _current_page = nil
-}
-
-local action_mt = {}
-action_mt.__index = action_mt
-
-function action_mt:title(t) self._title = tostring(t or ""); self:_update(); return self end
-function action_mt:setTitle(t) return self:title(t) end
-function action_mt:item(i) self._item = tostring(i or ""); self:_update(); return self end
-function action_mt:setItem(i) return self:item(i) end
-function action_mt:color(r, g, b) self._color = { r or 1, g or 1, b or 1 }; return self end
-function action_mt:setColor(r, g, b) return self:color(r, g, b) end
-function action_mt:hoverColor(r, g, b) self._hoverColor = { r or 1, g or 1, b or 1 }; return self end
-function action_mt:setHoverColor(r, g, b) return self:hoverColor(r, g, b) end
-function action_mt:texture(path, u, v, w, h) self._texture = path; return self end
-function action_mt:onLeftClick(fn) self._onLeftClick = fn; self:_update(); return self end
-function action_mt:onRightClick(fn) self._onRightClick = fn; self:_update(); return self end
-function action_mt:onScroll(fn) self._onScroll = fn; return self end
-function action_mt:toggled(t) self._toggled = t and true or false; return self end
-function action_mt:onToggle(fn) self._onToggle = fn; return self end
-
-function action_mt:_update()
-  if self._title ~= "" then
-    local page_name = self._page and self._page.id or "main"
-    local id = self.id or (page_name .. "_" .. self._title:gsub("%s+", "_"):lower())
-    local col = nil
-    if self._color then
-      local r = math.floor(math.max(0, math.min(1, tonumber(self._color[1]) or 1)) * 255)
-      local g = math.floor(math.max(0, math.min(1, tonumber(self._color[2]) or 1)) * 255)
-      local b = math.floor(math.max(0, math.min(1, tonumber(self._color[3]) or 1)) * 255)
-      col = (255 * 16777216) + (r * 65536) + (g * 256) + b
-    end
-    local hcol = nil
-    if self._hoverColor then
-      local r = math.floor(math.max(0, math.min(1, tonumber(self._hoverColor[1]) or 1)) * 255)
-      local g = math.floor(math.max(0, math.min(1, tonumber(self._hoverColor[2]) or 1)) * 255)
-      local b = math.floor(math.max(0, math.min(1, tonumber(self._hoverColor[3]) or 1)) * 255)
-      hcol = (255 * 16777216) + (r * 65536) + (g * 256) + b
-    end
-    _avatar_action_register(
-      id,
-      self._title,
-      self._desc or "",
-      page_name,
-      false,
-      self._onToggle == nil,
-      function()
-        if self._onToggle then self._toggled = not self._toggled; self._onToggle(self._toggled); self:_update() end
-        if self._onLeftClick then self._onLeftClick() end
-      end,
-      self._item or "",
-      self._onRightClick and function() self._onRightClick() end or nil,
-      self._onToggle ~= nil,
-      self._toggled == true,
-      col,
-      hcol
-    )
-    self._registered = true
-  end
-end
-
-local page_mt = {}
-page_mt.__index = page_mt
-
-function page_mt:newAction(id)
-  local act = setmetatable({
-    id = id or ("act_" .. tostring(#self.actions + 1)),
-    _title = "",
-    _item = "",
-    _desc = "",
-    _page = self,
-    _registered = false
-  }, action_mt)
-  table.insert(self.actions, act)
-  return act
-end
-
-function page_mt:getAction(id)
-  for _, act in ipairs(self.actions) do
-    if act.id == id then return act end
-  end
-  return nil
-end
-
-function action_wheel:newPage(title)
-  local page = setmetatable({
-    id = title or ("page_" .. tostring(#self._pages + 1)),
-    title = title or "",
-    actions = {}
-  }, page_mt)
-  table.insert(self._pages, page)
-  if not self._current_page then self._current_page = page end
-  return page
-end
-
-function action_wheel:setPage(page)
-  self._current_page = page
-end
-
-function action_wheel:getCurrentPage()
-  return self._current_page
-end
+-- Action Wheel is implemented in 63_figura_action_wheel.lua
 
 -- ------------------------------------------------------------------------------
 -- 3. PINGS RPC NETWORK BRIDGE (pings)
@@ -183,6 +75,49 @@ end
 pings = pings or {}
 local _ping_handlers = {}
 local _ping_sequence = 0
+local _ping_last_received = 0
+local _ping_capacity = 64
+local _ping_outbox = { first = 1, events = {} }
+
+-- Snapshots are rate-limited, so a single value loses every ping except the
+-- last one when a script calls pings.foo() more than once per tick. Keep a
+-- bounded, sequence-numbered queue instead. Receivers can safely see the
+-- most recent snapshot more than once because sequence numbers are deduped.
+local function _publish_ping_queue()
+  _avatar_synced_set("__figura_ping_queue", {
+    first = _ping_outbox.first,
+    last = _ping_sequence,
+    events = _ping_outbox.events
+  })
+end
+
+local function _dispatch_ping(data)
+  if type(data) ~= "table" or type(data.name) ~= "string" then return end
+  local handler = _ping_handlers[data.name]
+  if handler then pcall(handler, table.unpack(data.args or {})) end
+end
+
+local function _receive_ping_queue(queue)
+  if type(queue) ~= "table" or type(queue.events) ~= "table" then return end
+  for _, data in ipairs(queue.events) do
+    local sequence = tonumber(data and data.seq)
+    if sequence and sequence > _ping_last_received then
+      _ping_last_received = sequence
+      _dispatch_ping(data)
+    end
+  end
+end
+
+local function _enqueue_ping(name, args)
+  _ping_sequence = _ping_sequence + 1
+  local events = _ping_outbox.events
+  table.insert(events, { name = name, args = args, seq = _ping_sequence })
+  if #events > _ping_capacity then
+    table.remove(events, 1)
+    _ping_outbox.first = _ping_sequence - #events + 1
+  end
+  _publish_ping_queue()
+end
 
 setmetatable(pings, {
   __newindex = function(_, name, func)
@@ -196,22 +131,18 @@ setmetatable(pings, {
       if _ping_handlers[name] then
         pcall(_ping_handlers[name], table.unpack(args))
       end
-      _ping_sequence = _ping_sequence + 1
-      _avatar_synced_set("__figura_ping", {
-        name = name,
-        args = args,
-        seq = _ping_sequence
-      })
+      _enqueue_ping(name, args)
     end
   end
 })
 
 events.on("synced_var_change", function(payload)
-  if payload and payload.key == "__figura_ping" and payload.value then
-    local data = payload.value
-    if data.name and _ping_handlers[data.name] then
-      pcall(_ping_handlers[data.name], table.unpack(data.args or {}))
-    end
+  if not payload or not payload.value then return end
+  if payload.key == "__figura_ping_queue" then
+    _receive_ping_queue(payload.value)
+  elseif payload.key == "__figura_ping" then
+    -- Read older snapshots during the migration from the single-value format.
+    _dispatch_ping(payload.value)
   end
 end)
 
@@ -252,8 +183,10 @@ function keybinds:newKeybind(name, default_key)
   return kb
 end
 
+-- renderer and client are implemented in 61_figura_client_renderer.lua
+
 -- ------------------------------------------------------------------------------
--- 5. PLAYER & WORLD PROXIES (player, world)
+-- 6. PLAYER & WORLD PROXIES (player, world)
 -- ------------------------------------------------------------------------------
 
 ---@class FiguraPlayer
@@ -299,6 +232,8 @@ function player:addVelocity(vx, vy, vz)
   return self:setVelocity(cur.x + (vx or 0), cur.y + (vy or 0), cur.z + (vz or 0))
 end
 
+
+
 ---@class FiguraHost
 host = host or {}
 function host:isHost() return true end
@@ -319,13 +254,15 @@ if avatar then
   function avatar:isLoaded() return true end
 end
 
+---@class FiguraSettings
+settings = settings or {}
+function settings:isPowersEnabled() return _shyne_read("settings.powers_enabled") ~= false end
+function settings:isWeaponsEnabled() return _shyne_read("settings.weapons_enabled") ~= false end
+function settings:isHudEnabled() return _shyne_read("settings.hud_enabled") ~= false end
+
 ---@class FiguraWorld
 world = world or {}
 function world.getTime() return _shyne_read("world.time") or 0 end
-function world.getBlockState(pos)
-  pos = pos or { x = 0, y = 0, z = 0 }
-  return _shyne_read("block", pos.x or pos[1], pos.y or pos[2], pos.z or pos[3])
-end
 
 --- Returns list of nearby players (Figura compatible)
 ---@param radius number|nil Optional search radius in blocks (default 64)
@@ -435,4 +372,12 @@ function sounds.playSound(name, vol, pitch, pos)
     vol = vol.volume or vol.vol
   end
   return sound.play(tostring(name), { volume = vol, pitch = pitch, pos = pos })
+end
+
+function sounds:playStream(url, options)
+  return sound.stream(url, options)
+end
+
+function sounds.playStream(url, options)
+  return sound.stream(url, options)
 end

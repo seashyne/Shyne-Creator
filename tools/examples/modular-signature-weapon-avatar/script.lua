@@ -27,11 +27,22 @@ Weapon.init()
 
 -- 3. REGISTER AVATAR KEYBINDS (MINECRAFT CONTROLS INTEGRATION)
 
+local function are_powers_allowed()
+  local local_enabled = Config.loadout and (Config.loadout.powers_enabled ~= false)
+  local global_enabled = not minecraft or not minecraft.settings or minecraft.settings.powers_enabled()
+  return local_enabled and global_enabled
+end
+
 -- [X] Super Jump
 input.bind("skill_super_jump", {
   title = "Skill: Super Jump",
   key = input.key.x,
   on_press = function()
+    if not are_powers_allowed() then
+      sounds:playSound("minecraft:block.fire.extinguish", player:getPos(), 0.6, 1.8)
+      print(Color.red("[Powers] Standby / Disabled — Toggle in [B] Action Wheel or [O] Settings."))
+      return
+    end
     JumpSkill.super_jump(state, Config)
   end
 })
@@ -41,6 +52,11 @@ input.bind("skill_toggle_hover", {
   title = "Skill: Toggle Hover",
   key = input.key.z,
   on_press = function()
+    if not are_powers_allowed() then
+      sounds:playSound("minecraft:block.fire.extinguish", player:getPos(), 0.6, 1.8)
+      print(Color.red("[Powers] Standby / Disabled — Toggle in [B] Action Wheel or [O] Settings."))
+      return
+    end
     JumpSkill.toggle_hover(state)
   end
 })
@@ -50,16 +66,21 @@ input.bind("skill_flight_dash", {
   title = "Skill: Flight Dash",
   key = input.key.r,
   on_press = function()
+    if not are_powers_allowed() then
+      sounds:playSound("minecraft:block.fire.extinguish", player:getPos(), 0.6, 1.8)
+      print(Color.red("[Powers] Standby / Disabled — Toggle in [B] Action Wheel or [O] Settings."))
+      return
+    end
     FlightSkill.flight_dash(state, Config)
   end
 })
 
--- [G] Draw / Sheath Signature Weapon
+-- [G] Cycle Signature Weapon Mode (Drawn -> Hidden -> Sheathed)
 input.bind("weapon_toggle", {
-  title = "Weapon: Draw/Sheath Blade",
+  title = "Weapon: Draw/Sheath/Equip Blade",
   key = input.key.g,
   on_press = function()
-    Weapon.toggle_drawn()
+    Weapon.cycle_mode()
   end
 })
 
@@ -68,6 +89,11 @@ input.bind("weapon_slash", {
   title = "Weapon: Blade Wave",
   key = input.key.f,
   on_press = function()
+    if not are_powers_allowed() then
+      sounds:playSound("minecraft:block.fire.extinguish", player:getPos(), 0.6, 1.8)
+      print(Color.red("[Powers] Blade Wave requires Powers to be Active."))
+      return
+    end
     Weapon.slash_wave(state, Config)
   end
 })
@@ -77,6 +103,10 @@ input.bind("skill_meditate", {
   title = "Skill: Meditate (Hold)",
   key = input.key.m,
   on_press = function()
+    if not are_powers_allowed() then
+      print(Color.red("[Powers] Standby / Disabled."))
+      return
+    end
     Meditate.start()
   end,
   on_release = function()
@@ -93,41 +123,107 @@ input.bind("debug_refill", {
   end
 })
 
--- 4. ACTION WHEEL INTEGRATION (KEY 'B')
+-- 4. ACTION WHEEL INTEGRATION (KEY 'B' - 3-LAYER LOADOUT CONTROLLER)
 if action_wheel then
   local page = action_wheel:newPage("main_page")
   action_wheel:setPage(page)
 
+  -- Slot 1: Weapon Layer - Cycle 3-state weapon
   page:newAction(1)
     :setTitle("Signature Blade [G]")
     :setItem("minecraft:iron_sword")
     :setColor(0.3, 0.7, 1.0)
-    :onLeftClick(Weapon.toggle_drawn)
+    :onLeftClick(function()
+      Weapon.cycle_mode()
+    end)
 
+  -- Slot 2: Powers Layer - Standby vs Active toggle
   page:newAction(2)
+    :setTitle("Toggle Powers (Active/Standby)")
+    :setItem("minecraft:blaze_powder")
+    :setColor(1.0, 0.6, 0.2)
+    :onLeftClick(function()
+      Config.loadout.powers_enabled = not Config.loadout.powers_enabled
+      if Config.loadout.powers_enabled then
+        sounds:playSound("minecraft:entity.player.levelup", player:getPos(), 0.8, 1.5)
+        print(Color.green("[Powers Layer] ") + Color.yellow("ACTIVATED ") + Color.gray("(Skills & Flight Ready)"))
+      else
+        sounds:playSound("minecraft:block.beacon.deactivate", player:getPos(), 0.8, 1.2)
+        print(Color.red("[Powers Layer] ") + Color.gray("STANDBY (Skills & Velocities Blocked)"))
+      end
+    end)
+
+  -- Slot 3: Interface Layer - HUD Show/Hide
+  page:newAction(3)
+    :setTitle("Toggle Combat HUD")
+    :setItem("minecraft:compass")
+    :setColor(0.4, 0.9, 0.9)
+    :onLeftClick(function()
+      Config.loadout.hud_visible = not Config.loadout.hud_visible
+      if Config.loadout.hud_visible then
+        print(Color.aqua("[HUD Layer] ") + Color.green("Visible"))
+      else
+        print(Color.gray("[HUD Layer] Hidden"))
+      end
+    end)
+
+  -- Slot 4: Attack - Blade Wave [F]
+  page:newAction(4)
     :setTitle("Blade Wave [F]")
     :setItem("minecraft:nether_star")
     :setColor(0.5, 0.9, 1.0)
-    :onLeftClick(function() Weapon.slash_wave(state, Config) end)
+    :onLeftClick(function()
+      if not are_powers_allowed() then
+        sounds:playSound("minecraft:block.fire.extinguish", player:getPos(), 0.6, 1.8)
+        print(Color.red("[Powers] Standby / Disabled."))
+        return
+      end
+      Weapon.slash_wave(state, Config)
+    end)
 
-  page:newAction(3)
+  -- Slot 5: Skill - Super Jump [X]
+  page:newAction(5)
     :setTitle("Super Jump [X]")
     :setItem("minecraft:feather")
     :setColor(0.8, 1.0, 0.4)
-    :onLeftClick(function() JumpSkill.super_jump(state, Config) end)
+    :onLeftClick(function()
+      if not are_powers_allowed() then
+        sounds:playSound("minecraft:block.fire.extinguish", player:getPos(), 0.6, 1.8)
+        print(Color.red("[Powers] Standby / Disabled."))
+        return
+      end
+      JumpSkill.super_jump(state, Config)
+    end)
 
-  page:newAction(4)
+  -- Slot 6: Skill - Toggle Hover [Z]
+  page:newAction(6)
     :setTitle("Toggle Hover [Z]")
     :setItem("minecraft:phantom_membrane")
     :setColor(0.4, 0.9, 0.8)
-    :onLeftClick(function() JumpSkill.toggle_hover(state) end)
+    :onLeftClick(function()
+      if not are_powers_allowed() then
+        sounds:playSound("minecraft:block.fire.extinguish", player:getPos(), 0.6, 1.8)
+        print(Color.red("[Powers] Standby / Disabled."))
+        return
+      end
+      JumpSkill.toggle_hover(state)
+    end)
 
-  page:newAction(5)
+  -- Slot 7: Skill - Flight Dash [R]
+  page:newAction(7)
     :setTitle("Flight Dash [R]")
     :setItem("minecraft:elytra")
     :setColor(0.9, 0.5, 1.0)
-    :onLeftClick(function() FlightSkill.flight_dash(state, Config) end)
+    :onLeftClick(function()
+      if not are_powers_allowed() then
+        sounds:playSound("minecraft:block.fire.extinguish", player:getPos(), 0.6, 1.8)
+        print(Color.red("[Powers] Standby / Disabled."))
+        return
+      end
+      FlightSkill.flight_dash(state, Config)
+    end)
 
+  -- Slot 8: Debug - Refill Mana [H]
   page:newAction(8)
     :setTitle("Debug Refill [H]")
     :setItem("minecraft:potion")
@@ -140,7 +236,7 @@ events.ENTITY_INIT:register(function()
   if animations and animations.idle then
     animations.idle:play()
   end
-  print("§b[Modular Avatar] §aLoaded! Controls: §e[X] Jump§a, §e[Z] Hover§a, §e[R] Flight§a, §e[G] Blade§a, §e[F] Wave§a, §e[M] Meditate§a, §e[H] Debug")
+  print(Color.aqua("[3-Layer Loadout Avatar] ") + Color.green("Loaded! ") + Color.yellow("[B] Action Wheel") + ", " + Color.yellow("[G] Weapon") + ", " + Color.yellow("[O] Settings"))
 end)
 
 events.TICK:register(function()

@@ -7,35 +7,72 @@
 -- ==============================================================================
 
 local SignatureWeapon = {
+  mode = "sheathed", -- "drawn", "sheathed", "hidden"
   is_drawn = false,
   blade_cooldown = 0
 }
 
-function SignatureWeapon.init()
+function SignatureWeapon.apply_visibility()
   local sheath = models.model and models.model.root and models.model.root.Body and models.model.root.Body.SheathedBlade
   local blade = models.model and models.model.root and models.model.root.RightArm and models.model.root.RightArm.SignatureBlade
 
-  if sheath then sheath:setVisible(true) end
-  if blade then blade:setVisible(false) end
+  local weapons_allowed = not minecraft or not minecraft.settings or minecraft.settings.weapons_enabled()
+
+  if not weapons_allowed or SignatureWeapon.mode == "hidden" then
+    if sheath then sheath:setVisible(false) end
+    if blade then blade:setVisible(false) end
+    SignatureWeapon.is_drawn = false
+  elseif SignatureWeapon.mode == "drawn" then
+    if sheath then sheath:setVisible(false) end
+    if blade then blade:setVisible(true) end
+    SignatureWeapon.is_drawn = true
+  else -- "sheathed"
+    if sheath then sheath:setVisible(true) end
+    if blade then blade:setVisible(false) end
+    SignatureWeapon.is_drawn = false
+  end
+end
+
+function SignatureWeapon.init()
+  SignatureWeapon.apply_visibility()
+end
+
+function SignatureWeapon.cycle_mode()
+  local pos = player:getPos()
+  if SignatureWeapon.mode == "sheathed" then
+    SignatureWeapon.mode = "drawn"
+    SignatureWeapon.apply_visibility()
+    sounds:playSound("minecraft:item.armor.equip_iron", pos, 1.0, 1.4)
+    print("§b[Weapon] §aSignature Blade: §eDRAWN (มือขวา)")
+  elseif SignatureWeapon.mode == "drawn" then
+    SignatureWeapon.mode = "hidden"
+    SignatureWeapon.apply_visibility()
+    sounds:playSound("minecraft:item.armor.equip_leather", pos, 0.7, 0.8)
+    print("§7[Weapon] §cSignature Blade: §7UNEQUIPPED (ถอดเก็บ)")
+  else
+    SignatureWeapon.mode = "sheathed"
+    SignatureWeapon.apply_visibility()
+    sounds:playSound("minecraft:item.armor.equip_leather", pos, 0.8, 1.2)
+    print("§7[Weapon] §bSignature Blade: §fSHEATHED (สะพายหลัง)")
+  end
+  return SignatureWeapon.mode
 end
 
 function SignatureWeapon.toggle_drawn()
-  SignatureWeapon.is_drawn = not SignatureWeapon.is_drawn
-  local sheath = models.model and models.model.root and models.model.root.Body and models.model.root.Body.SheathedBlade
-  local blade = models.model and models.model.root and models.model.root.RightArm and models.model.root.RightArm.SignatureBlade
-
+  if SignatureWeapon.mode == "hidden" then
+    SignatureWeapon.mode = "sheathed"
+  end
   local pos = player:getPos()
-  if SignatureWeapon.is_drawn then
-    if sheath then sheath:setVisible(false) end
-    if blade then blade:setVisible(true) end
+  if SignatureWeapon.mode == "sheathed" then
+    SignatureWeapon.mode = "drawn"
     sounds:playSound("minecraft:item.armor.equip_iron", pos, 1.0, 1.4)
     print("§b[Weapon] §aUnsheathed Signature Blade!")
   else
-    if sheath then sheath:setVisible(true) end
-    if blade then blade:setVisible(false) end
+    SignatureWeapon.mode = "sheathed"
     sounds:playSound("minecraft:item.armor.equip_leather", pos, 0.8, 1.2)
     print("§7[Weapon] Sheathed Signature Blade.")
   end
+  SignatureWeapon.apply_visibility()
 end
 
 function SignatureWeapon.slash_wave(state, config)
@@ -85,6 +122,9 @@ function SignatureWeapon.slash_wave(state, config)
       if target.is_monster then
         particle.spawn("minecraft:crit", target:getPos(), { velocity = { 0, 0.5, 0 } })
         sounds:playSound("minecraft:entity.player.attack.crit", target:getPos(), 1.0, 1.1)
+        if fx and fx.damage then
+          fx.damage(250, target:getPos(), { crit = true })
+        end
       end
     end
   end
@@ -95,11 +135,12 @@ function SignatureWeapon.tick(state, config)
     SignatureWeapon.blade_cooldown = SignatureWeapon.blade_cooldown - 1
   end
 
-  -- ซิงก์กับไอเทมในมือหลัก (ถ้าถือดาบจะชักอาวุธอัตโนมัติ)
+  -- ซิงก์กับไอเทมในมือหลัก (ถ้าถือดาบจะชักอาวุธอัตโนมัติ เฉพาะเมื่อไม่ได้ตั้งเป็น hidden)
   local held_main = minecraft.player.held_item("main")
   if held_main and not held_main.empty and string.find(tostring(held_main.id), "sword") then
-    if not SignatureWeapon.is_drawn then
-      SignatureWeapon.toggle_drawn()
+    if SignatureWeapon.mode ~= "hidden" and SignatureWeapon.mode ~= "drawn" then
+      SignatureWeapon.mode = "drawn"
+      SignatureWeapon.apply_visibility()
     end
   end
 end

@@ -91,23 +91,29 @@ function render.remove(id)
     return true
   end
   render._tasks[id] = nil
-  return _shyne_render_remove(id)
+  return _shyne_render_remove and _shyne_render_remove(id) or true
 end
 
 --- Clears all active render tasks, groups, and collections.
 ---@return boolean
 function render.clear()
   render._tasks, render._groups, render._collections = {}, {}, {}
-  return _shyne_render_clear()
+  return _shyne_render_clear and _shyne_render_clear() or true
 end
 
 --- Returns current screen dimensions and GUI scale: { width, height, gui_scale }.
 ---@return table
-function render.screen() return _shyne_render_screen() end
+function render.screen()
+  if _shyne_render_screen then return _shyne_render_screen() end
+  return { width = 1920, height = 1080, gui_scale = 2, ready = true }
+end
 
 --- Returns render performance metrics and task budget stats.
 ---@return table
-function render.stats() return _shyne_render_stats() end
+function render.stats()
+  if _shyne_render_stats then return _shyne_render_stats() end
+  return { tasks = 0, limit = 128 }
+end
 
 --- Registers a frame render callback (shortcut for events.on("render", callback)).
 ---@param callback function

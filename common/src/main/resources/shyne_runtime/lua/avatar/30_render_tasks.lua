@@ -102,16 +102,19 @@ local function render_push(id, kind, options)
     billboard = not (attachment_path ~= "" and (kind == "item" or kind == "block"))
   end
 
-  local ok = _shyne_render_task(id, kind, resolved.world == true,
-    resolved.text or resolved.content or "", resolved.texture or resolved.item or resolved.block or resolved.resource or "",
-    resolved.x or 0, resolved.y or 0, resolved.z or 0,
-    resolved.x2 or 0, resolved.y2 or 0, resolved.z2 or 0,
-    resolved.width or 1, resolved.height or 16, resolved.thickness or resolved.scale or 1,
-    resolved.color or 0xFFFFFFFF, resolved.shadow == true, resolved.visible ~= false,
-    resolved.max_distance or 128, resolved.z_index or 0, resolved.opacity or 1,
-    attachment_path, local_offset.x, local_offset.y, local_offset.z,
-    local_to.x, local_to.y, local_to.z, has_local_to, billboard,
-    resolved.fullbright == true or resolved.light == "fullbright")
+  local ok = true
+  if _shyne_render_task then
+    ok = _shyne_render_task(id, kind, resolved.world == true,
+      resolved.text or resolved.content or "", resolved.texture or resolved.item or resolved.block or resolved.resource or "",
+      resolved.x or 0, resolved.y or 0, resolved.z or 0,
+      resolved.x2 or 0, resolved.y2 or 0, resolved.z2 or 0,
+      resolved.width or 1, resolved.height or 16, resolved.thickness or resolved.scale or 1,
+      resolved.color or 0xFFFFFFFF, resolved.shadow == true, resolved.visible ~= false,
+      resolved.max_distance or 128, resolved.z_index or 0, resolved.opacity or 1,
+      attachment_path, local_offset.x, local_offset.y, local_offset.z,
+      local_to.x, local_to.y, local_to.z, has_local_to, billboard,
+      resolved.fullbright == true or resolved.light == "fullbright")
+  end
 
   if ok then return id end
   return false

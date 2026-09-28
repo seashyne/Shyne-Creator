@@ -16,6 +16,8 @@ import security from '../../SECURITY.md?raw'
 import multiplayer from '../../MULTIPLAYER_TESTING.md?raw'
 import sdk from '../../CREATOR_SDK_TH.md?raw'
 import architecture from '../../ARCHITECTURE_TH.md?raw'
+import rules from '../../RULES.md?raw'
+import changelog from '../../CHANGELOG.md?raw'
 import zeroLuaExample from '../../tools/examples/zero-lua-avatar/README.md?raw'
 import luaTwoExample from '../../tools/examples/lua-api-2.0-avatar/README.md?raw'
 import advancedExample from '../../tools/examples/advanced-render-avatar/README_TH.md?raw'
@@ -35,7 +37,7 @@ export type DocItem = {
   api?: boolean
 }
 
-export const version = '2.10.4-alpha-26.3'
+export const version = '2.12.0'
 export const minecraftVersion = '26.3'
 
 const installation = `# ติดตั้ง Shyne Creator
@@ -52,8 +54,8 @@ Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}*
 
 | คุณต้องการทำอะไร | ไฟล์ที่ต้องใช้ |
 | --- | --- |
-| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-2.10.4-alpha-26.3.jar\` พร้อม Fabric API |
-| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-2.10.4-alpha-26.3.jar\` |
+| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-2.12.0.jar\` พร้อม Fabric API |
+| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-2.12.0.jar\` |
 | สร้าง Avatar ด้วย Blockbench | Shyne Creator Kit — **ห้ามนำไปใส่ในโฟลเดอร์ mods** |
 
 ## ความต้องการของระบบ
@@ -69,18 +71,18 @@ Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}*
 ## ติดตั้งบน Fabric
 
 1. ติดตั้ง Fabric Loader สำหรับ Minecraft ${minecraftVersion}
-2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.10.4-alpha-26.3.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
+2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.12.0.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมแล้วตรวจว่ามีโลโก้ Shyne ในหน้าเมนูหลัก หรือเมนู \`Esc → อวตาร\`
 
 ## ติดตั้งบน NeoForge
 
 1. ติดตั้ง NeoForge สำหรับ Minecraft ${minecraftVersion}
-2. ใส่ไฟล์ \`shyne-creator-neoforge-2.10.4-alpha-26.3.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
+2. ใส่ไฟล์ \`shyne-creator-neoforge-2.12.0.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมด้วยโปรไฟล์ NeoForge แล้วตรวจว่ามีเมนู \`Esc → อวตาร\`
 
 ## ติดตั้งเสร็จแล้วทำอะไรต่อ
 
-1. เข้าโลก Minecraft แล้วกด \`H\` หรือเปิด \`Esc → อวตาร\`
+1. เข้าโลก Minecraft แล้วกด \`G\` จากนั้นเลือก \`จัดการอวตาร\` หรือเปิด \`Esc → อวตาร\`
 2. กด \`เปิดโฟลเดอร์\` เพื่อติดตั้ง Avatar ที่มีอยู่ หรือเปิด Cloud ในการตั้งค่าเพื่อค้นหา Avatar
 3. กลับมาหน้าคลังอวตาร กด \`สแกนไฟล์\` แล้วกด \`เลือกใช้\`
 4. กด \`G\` เพื่อเปิดคำสั่ง ท่าทาง หรือสีหน้าที่ Avatar นั้นเตรียมไว้
@@ -122,6 +124,8 @@ export const docs: DocItem[] = [
   { slug: 'multiplayer-testing', title: 'Multiplayer Test Matrix', shortTitle: 'ทดสอบ Multiplayer', description: 'รายการตรวจ release และหลักฐานที่ต้องเก็บก่อนเผยแพร่', category: 'เผยแพร่และพัฒนา', icon: 'users', content: multiplayer },
   { slug: 'creator-sdk', title: 'Shyne Creator SDK', shortTitle: 'Creator SDK', description: 'โครงม็อด Gameplay, custom item, Avatar และข้อมูลที่ sync', category: 'เผยแพร่และพัฒนา', icon: 'wrench', content: sdk, api: true },
   { slug: 'architecture', title: 'Shyne Creator Architecture', shortTitle: 'สถาปัตยกรรม', description: 'ขอบเขต common, Fabric, NeoForge และลำดับ renderer', category: 'เผยแพร่และพัฒนา', icon: 'workflow', content: architecture },
+  { slug: 'rules', title: 'ระเบียบสถาปัตยกรรม (Architecture Rules)', shortTitle: 'ระเบียบโค้ด', description: 'ขอบเขตขนาดไฟล์ < 400 บรรทัด, SRP, มาตรฐานคอมเมนต์ และ MultiLoader Parity', category: 'เผยแพร่และพัฒนา', icon: 'shield', content: rules },
+  { slug: 'changelog', title: 'ประวัติการอัปเดต (Changelog)', shortTitle: 'ประวัติการอัปเดต', description: 'รายละเอียดฟีเจอร์และการปรับปรุงในแต่ละเวอร์ชันของ Shyne Creator', category: 'เริ่มต้น', icon: 'book', content: changelog },
 ]
 
 export const exampleDocs = [
@@ -140,4 +144,5 @@ export const fileToSlug: Record<string, string> = {
   'SHYNE_LUA_API_TH.md': 'lua-api', 'CUSTOM_RENDER_API_TH.md': 'render-api', 'SHYNE_GAMEPLAY_API_TH.md': 'gameplay-api',
   'AVATAR_CLOUD.md': 'cloud', 'CLOUD_API.md': 'cloud-api', 'SECURITY.md': 'security', 'PUBLIC_SHARE.md': 'public-share',
   'MULTIPLAYER_TESTING.md': 'multiplayer-testing', 'CREATOR_SDK_TH.md': 'creator-sdk', 'ARCHITECTURE_TH.md': 'architecture',
+  'RULES.md': 'rules', 'CHANGELOG.md': 'changelog',
 }

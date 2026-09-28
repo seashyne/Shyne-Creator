@@ -16,8 +16,13 @@ $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $projectParent = Split-Path -Parent $projectRoot
 $version = (Get-Content -LiteralPath (Join-Path $projectRoot "VERSION.txt") -Raw).Trim()
 if ([string]::IsNullOrWhiteSpace($version)) { throw "VERSION.txt is empty" }
-$minecraftVersion = [regex]::Match($version, '\d+\.\d+$').Value
-if ([string]::IsNullOrWhiteSpace($minecraftVersion)) { throw "Could not read Minecraft version from VERSION.txt: $version" }
+$mcProp = (Get-Content -LiteralPath (Join-Path $projectRoot "gradle.properties") | Where-Object { $_ -match "^minecraft_version=" })
+if ($mcProp) {
+    $minecraftVersion = ($mcProp -split "=", 2)[1].Trim()
+} else {
+    $minecraftVersion = [regex]::Match($version, '\d+\.\d+$').Value
+}
+if ([string]::IsNullOrWhiteSpace($minecraftVersion)) { throw "Could not read Minecraft version: $version" }
 
 if ([string]::IsNullOrWhiteSpace($Destination)) {
     $Destination = Join-Path $projectParent "Shyne-Creator-Kit-$version"

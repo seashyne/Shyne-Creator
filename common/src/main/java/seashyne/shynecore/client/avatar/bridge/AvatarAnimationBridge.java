@@ -95,15 +95,48 @@ public final class AvatarAnimationBridge {
                 LuaTable value = new LuaTable();
                 if (layer == null) return value;
                 long now = System.currentTimeMillis();
-                double elapsed = Math.max(0, now - layer.startedAtMillis()) * layer.speed() / 1000.0;
-                double time = layer.looping() && layer.lengthSeconds() > 0 ? elapsed % layer.lengthSeconds() : Math.min(elapsed, layer.lengthSeconds());
-                value.set("time", LuaValue.valueOf(time));
+                value.set("time", LuaValue.valueOf(layer.currentTime(now)));
                 value.set("length", LuaValue.valueOf(layer.lengthSeconds()));
                 value.set("looping", LuaValue.valueOf(layer.looping()));
                 value.set("weight", LuaValue.valueOf(layer.effectiveWeight(now)));
                 value.set("priority", LuaValue.valueOf(layer.priority()));
                 value.set("playing", LuaValue.valueOf(!layer.finished(now)));
+                value.set("paused", LuaValue.valueOf(layer.paused()));
                 return value;
+            }
+        });
+
+        globals.set("_avatar_anim_time", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                String name = args.arg(1).optjstring("");
+                String key = name.toLowerCase(Locale.ROOT);
+                var layer = state.animationLayers().get(key);
+                if (layer == null) return LuaValue.ZERO;
+                long now = System.currentTimeMillis();
+                if (args.arg(2).isnil()) {
+                    return LuaValue.valueOf(layer.currentTime(now));
+                }
+                double target = args.arg(2).todouble();
+                state.animationLayers().put(key, layer.withTime(target, now));
+                state.markAnimationLayersDirty();
+                state.markSnapshotDirty();
+                return LuaValue.valueOf(target);
+            }
+        });
+
+        globals.set("_avatar_anim_pause", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                String name = args.arg(1).optjstring("");
+                String key = name.toLowerCase(Locale.ROOT);
+                var layer = state.animationLayers().get(key);
+                if (layer != null) {
+                    boolean pause = args.arg(2).optboolean(true);
+                    long now = System.currentTimeMillis();
+                    state.animationLayers().put(key, layer.withPaused(pause, now));
+                    state.markAnimationLayersDirty();
+                    state.markSnapshotDirty();
+                }
+                return LuaValue.NIL;
             }
         });
 

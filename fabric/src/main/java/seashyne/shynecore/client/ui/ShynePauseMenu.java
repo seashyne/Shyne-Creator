@@ -15,18 +15,11 @@ public final class ShynePauseMenu {
         ScreenEvents.AFTER_INIT.register((minecraft, screen, width, height) -> {
             if (!(screen instanceof PauseScreen pauseScreen) || !pauseScreen.showsPauseMenu()) return;
 
-            int buttonWidth = 104;
+            int buttonWidth = 74;
             int gap = 4;
-            int groupWidth = buttonWidth * 2 + gap;
+            int groupWidth = buttonWidth * 3 + gap * 2;
             int x = Math.max(6, width - groupWidth - 6);
             int y = Math.max(4, height - 26);
-            Button button = Button.builder(
-                Component.literal("✦ ").withStyle(ChatFormatting.AQUA)
-                    .append(Component.translatable("screen.shyne_core.pause_button").withStyle(ChatFormatting.WHITE)),
-                ignored -> minecraft.gui.setScreen(new ShyneSettingsScreen(screen))
-            ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.pause_button.tooltip")))
-                .bounds(x + buttonWidth + gap, y, buttonWidth, 20).build();
-            Screens.getWidgets(screen).add(button);
 
             Button avatars = Button.builder(
                 Component.literal("✦ ").withStyle(ChatFormatting.AQUA)
@@ -35,6 +28,22 @@ public final class ShynePauseMenu {
             ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.pause_avatar_button.tooltip")))
                 .bounds(x, y, buttonWidth, 20).build();
             Screens.getWidgets(screen).add(avatars);
+
+            Button powers = Button.builder(
+                Component.literal("✦ ").withStyle(ChatFormatting.AQUA)
+                    .append(Component.translatable("screen.shyne_core.pause_powers_button").withStyle(ChatFormatting.WHITE)),
+                ignored -> minecraft.gui.setScreen(new PowerDeckScreen(screen))
+            ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.pause_powers_button.tooltip")))
+                .bounds(x + buttonWidth + gap, y, buttonWidth, 20).build();
+            Screens.getWidgets(screen).add(powers);
+
+            Button settings = Button.builder(
+                Component.literal("✦ ").withStyle(ChatFormatting.AQUA)
+                    .append(Component.translatable("screen.shyne_core.pause_button").withStyle(ChatFormatting.WHITE)),
+                ignored -> minecraft.gui.setScreen(new ShyneSettingsScreen(screen))
+            ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.pause_button.tooltip")))
+                .bounds(x + (buttonWidth + gap) * 2, y, buttonWidth, 20).build();
+            Screens.getWidgets(screen).add(settings);
         });
     }
 }

@@ -34,7 +34,7 @@ import java.nio.file.Path;
 
 public class ShyneCore implements ModInitializer {
     public static final String MOD_ID = "shyne_creator";
-    public static final String VERSION = "2.10.4-alpha-26.3";
+    public static final String VERSION = "2.12.0";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     public static ShyneCore INSTANCE;
 
@@ -45,6 +45,7 @@ public class ShyneCore implements ModInitializer {
         Path gameDir = FabricLoader.getInstance().getGameDir();
         Path configDir = FabricLoader.getInstance().getConfigDir().resolve("shyne-creator");
         Path shyneModsDir = gameDir.resolve("shyne-mods");
+        seashyne.shynecore.admin.ShyneServerPolicy.init(gameDir);
         ActionBus actionBus = new ActionBus();
         ContentDiagnostics diagnostics = new ContentDiagnostics(configDir.resolve("reports"));
         try {

@@ -39,4 +39,16 @@ final class VanillaVisibilityKeysTest {
         assertFalse(VanillaVisibilityKeys.effectiveVisible(Map.of("PLAYER", true, "HAT", true), false, "HAT", false));
         assertTrue(VanillaVisibilityKeys.effectiveVisible(Map.of("PLAYER", true, "HAT", true), false, "HAT", true));
     }
+
+    @Test
+    void expandsCompoundPartsAndOuterLayers() {
+        assertAll(
+            () -> assertEquals(java.util.List.of("RIGHT_ARM", "LEFT_ARM", "RIGHT_SLEEVE", "LEFT_SLEEVE"), VanillaVisibilityKeys.expand("arms")),
+            () -> assertEquals(java.util.List.of("RIGHT_LEG", "LEFT_LEG", "RIGHT_PANTS", "LEFT_PANTS"), VanillaVisibilityKeys.expand("legs")),
+            () -> assertEquals(java.util.List.of("BODY", "JACKET"), VanillaVisibilityKeys.expand("torso")),
+            () -> assertEquals(java.util.List.of("RIGHT_ARM", "RIGHT_SLEEVE"), VanillaVisibilityKeys.expand("right_arm")),
+            () -> assertEquals(java.util.List.of("LEFT_LEG", "LEFT_PANTS"), VanillaVisibilityKeys.expand("left_leg")),
+            () -> assertEquals(java.util.List.of("HEAD", "HAT"), VanillaVisibilityKeys.expand("head"))
+        );
+    }
 }

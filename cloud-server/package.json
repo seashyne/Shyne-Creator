@@ -1,0 +1,23 @@
+{
+  "name": "shyne-cloud-server",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "tsx --test test/api.test.ts",
+    "typecheck": "tsc --noEmit",
+    "db:init": "wrangler d1 execute shyne-cloud-db --remote --file=./schema.sql",
+    "db:init:local": "wrangler d1 execute shyne-cloud-db --local --file=./schema.sql"
+  },
+  "dependencies": {
+    "hono": "^4.7.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260926.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.16.0"
+  }
+}

@@ -47,16 +47,39 @@ public class ProjectileRuntime {
         AABB box = projectile.getBoundingBox().inflate(state.hitboxRadius());
         List<Entity> entities = projectile.level().getEntities(projectile, box, e -> e != null && e.isAlive() && !e.getUUID().equals(state.ownerEntityId()));
         Entity owner = findEntity(projectile, state.ownerEntityId());
+        seashyne.shynecore.admin.ShyneServerPolicy policy = seashyne.shynecore.admin.ShyneServerPolicy.get();
         List<Entity> out = new ArrayList<>();
-        for (Entity entity : entities) { if (owner != null && teamRuntime.areAllied(owner.getUUID(), entity.getUUID())) continue; out.add(entity); } out.sort(Comparator.comparingDouble(projectile::distanceToSqr)); return out;
+        for (Entity entity : entities) {
+            if (!policy.isPvpSkillsAllowed() && entity instanceof net.minecraft.world.entity.player.Player) continue;
+            if (owner != null && !policy.isFriendlyFireAllowed() && teamRuntime.areAllied(owner.getUUID(), entity.getUUID())) continue;
+            out.add(entity);
+        }
+        out.sort(Comparator.comparingDouble(projectile::distanceToSqr));
+        return out;
     }
+    /**
+     * Triggers an area explosion around the impact entity.
+     * Respects server policies for block destruction (block_damage_allowed), fire ignition (fire_spread_allowed),
+     * and PvP/Friendly Fire constraints.
+     */
     private void explodeAround(Entity projectile, Entity center, SpellProjectileState state) {
+        seashyne.shynecore.admin.ShyneServerPolicy policy = seashyne.shynecore.admin.ShyneServerPolicy.get();
+        if (center.level() instanceof ServerLevel serverLevel) {
+            // If block damage is enabled, explode modifies terrain; if disabled, blocks remain intact.
+            net.minecraft.world.level.Level.ExplosionInteraction interaction = policy.isBlockDamageAllowed()
+                ? net.minecraft.world.level.Level.ExplosionInteraction.BLOCK
+                : net.minecraft.world.level.Level.ExplosionInteraction.NONE;
+            serverLevel.explode(projectile, center.getX(), center.getY(), center.getZ(),
+                (float) state.explodeRadius(), policy.isFireSpreadAllowed(), interaction);
+        }
         AABB box = center.getBoundingBox().inflate(state.explodeRadius());
         List<Entity> entities = center.level().getEntities(center, box, e -> e != null && e.isAlive() && !e.getUUID().equals(state.ownerEntityId()));
         Entity owner = findEntity(center, state.ownerEntityId());
+        float clampedDamage = (float) seashyne.shynecore.admin.ShyneAntiCheat.clampDamage(state.damage());
         for (Entity entity : entities) {
-            if (owner != null && teamRuntime.areAllied(owner.getUUID(), entity.getUUID())) continue;
-            entity.hurt(projectile.damageSources().magic(), (float) Math.max(1.0, state.damage() * 0.65));
+            if (!policy.isPvpSkillsAllowed() && entity instanceof net.minecraft.world.entity.player.Player) continue;
+            if (owner != null && !policy.isFriendlyFireAllowed() && teamRuntime.areAllied(owner.getUUID(), entity.getUUID())) continue;
+            entity.hurt(projectile.damageSources().magic(), (float) Math.max(1.0, clampedDamage * 0.65));
         }
     }
     private void expire(Entity projectile, SpellProjectileState state) { animationRuntime.stop(projectile); attachmentRuntime.detach(projectile); projectile.discard(); projectiles.remove(state.projectileEntityId()); }

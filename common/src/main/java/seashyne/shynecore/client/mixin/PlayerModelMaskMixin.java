@@ -11,6 +11,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import seashyne.shynecore.client.avatar.AvatarRuntime;
+import seashyne.shynecore.client.avatar.AvatarState;
 import seashyne.shynecore.client.render.VanillaRenderMask;
 
 @Mixin(AvatarRenderer.class)
@@ -32,12 +34,12 @@ public abstract class PlayerModelMaskMixin {
             state.parrotOnRightShoulder = null;
         }
 
-        state.showHat &= VanillaRenderMask.visible(state, "HAT");
-        state.showJacket &= VanillaRenderMask.visible(state, "JACKET");
-        state.showLeftPants &= VanillaRenderMask.visible(state, "LEFT_PANTS");
-        state.showRightPants &= VanillaRenderMask.visible(state, "RIGHT_PANTS");
-        state.showLeftSleeve &= VanillaRenderMask.visible(state, "LEFT_SLEEVE");
-        state.showRightSleeve &= VanillaRenderMask.visible(state, "RIGHT_SLEEVE");
+        state.showHat &= VanillaRenderMask.visible(state, "HEAD") && VanillaRenderMask.visible(state, "HAT");
+        state.showJacket &= VanillaRenderMask.visible(state, "BODY") && VanillaRenderMask.visible(state, "JACKET");
+        state.showLeftPants &= VanillaRenderMask.visible(state, "LEFT_LEG") && VanillaRenderMask.visible(state, "LEFT_PANTS");
+        state.showRightPants &= VanillaRenderMask.visible(state, "RIGHT_LEG") && VanillaRenderMask.visible(state, "RIGHT_PANTS");
+        state.showLeftSleeve &= VanillaRenderMask.visible(state, "LEFT_ARM") && VanillaRenderMask.visible(state, "LEFT_SLEEVE");
+        state.showRightSleeve &= VanillaRenderMask.visible(state, "RIGHT_ARM") && VanillaRenderMask.visible(state, "RIGHT_SLEEVE");
         state.showCape &= VanillaRenderMask.visible(state, "CAPE");
         state.showExtraEars &= player;
 
@@ -52,6 +54,11 @@ public abstract class PlayerModelMaskMixin {
         // independently controllable without affecting chest armor.
         if (!VanillaRenderMask.visible(state, "ELYTRA") && state.chestEquipment.is(Items.ELYTRA)) {
             state.chestEquipment = ItemStack.EMPTY;
+        }
+
+        AvatarState active = AvatarRuntime.active();
+        if (active != null && entity.getUUID().equals(active.boundEntityId()) && active.shadowRadius() >= 0f) {
+            state.shadowRadius = active.shadowRadius();
         }
     }
 

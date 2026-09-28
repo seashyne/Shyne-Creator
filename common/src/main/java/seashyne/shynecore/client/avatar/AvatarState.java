@@ -33,6 +33,17 @@ public final class AvatarState {
     private boolean hideHeadInFirstPerson;
     private float cameraOffsetX, cameraOffsetY, cameraOffsetZ;
     private float cameraRotationX, cameraRotationY, cameraRotationZ;
+    // Figura's renderer API distinguishes relative camera offsets from an
+    // absolute world pivot/rotation. Keep those independently so native
+    // Shyne camera configuration remains backwards compatible.
+    private boolean cameraPivotControlled;
+    private float cameraPivotX, cameraPivotY, cameraPivotZ;
+    private boolean cameraAbsoluteRotationControlled;
+    private float cameraAbsoluteRotationX, cameraAbsoluteRotationY, cameraAbsoluteRotationZ;
+    // NaN represents Figura's nil/default FOV multiplier rather than a real
+    // value. It deliberately avoids persisting a change to the user's option.
+    private float cameraFovMultiplier = Float.NaN;
+    private float shadowRadius = -1.0f;
     private String nameplateText = "";
     private boolean nameplateVisible = true;
     private String textureSyncMode = "manifest";
@@ -142,6 +153,34 @@ public final class AvatarState {
     public float cameraRotationX() { return cameraRotationX; }
     public float cameraRotationY() { return cameraRotationY; }
     public float cameraRotationZ() { return cameraRotationZ; }
+    public boolean cameraPivotControlled() { return cameraPivotControlled; }
+    public void setCameraPivot(float x, float y, float z) {
+        cameraPivotControlled = true;
+        cameraPivotX = x;
+        cameraPivotY = y;
+        cameraPivotZ = z;
+    }
+    public void clearCameraPivot() { cameraPivotControlled = false; }
+    public float cameraPivotX() { return cameraPivotX; }
+    public float cameraPivotY() { return cameraPivotY; }
+    public float cameraPivotZ() { return cameraPivotZ; }
+    public boolean cameraAbsoluteRotationControlled() { return cameraAbsoluteRotationControlled; }
+    public void setCameraAbsoluteRotation(float x, float y, float z) {
+        cameraAbsoluteRotationControlled = true;
+        cameraAbsoluteRotationX = x;
+        cameraAbsoluteRotationY = y;
+        cameraAbsoluteRotationZ = z;
+    }
+    public void clearCameraAbsoluteRotation() { cameraAbsoluteRotationControlled = false; }
+    public float cameraAbsoluteRotationX() { return cameraAbsoluteRotationX; }
+    public float cameraAbsoluteRotationY() { return cameraAbsoluteRotationY; }
+    public float cameraAbsoluteRotationZ() { return cameraAbsoluteRotationZ; }
+    public float cameraFovMultiplier() { return cameraFovMultiplier; }
+    public void setCameraFovMultiplier(float value) {
+        cameraFovMultiplier = Float.isFinite(value) && value > 0f ? value : Float.NaN;
+    }
+    public float shadowRadius() { return shadowRadius; }
+    public void setShadowRadius(float value) { this.shadowRadius = value; markSnapshotDirty(); }
     public String nameplateText() { return nameplateText; }
     public boolean nameplateVisible() { return nameplateVisible; }
     public void setNameplate(String text, boolean visible) { nameplateText = text == null ? "" : text.substring(0, Math.min(128, text.length())); nameplateVisible = visible; markSnapshotDirty(); }

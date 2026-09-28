@@ -21,13 +21,30 @@ import java.util.UUID;
 
 public final class ShyneClientSettings {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("shyne-creator-client.json");
+    private static final Path CONFIG_PATH = resolveConfigPath();
+
+    private static Path resolveConfigPath() {
+        try {
+            if (FMLPaths.CONFIGDIR != null && FMLPaths.CONFIGDIR.get() != null) {
+                return FMLPaths.CONFIGDIR.get().resolve("shyne-creator-client.json");
+            }
+        } catch (Throwable ignored) {
+        }
+        return Path.of("config", "shyne-creator-client.json");
+    }
     private static final String DEFAULT_CLOUD_ENDPOINT = "https://shyne-avatar-cloud.jirayut-wh.workers.dev";
 
     public static boolean renderAttachments = true;
     public static boolean renderDebugLines = false;
     public static boolean renderUiHints = true;
     public static boolean autoPlayVisuals = true;
+    public static boolean avatarPowersEnabled = true;
+    public static boolean itemActionsEnabled = true;
+    public static boolean actionWheelCenterAvatar = true;
+    public static boolean signatureWeaponsEnabled = true;
+    public static boolean audioStreamEnabled = true;
+    public static float audioStreamVolume = 1.0f;
+    public static boolean combatHudEnabled = true;
     public static String selectedAvatarId = "";
     public static Map<String, String> selectedOutfits = new HashMap<>();
     public static Map<String, Map<String, Object>> avatarLocalState = new HashMap<>();
@@ -59,6 +76,13 @@ public final class ShyneClientSettings {
             renderDebugLines = data.renderDebugLines;
             renderUiHints = data.renderUiHints;
             autoPlayVisuals = data.autoPlayVisuals;
+            avatarPowersEnabled = data.avatarPowersEnabled;
+            itemActionsEnabled = data.itemActionsEnabled;
+            actionWheelCenterAvatar = data.actionWheelCenterAvatar;
+            signatureWeaponsEnabled = data.signatureWeaponsEnabled;
+            audioStreamEnabled = data.audioStreamEnabled;
+            audioStreamVolume = Math.max(0.0f, Math.min(2.0f, data.audioStreamVolume <= 0.001f ? 1.0f : data.audioStreamVolume));
+            combatHudEnabled = data.combatHudEnabled;
             selectedAvatarId = data.selectedAvatarId == null ? "" : data.selectedAvatarId;
             selectedOutfits = data.selectedOutfits == null ? new HashMap<>() : new HashMap<>(data.selectedOutfits);
             avatarLocalState = data.avatarLocalState == null ? new HashMap<>() : new HashMap<>(data.avatarLocalState);
@@ -96,6 +120,13 @@ public final class ShyneClientSettings {
         renderDebugLines = false;
         renderUiHints = true;
         autoPlayVisuals = true;
+        avatarPowersEnabled = true;
+        itemActionsEnabled = true;
+        actionWheelCenterAvatar = true;
+        signatureWeaponsEnabled = true;
+        audioStreamEnabled = true;
+        audioStreamVolume = 1.0f;
+        combatHudEnabled = true;
         cloudEnabled = false;
         publicAvatarPermissionDecisions.clear();
         remotePlayerPolicies.clear();
@@ -242,6 +273,13 @@ public final class ShyneClientSettings {
         data.renderDebugLines = renderDebugLines;
         data.renderUiHints = renderUiHints;
         data.autoPlayVisuals = autoPlayVisuals;
+        data.avatarPowersEnabled = avatarPowersEnabled;
+        data.itemActionsEnabled = itemActionsEnabled;
+        data.actionWheelCenterAvatar = actionWheelCenterAvatar;
+        data.signatureWeaponsEnabled = signatureWeaponsEnabled;
+        data.audioStreamEnabled = audioStreamEnabled;
+        data.audioStreamVolume = audioStreamVolume;
+        data.combatHudEnabled = combatHudEnabled;
         data.selectedAvatarId = selectedAvatarId;
         data.selectedOutfits = new HashMap<>(selectedOutfits);
         data.avatarLocalState = new HashMap<>(avatarLocalState);
@@ -308,6 +346,13 @@ public final class ShyneClientSettings {
         boolean renderDebugLines = false;
         boolean renderUiHints = true;
         boolean autoPlayVisuals = true;
+        boolean avatarPowersEnabled = true;
+        boolean itemActionsEnabled = true;
+        boolean actionWheelCenterAvatar = true;
+        boolean signatureWeaponsEnabled = true;
+        boolean audioStreamEnabled = true;
+        float audioStreamVolume = 1.0f;
+        boolean combatHudEnabled = true;
         String selectedAvatarId = "";
         Map<String, String> selectedOutfits = new HashMap<>();
         Map<String, Map<String, Object>> avatarLocalState = new HashMap<>();

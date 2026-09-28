@@ -35,6 +35,11 @@ local Config = {
     speed_text = 0xFF55FFFF,
     debug_tag = 0xFFFFAA00
   },
+  loadout = {
+    powers_enabled = true,
+    weapon_mode = "sheathed", -- "drawn", "sheathed", "hidden"
+    hud_visible = true
+  },
   debug = {
     infinite_mana = false,
     show_metrics = true

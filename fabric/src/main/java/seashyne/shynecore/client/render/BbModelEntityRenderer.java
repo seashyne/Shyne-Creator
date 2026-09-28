@@ -234,9 +234,9 @@ public final class BbModelEntityRenderer {
                 colorArgb = multiplyColor(colorArgb, cubePart.colorArgb());
                 emissive |= cubePart.emissive();
             }
-            boolean translucent = ((colorArgb >>> 24) & 255) < 255;
+            boolean translucent = resolvePartTranslucent(cubePart, colorArgb);
             if (translucent != translucentPass) continue;
-            emitCube(vertices, transform, cube, targetTextureIndex, textureCount, textureWidth, textureHeight, emissive ? 0x00F000F0 : lightCoords, colorArgb);
+            emitCube(vertices, transform, cube, targetTextureIndex, textureCount, textureWidth, textureHeight, resolvePartLight(cubePart, emissive, lightCoords), colorArgb);
         }
         for (BbMeshDefinition mesh : model.meshes()) {
             if (!belongsToBone(model, mesh.parentBoneUuid(), armBone.uuid())) continue;
@@ -261,9 +261,9 @@ public final class BbModelEntityRenderer {
                 colorArgb = multiplyColor(colorArgb, meshPart.colorArgb());
                 emissive |= meshPart.emissive();
             }
-            boolean translucent = ((colorArgb >>> 24) & 255) < 255;
+            boolean translucent = resolvePartTranslucent(meshPart, colorArgb);
             if (translucent != translucentPass) continue;
-            emitMesh(vertices, transform, mesh, targetTextureIndex, textureCount, textureWidth, textureHeight, emissive ? 0x00F000F0 : lightCoords, colorArgb);
+            emitMesh(vertices, transform, mesh, targetTextureIndex, textureCount, textureWidth, textureHeight, resolvePartLight(meshPart, emissive, lightCoords), colorArgb);
         }
     }
 
@@ -450,9 +450,9 @@ public final class BbModelEntityRenderer {
                 colorArgb = multiplyColor(colorArgb, cubePart.colorArgb());
                 emissive |= cubePart.emissive();
             }
-            boolean translucent = ((colorArgb >>> 24) & 255) < 255;
+            boolean translucent = resolvePartTranslucent(cubePart, colorArgb);
             if (translucent != translucentPass) continue;
-            emitCube(vertices, transform, cube, targetTextureIndex, textureCount, textureWidth, textureHeight, emissive ? 0x00F000F0 : lightCoords, colorArgb);
+            emitCube(vertices, transform, cube, targetTextureIndex, textureCount, textureWidth, textureHeight, resolvePartLight(cubePart, emissive, lightCoords), colorArgb);
         }
         for (BbMeshDefinition mesh : model.meshes()) {
             if (onlyBoneUuid != null && !belongsToBone(model, mesh.parentBoneUuid(), onlyBoneUuid)) continue;
@@ -480,15 +480,28 @@ public final class BbModelEntityRenderer {
                 colorArgb = multiplyColor(colorArgb, meshPart.colorArgb());
                 emissive |= meshPart.emissive();
             }
-            boolean translucent = ((colorArgb >>> 24) & 255) < 255;
+            boolean translucent = resolvePartTranslucent(meshPart, colorArgb);
             if (translucent != translucentPass) continue;
             emitMesh(vertices, transform, mesh, targetTextureIndex, textureCount, textureWidth, textureHeight,
-                emissive ? 0x00F000F0 : lightCoords, colorArgb);
+                resolvePartLight(meshPart, emissive, lightCoords), colorArgb);
         }
         AvatarState profiled = AvatarRuntime.active();
         if (profiled != null && entityId.equals(profiled.boundEntityId())) {
             AvatarProfiler.record(AvatarProfiler.Category.MODEL_RENDER, System.nanoTime() - profileStarted);
         }
+    }
+
+    private static int resolvePartLight(AvatarPartState part, boolean emissive, int defaultLight) {
+        if (part != null && part.hasOverrideLight()) return part.overrideLight();
+        return emissive ? 0x00F000F0 : defaultLight;
+    }
+
+    private static boolean resolvePartTranslucent(AvatarPartState part, int colorArgb) {
+        if (part != null && part.renderControlled()) {
+            if ("TRANSLUCENT".equals(part.renderType())) return true;
+            if ("CUTOUT".equals(part.renderType())) return false;
+        }
+        return ((colorArgb >>> 24) & 255) < 255;
     }
 
     /** Captures the exact composed bone pose used by this render submission. */

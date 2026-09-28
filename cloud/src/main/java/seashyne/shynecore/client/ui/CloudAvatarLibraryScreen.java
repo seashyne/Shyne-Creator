@@ -67,6 +67,10 @@ public final class CloudAvatarLibraryScreen extends Screen {
             .bounds(panelX + Math.max(270, panelWidth - 368), panelY + 12, 96, 20).build();
         publicTab.active = !publicMode && !loading;
         addRenderableWidget(publicTab);
+        Button luaTab = Button.builder(Component.translatable("screen.shyne_core.cloud.tab.lua"), button -> {
+            if (this.minecraft != null) this.minecraft.gui.setScreen(new CloudLuaLibraryScreen(this));
+        }).bounds(panelX + Math.max(370, panelWidth - 268), panelY + 12, 106, 20).build();
+        addRenderableWidget(luaTab);
 
         Button searchButton = Button.builder(Component.translatable("screen.shyne_core.cloud.search_button"), button -> { offset = 0; refresh(); })
             .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.cloud.search.tooltip")))
@@ -376,9 +380,7 @@ public final class CloudAvatarLibraryScreen extends Screen {
             graphics.text(this.font, Component.translatable(ShyneCloudClient.signedIn() ? "screen.shyne_core.cloud.start.backup" : "screen.shyne_core.cloud.start.signin"), detailX, panelY + 106, 0xFF91A7C6, false);
             graphics.text(this.font, Component.translatable("screen.shyne_core.cloud.start.folder"), detailX, panelY + 122, 0xFF7188A8, false);
         }
-        int color = operation.state() == ShyneCloudClient.State.ERROR ? 0xFFFF7F8B
-            : operation.state() == ShyneCloudClient.State.SUCCESS ? 0xFF79D8B2
-            : operation.state() == ShyneCloudClient.State.CANCELLED ? 0xFF91A0B7 : 0xFF8DECF3;
+        int color = operation.state() == ShyneCloudClient.State.ERROR ? 0xFFFF7F8B : operation.state() == ShyneCloudClient.State.SUCCESS ? 0xFF79D8B2 : operation.state() == ShyneCloudClient.State.CANCELLED ? 0xFF91A0B7 : 0xFF8DECF3;
         if (operation.state() == ShyneCloudClient.State.WORKING) {
             int barLeft = panelX + 14;
             int barRight = panelX + panelWidth - 202;

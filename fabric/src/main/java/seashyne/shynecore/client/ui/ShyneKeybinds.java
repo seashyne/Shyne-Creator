@@ -9,62 +9,41 @@ import seashyne.shynecore.client.network.ShyneClientNetworking;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
 
 public final class ShyneKeybinds {
-    private static KeyMapping openSettings;
     private static KeyMapping castLight;
     private static KeyMapping castHeavy;
     private static KeyMapping castUtility;
     private static KeyMapping castFinisher;
-    private static KeyMapping openShynePalette;
     private static KeyMapping openActionWheel;
-    private static KeyMapping openAvatarManager;
-    private static KeyMapping reloadAvatar;
+    private static KeyMapping openPowerDeck;
+    private static KeyMapping openPowerWheel;
 
     private ShyneKeybinds() {}
 
     public static void init() {
-        openSettings = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.open_settings", InputConstants.KEY_O, KeyMapping.Category.MISC));
         castLight = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.cast_light", InputConstants.KEY_Z, KeyMapping.Category.GAMEPLAY));
         castHeavy = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.cast_heavy", InputConstants.KEY_X, KeyMapping.Category.GAMEPLAY));
         castUtility = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.cast_utility", InputConstants.KEY_C, KeyMapping.Category.GAMEPLAY));
         castFinisher = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.cast_finisher", InputConstants.KEY_V, KeyMapping.Category.GAMEPLAY));
-        openShynePalette = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.open_palette", InputConstants.KEY_G, KeyMapping.Category.MISC));
-        openActionWheel = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.action_wheel", InputConstants.KEY_B, KeyMapping.Category.MISC));
-        openAvatarManager = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.avatar_manager", InputConstants.KEY_H, KeyMapping.Category.MISC));
-        reloadAvatar = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.reload_avatar", InputConstants.KEY_F10, KeyMapping.Category.MISC));
+        openActionWheel = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.action_wheel", InputConstants.KEY_G, KeyMapping.Category.MISC));
+        openPowerDeck = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.power_deck", InputConstants.KEY_K, KeyMapping.Category.GAMEPLAY));
+        openPowerWheel = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.shyne_core.power_wheel", InputConstants.KEY_B, KeyMapping.Category.GAMEPLAY));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (openSettings.consumeClick()) {
-                Minecraft mc = Minecraft.getInstance();
-                mc.gui.setScreen(new ShyneSettingsScreen(mc.gui.screen()));
-            }
             while (castLight.consumeClick()) ShyneClientNetworking.sendSkillKey("light", 1);
             while (castHeavy.consumeClick()) ShyneClientNetworking.sendSkillKey("heavy", 2);
             while (castUtility.consumeClick()) ShyneClientNetworking.sendSkillKey("utility", 3);
             while (castFinisher.consumeClick()) ShyneClientNetworking.sendSkillKey("finisher", 4);
-            while (openShynePalette.consumeClick()) {
-                Minecraft mc = Minecraft.getInstance();
-                if (AvatarRuntime.active() != null) mc.gui.setScreen(new ShynePaletteScreen());
-            }
             while (openActionWheel.consumeClick()) {
                 Minecraft mc = Minecraft.getInstance();
-                if (AvatarRuntime.active() != null) mc.gui.setScreen(new AvatarActionWheelScreen());
+                if (mc.gui.screen() == null) mc.gui.setScreen(new AvatarActionWheelScreen());
             }
-            while (openAvatarManager.consumeClick()) {
+            while (openPowerDeck.consumeClick()) {
                 Minecraft mc = Minecraft.getInstance();
-                mc.gui.setScreen(new AvatarManagerScreen(mc.gui.screen()));
+                if (mc.gui.screen() == null) mc.gui.setScreen(new PowerDeckScreen());
             }
-            while (reloadAvatar.consumeClick()) {
+            while (openPowerWheel.consumeClick()) {
                 Minecraft mc = Minecraft.getInstance();
-                long start = System.currentTimeMillis();
-                boolean ok = AvatarRuntime.reloadActive(mc);
-                long elapsed = System.currentTimeMillis() - start;
-                if (mc.player != null) {
-                    if (ok) {
-                        mc.player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§a[Shyne] Avatar reloaded in " + elapsed + " ms!§r"));
-                    } else {
-                        mc.player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§c[Shyne] Failed to reload avatar! Check logs.§r"));
-                    }
-                }
+                if (mc.gui.screen() == null) mc.gui.setScreen(new PowerRadialWheelScreen());
             }
         });
     }

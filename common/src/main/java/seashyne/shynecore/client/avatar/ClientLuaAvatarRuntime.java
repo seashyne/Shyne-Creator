@@ -37,12 +37,16 @@ public final class ClientLuaAvatarRuntime {
         "/shyne_runtime/lua/avatar/05_events_scheduler.lua",
         "/shyne_runtime/lua/avatar/10_model_animation.lua",
         "/shyne_runtime/lua/avatar/20_avatar_world.lua",
+        "/shyne_runtime/lua/avatar/21_vanilla_model.lua",
         "/shyne_runtime/lua/avatar/30_render_tasks.lua",
         "/shyne_runtime/lua/avatar/31_render_shapes.lua",
         "/shyne_runtime/lua/avatar/40_optional_systems.lua",
         "/shyne_runtime/lua/avatar/50_easy_api.lua",
         "/shyne_runtime/lua/avatar/59_figura_vectors.lua",
         "/shyne_runtime/lua/avatar/60_figura_compat.lua",
+        "/shyne_runtime/lua/avatar/61_figura_client_renderer.lua",
+        "/shyne_runtime/lua/avatar/62_figura_items_world.lua",
+        "/shyne_runtime/lua/avatar/63_figura_action_wheel.lua",
         "/shyne_runtime/lua/compat/squapi/squapi_core.lua",
         "/shyne_runtime/lua/compat/squapi/squapi_math.lua",
         "/shyne_runtime/lua/compat/squapi/squapi_springs.lua",
@@ -140,11 +144,13 @@ public final class ClientLuaAvatarRuntime {
         AvatarStateBridge.register(globals, state);
         AvatarActionBridge.register(globals, state);
         modelBridge.register(globals);
+        AvatarRendererBridge.register(globals, state);
         animationBridge.register(globals);
         AvatarWorldBridge.register(globals);
         inputBridge.register(globals);
         renderTaskBridge.register(globals);
         systemBridge.register(globals);
+        AvatarAudioStreamBridge.register(globals, state);
     }
 
     private void loadBootstrap() throws IOException {
@@ -176,40 +182,64 @@ public final class ClientLuaAvatarRuntime {
                 }
                 LuaValue cached = modules.get(module);
                 if (cached != null) return cached;
-                if (!module.matches("[A-Za-z0-9_.-]+")) throw new LuaError("invalid module name: " + module);
+                if (!ShyneLibraryManager.isValidModuleName(module)) throw new LuaError("invalid module name: " + module);
 
-                // 1. Try bundled classpath resources (e.g. "rig.rig_spring", "compat.squapi")
-                String bundledPath = "/shyne_runtime/lua/" + module.replace('.', '/') + ".lua";
-                try (InputStream bundled = getClass().getResourceAsStream(bundledPath)) {
-                    if (bundled != null) {
+                // 1. Try local avatar directory first (user custom scripts take precedence)
+                Path root = state.rootDir().toAbsolutePath().normalize();
+                Path source = root.resolve(module.replace('.', java.io.File.separatorChar).replace('/', java.io.File.separatorChar) + ".lua").normalize();
+                if (source.startsWith(root) && Files.isRegularFile(source)) {
+                    try {
+                        modules.put(module, LuaValue.TRUE); // break recursive require cycles
+                        instructionBudget.reset(LOAD_INSTRUCTION_LIMIT);
+                        LuaValue result = globals.load(Files.readString(source), module).call();
+                        if (result.isnil()) result = LuaValue.TRUE;
+                        modules.put(module, result);
+                        return result;
+                    } catch (Exception error) {
+                        modules.remove(module);
+                        throw new LuaError("could not load module " + module + ": " + error.getMessage());
+                    }
+                }
+
+                // 2. Try bundled classpath resources (checks /shyne_runtime/lua/<mod>.lua and /shyne_runtime/lua/lib/<mod>.lua)
+                String path1 = "/shyne_runtime/lua/" + module.replace('.', '/') + ".lua";
+                String path2 = module.startsWith("lib.") ? null : "/shyne_runtime/lua/lib/" + module + ".lua";
+                InputStream stream = getClass().getResourceAsStream(path1);
+                if (stream == null && path2 != null) {
+                    stream = getClass().getResourceAsStream(path2);
+                }
+                if (stream != null) {
+                    try (InputStream bundled = stream) {
                         modules.put(module, LuaValue.TRUE); // break recursive require cycles
                         instructionBudget.reset(LOAD_INSTRUCTION_LIMIT);
                         LuaValue result = globals.load(new String(bundled.readAllBytes(), StandardCharsets.UTF_8), module).call();
                         if (result.isnil()) result = LuaValue.TRUE;
                         modules.put(module, result);
                         return result;
+                    } catch (Exception e) {
+                        modules.remove(module);
+                        throw new LuaError("could not load bundled module " + module + ": " + e.getMessage());
                     }
-                } catch (Exception e) {
-                    modules.remove(module);
-                    throw new LuaError("could not load bundled module " + module + ": " + e.getMessage());
                 }
 
-                // 2. Try avatar root directory
-                Path root = state.rootDir().toAbsolutePath().normalize();
-                Path source = root.resolve(module.replace('.', java.io.File.separatorChar) + ".lua").normalize();
-                if (!source.startsWith(root)) throw new LuaError("module escapes avatar folder: " + module);
-                if (!Files.isRegularFile(source)) throw new LuaError("module not found: " + module);
-                try {
-                    modules.put(module, LuaValue.TRUE); // break recursive require cycles
-                    instructionBudget.reset(LOAD_INSTRUCTION_LIMIT);
-                    LuaValue result = globals.load(Files.readString(source), module).call();
-                    if (result.isnil()) result = LuaValue.TRUE;
-                    modules.put(module, result);
-                    return result;
-                } catch (Exception error) {
-                    modules.remove(module);
-                    throw new LuaError("could not load module " + module + ": " + error.getMessage());
+                // 3. Try Local Library Cache (.minecraft/shyne_creator/libs/ or .minecraft/shyne-mods/libraries/)
+                Path cachedLib = ShyneLibraryManager.resolveCachedLibrary(root, module);
+                if (cachedLib != null && Files.isRegularFile(cachedLib)) {
+                    try {
+                        modules.put(module, LuaValue.TRUE); // break recursive require cycles
+                        instructionBudget.reset(LOAD_INSTRUCTION_LIMIT);
+                        LuaValue result = globals.load(Files.readString(cachedLib), module).call();
+                        if (result.isnil()) result = LuaValue.TRUE;
+                        modules.put(module, result);
+                        return result;
+                    } catch (Exception e) {
+                        modules.remove(module);
+                        throw new LuaError("could not load cached library " + module + ": " + e.getMessage());
+                    }
                 }
+
+                if (!source.startsWith(root)) throw new LuaError("module escapes avatar folder: " + module);
+                throw new LuaError("module not found: " + module);
             }
         });
     }

@@ -39,8 +39,36 @@ public final class VanillaVisibilityKeys {
             case "HEAD_ARMOR" -> "HELMET";
             case "CHEST_ARMOR", "BODY_ARMOR" -> "CHESTPLATE";
             case "LEG_ARMOR" -> "LEGGINGS";
-            case "FEET_ARMOR" -> "BOOTS";
+            case "TORSO" -> "BODY";
+            case "RIGHT_HAND" -> "RIGHT_ARM";
+            case "LEFT_HAND" -> "LEFT_ARM";
+            case "RIGHT_FOOT" -> "RIGHT_LEG";
+            case "LEFT_FOOT" -> "LEFT_LEG";
+            case "SLEEVES" -> "SLEEVE";
+            case "PANTS" -> "PANTS";
             default -> normalized;
+        };
+    }
+
+    /**
+     * Expands compound part keys (e.g. ARMS, LEGS) into their constituent parts and outer clothing layers.
+     */
+    public static java.util.List<String> expand(String key) {
+        String canonical = normalize(key);
+        return switch (canonical) {
+            case "ARMS", "ARM" -> java.util.List.of("RIGHT_ARM", "LEFT_ARM", "RIGHT_SLEEVE", "LEFT_SLEEVE");
+            case "LEGS", "LEG" -> java.util.List.of("RIGHT_LEG", "LEFT_LEG", "RIGHT_PANTS", "LEFT_PANTS");
+            case "HEAD" -> java.util.List.of("HEAD", "HAT");
+            case "BODY", "TORSO" -> java.util.List.of("BODY", "JACKET");
+            case "RIGHT_ARM" -> java.util.List.of("RIGHT_ARM", "RIGHT_SLEEVE");
+            case "LEFT_ARM" -> java.util.List.of("LEFT_ARM", "LEFT_SLEEVE");
+            case "RIGHT_LEG" -> java.util.List.of("RIGHT_LEG", "RIGHT_PANTS");
+            case "LEFT_LEG" -> java.util.List.of("LEFT_LEG", "LEFT_PANTS");
+            case "SLEEVES", "SLEEVE" -> java.util.List.of("RIGHT_SLEEVE", "LEFT_SLEEVE");
+            case "PANTS" -> java.util.List.of("RIGHT_PANTS", "LEFT_PANTS");
+            case "ARMOR" -> java.util.List.of("ARMOR", "HELMET", "CHESTPLATE", "LEGGINGS", "BOOTS");
+            case HELD_ITEMS, "ITEMS" -> java.util.List.of(HELD_ITEMS, LEFT_ITEM, RIGHT_ITEM, MAIN_HAND, OFF_HAND);
+            default -> java.util.List.of(canonical);
         };
     }
 

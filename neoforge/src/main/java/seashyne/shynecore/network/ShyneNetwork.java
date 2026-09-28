@@ -89,6 +89,8 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public static final Identifier SYNC_AVATAR_SNAPSHOTS = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "sync_avatar_snapshots");
     public static final Identifier SYNC_PLAYER_PRESENCE = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "sync_player_presence");
     public static final Identifier AVATAR_SYNC_REQUEST = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "avatar_sync_request");
+    public static final Identifier EQUIP_SKILL = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "equip_skill");
+    public static final Identifier SYNC_POWER_CONFIG = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "sync_power_config");
 
     public static final CustomPacketPayload.Type<ProtocolHelloPayload> PROTOCOL_HELLO_PAYLOAD = new CustomPacketPayload.Type<>(PROTOCOL_HELLO);
     public static final CustomPacketPayload.Type<JsonPayload> PROTOCOL_STATUS_PAYLOAD = new CustomPacketPayload.Type<>(PROTOCOL_STATUS);
@@ -109,6 +111,8 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public static final CustomPacketPayload.Type<JsonPayload> SYNC_AVATAR_SNAPSHOTS_PAYLOAD = new CustomPacketPayload.Type<>(SYNC_AVATAR_SNAPSHOTS);
     public static final CustomPacketPayload.Type<JsonPayload> SYNC_PLAYER_PRESENCE_PAYLOAD = new CustomPacketPayload.Type<>(SYNC_PLAYER_PRESENCE);
     public static final CustomPacketPayload.Type<AvatarSyncRequestPayload> AVATAR_SYNC_REQUEST_PAYLOAD = new CustomPacketPayload.Type<>(AVATAR_SYNC_REQUEST);
+    public static final CustomPacketPayload.Type<JsonPayload> EQUIP_SKILL_PAYLOAD = new CustomPacketPayload.Type<>(EQUIP_SKILL);
+    public static final CustomPacketPayload.Type<JsonPayload> SYNC_POWER_CONFIG_PAYLOAD = new CustomPacketPayload.Type<>(SYNC_POWER_CONFIG);
 
     public static final Gson GSON = new GsonBuilder().serializeNulls().create();
     public static final double MAX_AVATAR_TRACKING_DISTANCE = 160.0;
@@ -213,6 +217,11 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
                     activeInstance.handleSkillKey(player, payload);
                 }
             });
+            registrar.playToServer(EQUIP_SKILL_PAYLOAD, JsonPayload.codec(EQUIP_SKILL_PAYLOAD), (payload, context) -> {
+                if (activeInstance != null && context.player() instanceof ServerPlayer player) {
+                    activeInstance.handleEquipSkill(player, payload.json());
+                }
+            });
             registrar.playToServer(AVATAR_VAR_SET_PAYLOAD, AvatarVarSetPayload.CODEC, (payload, context) -> {
                 if (activeInstance != null && context.player() instanceof ServerPlayer player) {
                     activeInstance.handleAvatarVarSet(player, payload);
@@ -234,6 +243,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public void bindServer(MinecraftServer server) {
         this.server = server;
         this.lastBroadcastPresenceJson = null;
+        seashyne.shynecore.power.PowerServerConfig.get().load(java.nio.file.Path.of("config"));
         NeoForge.EVENT_BUS.addListener(PlayerEvent.PlayerLoggedInEvent.class, event -> {
             if (event.getEntity() instanceof ServerPlayer player && this.server != null) {
                 profileRuntime.ensurePlayer(player);
@@ -600,12 +610,35 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         sendActiveSync(player);
         sendAttachmentSync(player);
         sendPowerSync(player);
+        sendPowerConfigSync(player);
         sendSkillSync(player);
         sendProfileSync(player);
         sendWeaponSync(player);
         sendLoadoutSync(player);
         sendAvatarVarSync(player);
         sendAvatarSnapshotSync(player);
+    }
+
+    public void sendPowerConfigSync(ServerPlayer player) {
+        send(player, SYNC_POWER_CONFIG, seashyne.shynecore.power.PowerServerConfig.get().toJson());
+    }
+
+    public void handleEquipSkill(ServerPlayer player, String json) {
+        if (!compatibleClients.contains(player.getUUID())) return;
+        try {
+            EquipRequest request = GSON.fromJson(json, EquipRequest.class);
+            if (request != null && request.slot() != null) {
+                SkillSlot slot = SkillSlot.fromString(request.slot());
+                String skillId = request.skillId();
+                if (skillId != null && !skillId.isBlank() && seashyne.shynecore.power.PowerServerConfig.get().isBanned(skillId)) {
+                    return;
+                }
+                profileRuntime.equipSkill(player, slot, skillId);
+                try {
+                    profileRuntime.save();
+                } catch (Exception ignored) {}
+            }
+        } catch (Exception ignored) {}
     }
 
     private void sendProtocolStatus(ServerPlayer player, boolean accepted, String message) {
@@ -729,6 +762,8 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         ids.put(SYNC_AVATAR_VARS, SYNC_AVATAR_VARS_PAYLOAD);
         ids.put(SYNC_AVATAR_SNAPSHOTS, SYNC_AVATAR_SNAPSHOTS_PAYLOAD);
         ids.put(SYNC_PLAYER_PRESENCE, SYNC_PLAYER_PRESENCE_PAYLOAD);
+        ids.put(EQUIP_SKILL, EQUIP_SKILL_PAYLOAD);
+        ids.put(SYNC_POWER_CONFIG, SYNC_POWER_CONFIG_PAYLOAD);
         return Map.copyOf(ids);
     }
 
@@ -770,6 +805,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public record PlayerPresenceSyncPayload(List<NetPlayerPresence> players) {}
     public record ProtocolStatus(boolean accepted, int protocolVersion, String modVersion, String message, List<String> capabilities) {}
     public record StopPayload(String entityId) {}
+    public record EquipRequest(String skillId, String slot) {}
 
     /** startedAtMillis is an elapsed age on the wire, never an absolute clock. */
     public record NetPlayback(String entityId, String entityName, String modelId, String animationName, long startedAtMillis, double lengthSeconds, boolean looping) {

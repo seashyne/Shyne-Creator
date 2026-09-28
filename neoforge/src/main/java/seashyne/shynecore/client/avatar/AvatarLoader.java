@@ -132,13 +132,16 @@ public final class AvatarLoader {
                 }
             }
         }
-        String standard = json.has("standard") ? json.get("standard").getAsString().trim() : "2.0";
+        String standard = json.has("standard") ? json.get("standard").getAsString().trim() : ShyneApiStandard.LATEST;
+        if (standard.isBlank() || "latest".equalsIgnoreCase(standard) || "auto".equalsIgnoreCase(standard)) {
+            standard = ShyneApiStandard.LATEST;
+        }
         if ("figura".equalsIgnoreCase(standard)) {
             importSource = "figura";
         }
         boolean isFigura = "figura".equalsIgnoreCase(importSource);
-        if (!isFigura && !"2.0".equals(standard)) {
-            throw new IOException("unsupported Shyne Avatar standard: " + standard + "; expected 2.0");
+        if (!isFigura && !ShyneApiStandard.LATEST.equals(standard)) {
+            throw new IOException("unsupported Shyne Avatar standard: " + standard + "; expected " + ShyneApiStandard.LATEST);
         }
         List<String> declaredTextures = new ArrayList<>();
         if (json.has("textures") && json.get("textures").isJsonArray()) {
@@ -265,7 +268,7 @@ public final class AvatarLoader {
             json.has("version") ? json.get("version").getAsString() : "1.0.0",
             mainScript,
             modelFile,
-            json.has("replace_vanilla") ? json.get("replace_vanilla").getAsBoolean() : (importObj != null && importObj.has("replace_vanilla") ? importObj.get("replace_vanilla").getAsBoolean() : profile.replaceVanilla()),
+            json.has("replace_vanilla") ? parseReplaceVanilla(json.get("replace_vanilla"), profile.replaceVanilla()) : (importObj != null && importObj.has("replace_vanilla") ? parseReplaceVanilla(importObj.get("replace_vanilla"), profile.replaceVanilla()) : profile.replaceVanilla()),
             !json.has("online_sync") || json.get("online_sync").getAsBoolean(),
             json.has("description") ? json.get("description").getAsString() : "",
             json.has("first_person_arm") ? json.get("first_person_arm").getAsBoolean() : (json.has("first_person_masking") ? json.get("first_person_masking").getAsBoolean() : profile.firstPersonMasking()),
@@ -336,4 +339,16 @@ public final class AvatarLoader {
         if (size > maxBytes) throw new IOException(label + " is too large: " + path.getFileName());
     }
 
+    private static boolean parseReplaceVanilla(com.google.gson.JsonElement elem, boolean defaultValue) {
+        if (elem == null || elem.isJsonNull()) return defaultValue;
+        if (elem.isJsonPrimitive()) {
+            var prim = elem.getAsJsonPrimitive();
+            if (prim.isBoolean()) return prim.getAsBoolean();
+            if (prim.isString()) {
+                String s = prim.getAsString().trim().toLowerCase(java.util.Locale.ROOT);
+                return "true".equals(s) || "all".equals(s);
+            }
+        }
+        return false;
+    }
 }

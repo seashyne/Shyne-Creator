@@ -18,6 +18,15 @@ tasks.register('verifyLoaderParity') {
             throw new GradleException("Loader imports are not allowed in common: ${forbiddenImports}")
         }
 
+        def cloudJava = fileTree('cloud/src/main/java') { include '**/*.java' }.files
+        def forbiddenCloudImports = cloudJava.findAll { file ->
+            def text = file.getText('UTF-8')
+            text.contains('net.fabricmc') || text.contains('net.neoforged')
+        }
+        if (!forbiddenCloudImports.empty) {
+            throw new GradleException("Loader imports are not allowed in cloud: ${forbiddenCloudImports}")
+        }
+
         def relativeJavaPaths = { String root ->
             def rootDir = file(root)
             fileTree(rootDir) { include '**/*.java' }.files.collect {

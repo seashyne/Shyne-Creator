@@ -1,7 +1,6 @@
 package seashyne.shynecore.client.avatar;
 
 import com.google.gson.*;
-import net.neoforged.fml.loading.FMLPaths;
 import net.minecraft.client.Minecraft;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.config.ShyneClientSettings;
@@ -25,8 +24,8 @@ public final class ShyneCloudClient {
     private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
     private static final HttpClient HTTP = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(8)).followRedirects(HttpClient.Redirect.NEVER).build();
-    private static final Path SESSION_PATH = FMLPaths.CONFIGDIR.get().resolve("shyne-creator").resolve("cloud-session.json");
-    private static final Path CACHE_ROOT = FMLPaths.GAMEDIR.get().resolve(".shyne-cache");
+    private static Path sessionPath;
+    private static Path cacheRoot;
     private static final int CHUNK_BYTES = 512 * 1024;
     private static final int MAX_JSON_BYTES = 2 * 1024 * 1024;
     private static final int MAX_FILES = 256;
@@ -40,7 +39,7 @@ public final class ShyneCloudClient {
     private static final AtomicBoolean SIGN_IN_RUNNING = new AtomicBoolean();
     private static final long SIGN_IN_RATE_LIMIT_COOLDOWN_MS = 60_000L;
     private static final long PUBLIC_METADATA_CHECK_INTERVAL_MS = 5 * 60 * 1000L;
-    private static volatile Session session = loadSession();
+    private static volatile Session session;
     private static volatile long nextSignInAllowedAt;
     private static volatile String activePublicShare = "";
     private static volatile String activePublicPackageHash = "";
@@ -50,7 +49,30 @@ public final class ShyneCloudClient {
 
     private ShyneCloudClient() {}
 
+    private static Path getSessionPath() {
+        if (sessionPath != null) return sessionPath;
+        Minecraft mc = Minecraft.getInstance();
+        Path game = (mc != null && mc.gameDirectory != null) ? mc.gameDirectory.toPath() : Paths.get(".");
+        return game.resolve("config").resolve("shyne-creator").resolve("cloud-session.json");
+    }
+
+    private static Path getCacheRoot() {
+        if (cacheRoot != null) return cacheRoot;
+        Minecraft mc = Minecraft.getInstance();
+        Path game = (mc != null && mc.gameDirectory != null) ? mc.gameDirectory.toPath() : Paths.get(".");
+        return game.resolve(".shyne-cache");
+    }
+
     public static void init() {
+        Minecraft mc = Minecraft.getInstance();
+        Path game = (mc != null && mc.gameDirectory != null) ? mc.gameDirectory.toPath() : Paths.get(".");
+        init(game, game.resolve("config"));
+    }
+
+    public static void init(Path gameDir, Path configDir) {
+        if (configDir != null) sessionPath = configDir.resolve("shyne-creator").resolve("cloud-session.json");
+        if (gameDir != null) cacheRoot = gameDir.resolve(".shyne-cache");
+        session = loadSession();
         ShyneSecureAvatar.cleanupRuntimeCache();
     }
 
@@ -60,7 +82,10 @@ public final class ShyneCloudClient {
         ACTIVE_OPERATION.set(-1L);
         LAST.set(Operation.cancelled("Cloud operation cancelled"));
     }
-    public static boolean signedIn() { return session != null && session.expiresAt() > System.currentTimeMillis(); }
+    public static boolean signedIn() {
+        if (session == null) session = loadSession();
+        return session != null && session.expiresAt() > System.currentTimeMillis();
+    }
     public static String accountName() { return signedIn() ? session.username() : ""; }
     public static long signInRetrySeconds() {
         long remaining = nextSignInAllowedAt - System.currentTimeMillis();
@@ -87,15 +112,37 @@ public final class ShyneCloudClient {
                 } catch (Exception error) {
                     throw new CompletionFailure("Minecraft could not verify this account", error);
                 }
-                return requiredString(challenge, "challenge_id");
+                return challenge;
             }))
-            .thenCompose(challengeId -> {
+            .thenCompose(challenge -> CompletableFuture.supplyAsync(() -> {
                 requireActive(operation);
-                progress(operation, "Completing secure sign-in…", 0.75);
+                progress(operation, "Completing secure sign-in…", 0.70);
+                String challengeId = requiredString(challenge, "challenge_id");
+                String serverId = requiredString(challenge, "server_id");
                 JsonObject verify = new JsonObject();
                 verify.addProperty("challenge_id", challengeId);
-                return sendJson("POST", "/v1/auth/verify", verify, false);
-            })
+
+                // Fetch directly from Mojang from client (residential IP -> bypasses Azure Front Door datacenter IP block)
+                try {
+                    String url = "https://sessionserver.mojang.com/session/minecraft/hasJoined?username="
+                        + encode(username) + "&serverId=" + encode(serverId);
+                    HttpRequest mojangReq = HttpRequest.newBuilder(URI.create(url))
+                        .timeout(Duration.ofSeconds(6))
+                        .header("Accept", "application/json")
+                        .GET().build();
+                    HttpResponse<String> mojangResp = HTTP.send(mojangReq, HttpResponse.BodyHandlers.ofString());
+                    if (mojangResp.statusCode() == 200 && mojangResp.body() != null && !mojangResp.body().isBlank()) {
+                        JsonElement parsed = JsonParser.parseString(mojangResp.body());
+                        if (parsed.isJsonObject()) {
+                            verify.add("client_mojang_response", parsed.getAsJsonObject());
+                        }
+                    }
+                } catch (Exception e) {
+                    ShyneCore.LOGGER.warn("[ShyneCloud] Direct mojang check from client failed: {}", e.getMessage());
+                }
+                return verify;
+            }))
+            .thenCompose(verify -> sendJson("POST", "/v1/auth/verify", verify, false))
             .thenApply(result -> {
                 requireActive(operation);
                 JsonObject account = result.getAsJsonObject("account");
@@ -121,7 +168,7 @@ public final class ShyneCloudClient {
             HTTP.sendAsync(request, HttpResponse.BodyHandlers.discarding());
         } catch (Exception ignored) {}
         session = null;
-        try { Files.deleteIfExists(SESSION_PATH); } catch (IOException ignored) {}
+        try { Files.deleteIfExists(getSessionPath()); } catch (IOException ignored) {}
         LAST.set(Operation.idle());
     }
 
@@ -378,20 +425,26 @@ public final class ShyneCloudClient {
             fileJson.addProperty("size", bytes.length);
             JsonArray fileChunks = new JsonArray();
             for (int start = 0; start < bytes.length; start += CHUNK_BYTES) {
-                byte[] part = Arrays.copyOfRange(bytes, start, Math.min(start + CHUNK_BYTES, bytes.length));
-                String hash = sha256(part);
-                chunks.putIfAbsent(hash, new ChunkSource(hash, part));
-                JsonObject chunk = new JsonObject();
-                chunk.addProperty("hash", hash);
-                chunk.addProperty("size", part.length);
-                fileChunks.add(chunk);
+                int end = Math.min(bytes.length, start + CHUNK_BYTES);
+                byte[] chunkBytes = Arrays.copyOfRange(bytes, start, end);
+                String hash = sha256(chunkBytes);
+                JsonObject chunkJson = new JsonObject();
+                chunkJson.addProperty("hash", hash);
+                chunkJson.addProperty("size", chunkBytes.length);
+                fileChunks.add(chunkJson);
+                chunks.putIfAbsent(hash, new ChunkSource(hash, chunkBytes));
             }
             fileJson.add("chunks", fileChunks);
             manifestFiles.add(fileJson);
             fileIndex++;
         }
         JsonObject cloudManifest = new JsonObject();
-        cloudManifest.addProperty("format", 1);
+        cloudManifest.addProperty("format_version", 1);
+        cloudManifest.addProperty("id", local.id());
+        cloudManifest.addProperty("name", local.name());
+        cloudManifest.addProperty("version", local.version());
+        cloudManifest.addProperty("description", local.description());
+        cloudManifest.addProperty("total_size", total);
         cloudManifest.add("files", manifestFiles);
         JsonObject request = new JsonObject();
         request.addProperty("id", local.id());
@@ -430,9 +483,9 @@ public final class ShyneCloudClient {
         JsonArray files = manifest.getAsJsonArray("files");
         if (!SAFE_ID.matcher(avatarId).matches() || files == null || files.size() < 1 || files.size() > MAX_FILES) throw new IOException("Cloud manifest is invalid");
         Path avatarsRoot = AvatarLoader.avatarsDir().toAbsolutePath().normalize();
-        Path temp = CACHE_ROOT.resolve("installs").resolve(avatarId + ".tmp").normalize();
+        Path temp = getCacheRoot().resolve("installs").resolve(avatarId + ".tmp").normalize();
         Path target = avatarsRoot.resolve(avatarId).normalize();
-        if (!target.startsWith(avatarsRoot) || !temp.startsWith(CACHE_ROOT.toAbsolutePath().normalize())) throw new IOException("Unsafe Avatar path");
+        if (!target.startsWith(avatarsRoot) || !temp.startsWith(getCacheRoot().toAbsolutePath().normalize())) throw new IOException("Unsafe Avatar path");
         deleteTree(temp);
         Files.createDirectories(temp);
         long total = 0;
@@ -485,7 +538,7 @@ public final class ShyneCloudClient {
 
     private static byte[] cachedChunk(String avatarId, String hash, int expectedSize) throws Exception {
         if (!SAFE_HASH.matcher(hash).matches() || expectedSize < 1 || expectedSize > CHUNK_BYTES) throw new IOException("Invalid cloud chunk");
-        Path root = CACHE_ROOT.resolve("chunks").toAbsolutePath().normalize();
+        Path root = getCacheRoot().resolve("chunks").toAbsolutePath().normalize();
         Path cached = root.resolve(hash.substring(0, 2)).resolve(hash).normalize();
         if (!cached.startsWith(root)) throw new IOException("Unsafe cache path");
         if (Files.isRegularFile(cached)) {
@@ -652,16 +705,18 @@ public final class ShyneCloudClient {
 
     private static Session loadSession() {
         try {
-            if (!Files.isRegularFile(SESSION_PATH) || Files.size(SESSION_PATH) > 16 * 1024) return null;
-            Session loaded = GSON.fromJson(Files.readString(SESSION_PATH), Session.class);
+            Path path = getSessionPath();
+            if (!Files.isRegularFile(path) || Files.size(path) > 16 * 1024) return null;
+            Session loaded = GSON.fromJson(Files.readString(path), Session.class);
             return loaded != null && loaded.expiresAt() > System.currentTimeMillis() ? loaded : null;
         } catch (Exception ignored) { return null; }
     }
 
     private static void saveSession(Session value) {
         try {
-            Files.createDirectories(SESSION_PATH.getParent());
-            Files.writeString(SESSION_PATH, GSON.toJson(value), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            Path path = getSessionPath();
+            Files.createDirectories(path.getParent());
+            Files.writeString(path, GSON.toJson(value), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         } catch (IOException error) {
             ShyneCore.LOGGER.warn("[ShyneCloud] Could not save cloud session: {}", error.getMessage());
         }
@@ -670,7 +725,7 @@ public final class ShyneCloudClient {
     private static void deleteTree(Path root) throws IOException {
         if (!Files.exists(root)) return;
         Path normalized = root.toAbsolutePath().normalize();
-        Path allowedA = CACHE_ROOT.toAbsolutePath().normalize();
+        Path allowedA = getCacheRoot().toAbsolutePath().normalize();
         Path allowedB = AvatarLoader.avatarsDir().toAbsolutePath().normalize();
         if (!normalized.startsWith(allowedA) && !normalized.startsWith(allowedB)) throw new IOException("Refused to delete outside Shyne folders");
         try (var stream = Files.walk(normalized)) {

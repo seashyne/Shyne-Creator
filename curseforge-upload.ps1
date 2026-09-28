@@ -3,7 +3,7 @@
     Upload Shyne Creator mod to CurseForge via the Upload API.
 
 .DESCRIPTION
-    Uploads Fabric and NeoForge JARs for the current mod version to CurseForge project 1084611.
+    Uploads Fabric and NeoForge JARs for the current mod version to CurseForge project 1608411.
     - Fetches game version IDs automatically from the CurseForge API.
     - Supports building before upload with -Build switch.
     - Reads changelog from CHANGELOG.md or inline via -Changelog parameter.
@@ -28,7 +28,7 @@ param(
     [int]$ProjectId = 1608411,
 
     # CurseForge API token
-    [string]$ApiToken = "65df2957-4715-48ff-a7ee-17f52a9eabba",
+    [string]$ApiToken = $env:CURSEFORGE_API_TOKEN,
 
     # Release type: alpha, beta, or release (default: release)
     [ValidateSet("alpha", "beta", "release")]
@@ -59,6 +59,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+if ([string]::IsNullOrWhiteSpace($ApiToken)) {
+    throw "Set CURSEFORGE_API_TOKEN before uploading to CurseForge."
+}
 
 # --- Paths ----------------------------------------------------------------
 $ScriptDir = $PSScriptRoot
