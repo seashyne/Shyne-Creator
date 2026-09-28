@@ -1,0 +1,288 @@
+{
+  "meta": {
+    "format_version": "4.10",
+    "model_format": "free"
+  },
+  "name": "Action Wheel Showcase Avatar",
+  "resolution": {
+    "width": 64,
+    "height": 64
+  },
+  "textures": [],
+  "elements": [
+    {
+      "name": "HeadCube",
+      "uuid": "elem-head",
+      "type": "cube",
+      "from": [-4, 24, -4],
+      "to": [4, 32, 4],
+      "origin": [0, 24, 0],
+      "faces": {
+        "north": {"uv": [8, 8, 16, 16]},
+        "south": {"uv": [24, 8, 32, 16]},
+        "east": {"uv": [0, 8, 8, 16]},
+        "west": {"uv": [16, 8, 24, 16]},
+        "up": {"uv": [8, 0, 16, 8]},
+        "down": {"uv": [16, 0, 24, 8]}
+      }
+    },
+    {
+      "name": "LeftEarCube",
+      "uuid": "elem-left-ear",
+      "type": "cube",
+      "from": [2, 32, -1],
+      "to": [4, 38, 1],
+      "origin": [3, 32, 0],
+      "faces": {
+        "north": {"uv": [0, 0, 2, 6]},
+        "south": {"uv": [2, 0, 4, 6]},
+        "east": {"uv": [4, 0, 6, 6]},
+        "west": {"uv": [6, 0, 8, 6]},
+        "up": {"uv": [0, 0, 2, 2]},
+        "down": {"uv": [2, 0, 4, 2]}
+      }
+    },
+    {
+      "name": "RightEarCube",
+      "uuid": "elem-right-ear",
+      "type": "cube",
+      "from": [-4, 32, -1],
+      "to": [-2, 38, 1],
+      "origin": [-3, 32, 0],
+      "faces": {
+        "north": {"uv": [0, 0, 2, 6]},
+        "south": {"uv": [2, 0, 4, 6]},
+        "east": {"uv": [4, 0, 6, 6]},
+        "west": {"uv": [6, 0, 8, 6]},
+        "up": {"uv": [0, 0, 2, 2]},
+        "down": {"uv": [2, 0, 4, 2]}
+      }
+    },
+    {
+      "name": "BodyCube",
+      "uuid": "elem-body",
+      "type": "cube",
+      "from": [-4, 12, -2],
+      "to": [4, 24, 2],
+      "origin": [0, 12, 0],
+      "faces": {
+        "north": {"uv": [20, 20, 28, 32]},
+        "south": {"uv": [32, 20, 40, 32]},
+        "east": {"uv": [16, 20, 20, 32]},
+        "west": {"uv": [28, 20, 32, 32]},
+        "up": {"uv": [20, 16, 28, 20]},
+        "down": {"uv": [28, 16, 36, 20]}
+      }
+    },
+    {
+      "name": "TailCube",
+      "uuid": "elem-tail",
+      "type": "cube",
+      "from": [-1, 6, 2],
+      "to": [1, 14, 4],
+      "origin": [0, 12, 2],
+      "faces": {
+        "north": {"uv": [0, 16, 2, 24]},
+        "south": {"uv": [2, 16, 4, 24]},
+        "east": {"uv": [4, 16, 6, 24]},
+        "west": {"uv": [6, 16, 8, 24]},
+        "up": {"uv": [0, 16, 2, 18]},
+        "down": {"uv": [2, 16, 4, 18]}
+      }
+    },
+    {
+      "name": "RightArmCube",
+      "uuid": "elem-right-arm",
+      "type": "cube",
+      "from": [-8, 12, -2],
+      "to": [-4, 24, 2],
+      "origin": [-5, 22, 0],
+      "faces": {
+        "north": {"uv": [44, 20, 48, 32]},
+        "south": {"uv": [52, 20, 56, 32]},
+        "east": {"uv": [40, 20, 44, 32]},
+        "west": {"uv": [48, 20, 52, 32]},
+        "up": {"uv": [44, 16, 48, 20]},
+        "down": {"uv": [48, 16, 52, 20]}
+      }
+    },
+    {
+      "name": "LeftArmCube",
+      "uuid": "elem-left-arm",
+      "type": "cube",
+      "from": [4, 12, -2],
+      "to": [8, 24, 2],
+      "origin": [5, 22, 0],
+      "faces": {
+        "north": {"uv": [36, 52, 40, 64]},
+        "south": {"uv": [44, 52, 48, 64]},
+        "east": {"uv": [32, 52, 36, 64]},
+        "west": {"uv": [40, 52, 44, 64]},
+        "up": {"uv": [36, 48, 40, 52]},
+        "down": {"uv": [40, 48, 44, 52]}
+      }
+    }
+  ],
+  "outliner": [
+    {
+      "name": "root",
+      "uuid": "bone-root",
+      "origin": [0, 0, 0],
+      "children": [
+        {
+          "name": "Body",
+          "uuid": "bone-body",
+          "origin": [0, 12, 0],
+          "children": [
+            "elem-body",
+            {
+              "name": "Tail",
+              "uuid": "bone-tail",
+              "origin": [0, 12, 2],
+              "children": ["elem-tail"]
+            }
+          ]
+        },
+        {
+          "name": "Head",
+          "uuid": "bone-head",
+          "origin": [0, 24, 0],
+          "children": [
+            "elem-head",
+            {
+              "name": "LeftEar",
+              "uuid": "bone-left-ear",
+              "origin": [3, 32, 0],
+              "children": ["elem-left-ear"]
+            },
+            {
+              "name": "RightEar",
+              "uuid": "bone-right-ear",
+              "origin": [-3, 32, 0],
+              "children": ["elem-right-ear"]
+            }
+          ]
+        },
+        {
+          "name": "RightArm",
+          "uuid": "bone-right-arm",
+          "origin": [-5, 22, 0],
+          "children": ["elem-right-arm"]
+        },
+        {
+          "name": "LeftArm",
+          "uuid": "bone-left-arm",
+          "origin": [5, 22, 0],
+          "children": ["elem-left-arm"]
+        }
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "name": "idle",
+      "length": 2.0,
+      "loop": "loop",
+      "animators": {
+        "bone-body": {
+          "name": "Body",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 1.0, "vector": [1.5, 0, 0]},
+            {"time": 2.0, "vector": [0, 0, 0]}
+          ]
+        }
+      }
+    },
+    {
+      "name": "walk",
+      "length": 1.0,
+      "loop": "loop",
+      "animators": {
+        "bone-right-arm": {
+          "name": "RightArm",
+          "rotation": [
+            {"time": 0.0, "vector": [-20, 0, 0]},
+            {"time": 0.5, "vector": [20, 0, 0]},
+            {"time": 1.0, "vector": [-20, 0, 0]}
+          ]
+        },
+        "bone-left-arm": {
+          "name": "LeftArm",
+          "rotation": [
+            {"time": 0.0, "vector": [20, 0, 0]},
+            {"time": 0.5, "vector": [-20, 0, 0]},
+            {"time": 1.0, "vector": [20, 0, 0]}
+          ]
+        }
+      }
+    },
+    {
+      "name": "wave",
+      "length": 1.5,
+      "loop": "once",
+      "animators": {
+        "bone-right-arm": {
+          "name": "RightArm",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 0.3, "vector": [0, 0, 130]},
+            {"time": 0.6, "vector": [0, 0, 110]},
+            {"time": 0.9, "vector": [0, 0, 135]},
+            {"time": 1.2, "vector": [0, 0, 110]},
+            {"time": 1.5, "vector": [0, 0, 0]}
+          ]
+        }
+      }
+    },
+    {
+      "name": "dance",
+      "length": 1.2,
+      "loop": "loop",
+      "animators": {
+        "bone-body": {
+          "name": "Body",
+          "rotation": [
+            {"time": 0.0, "vector": [0, -15, -5]},
+            {"time": 0.3, "vector": [5, 0, 5]},
+            {"time": 0.6, "vector": [0, 15, -5]},
+            {"time": 0.9, "vector": [5, 0, 5]},
+            {"time": 1.2, "vector": [0, -15, -5]}
+          ],
+          "position": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 0.3, "vector": [0, 2, 0]},
+            {"time": 0.6, "vector": [0, 0, 0]},
+            {"time": 0.9, "vector": [0, 2, 0]},
+            {"time": 1.2, "vector": [0, 0, 0]}
+          ]
+        }
+      }
+    },
+    {
+      "name": "roar",
+      "length": 1.5,
+      "loop": "once",
+      "animators": {
+        "bone-head": {
+          "name": "Head",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 0.3, "vector": [-25, 0, 0]},
+            {"time": 1.1, "vector": [-30, 0, 0]},
+            {"time": 1.5, "vector": [0, 0, 0]}
+          ]
+        },
+        "bone-body": {
+          "name": "Body",
+          "rotation": [
+            {"time": 0.0, "vector": [0, 0, 0]},
+            {"time": 0.3, "vector": [-10, 0, 0]},
+            {"time": 1.1, "vector": [-12, 0, 0]},
+            {"time": 1.5, "vector": [0, 0, 0]}
+          ]
+        }
+      }
+    }
+  ]
+}

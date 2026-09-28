@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "format_version": "4.10",
+    "model_format": "free"
+  },
+  "name": "Zero-Lua Avatar",
+  "resolution": {
+    "width": 16,
+    "height": 16
+  },
+  "textures": [],
+  "elements": [],
+  "outliner": [
+    {
+      "name": "HeadAccessory",
+      "origin": [0, 24, 0],
+      "rotation": [0, 0, 0],
+      "uuid": "00000000-0000-4000-8000-000000000001",
+      "parent_type": "Head",
+      "role": "accessory",
+      "export": true,
+      "visibility": true,
+      "isOpen": true,
+      "children": []
+    }
+  ],
+  "animations": []
+}

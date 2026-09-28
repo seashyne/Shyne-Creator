@@ -8,12 +8,66 @@ import {
   Layers, Menu, MessageCircle, Palette, Play, Search, ShieldCheck, Sparkles, Users, Workflow, Wrench, X, Zap,
   type LucideIcon,
 } from 'lucide-react'
-import { docs, exampleDocs, fileToSlug, minecraftVersion, version, type DocIcon, type DocItem } from './content'
+import { docs, fileToSlug, minecraftVersion, version, type DocIcon, type DocItem } from './content'
 
 const CURSEFORGE_URL = 'https://www.curseforge.com/minecraft/mc-mods/shyne-creator'
 const YOUTUBE_URL = 'https://www.youtube.com/@seashyne'
 const CONTACT_URL = 'https://github.com/seashyne/Shyne-Creator/issues'
+const DISCORD_URL = 'https://discord.gg/YMFCAXddj3'
 const ModelViewer = lazy(() => import('./ModelViewer'))
+
+const siteAsset = (path: string) => `${import.meta.env.BASE_URL}${path}`
+
+type ShowcaseModel = {
+  id: string
+  label: string
+  title: string
+  description: string
+  model: string
+  avatar?: string
+  tags: string[]
+  guide: string
+}
+
+const showcaseModels: ShowcaseModel[] = [
+  {
+    id: 'deep-shynecore',
+    label: 'FEATURED MODEL',
+    title: 'Deep Shynecore',
+    description: 'โมเดลที่ใช้สาธิตหน้าแรกของ Shyne Creator — เปิดใน Blockbench เพื่อดูโครงสร้างและแต่งต่อได้ทันที',
+    model: 'deep-shynecore-model.bbmodel',
+    tags: ['Blockbench', '3D preview', 'Starter'],
+    guide: '/docs/blockbench-plugin',
+  },
+  {
+    id: 'zero-lua',
+    label: 'NO-CODE STARTER',
+    title: 'Zero-Lua Avatar',
+    description: 'จุดเริ่มต้นแบบไม่ต้องเขียน Lua สำหรับทดลอง parent type, role และการ Export Avatar ของ Shyne',
+    model: 'model-showcase/zero-lua-avatar.bbmodel',
+    tags: ['No Lua', 'Accessory', 'Beginner'],
+    guide: '/docs/first-avatar',
+  },
+  {
+    id: 'action-wheel',
+    label: 'ANIMATION EXAMPLE',
+    title: 'Action Wheel Avatar',
+    description: 'ตัวอย่าง Avatar ที่มี idle, walk, wave, dance และ roar เพื่อใช้เป็นฐานสำหรับต่อท่าทางและคำสั่ง',
+    model: 'model-showcase/action-wheel-showcase.bbmodel',
+    tags: ['Animation', 'Action Wheel', 'Intermediate'],
+    guide: '/docs/lua-api',
+  },
+  {
+    id: 'signature-weapon',
+    label: 'FULL AVATAR PACK',
+    title: 'Signature Weapon',
+    description: 'ตัวอย่างอาวุธและท่าต่อสู้ที่ดาวน์โหลดได้ทั้งไฟล์ Blockbench และ Avatar ZIP สำหรับติดตั้งทดลองในเกม',
+    model: 'model-showcase/signature-weapon.bbmodel',
+    avatar: 'model-showcase/signature-weapon-avatar.zip',
+    tags: ['Weapon', 'Avatar ZIP', 'Animation'],
+    guide: '/docs/first-avatar',
+  },
+]
 
 const iconMap: Record<DocIcon, LucideIcon> = {
   book: BookOpen, download: Download, sparkles: Sparkles, box: Box, play: Play,
@@ -42,7 +96,7 @@ function AppShell() {
     setMenuOpen(false)
     window.scrollTo({ top: 0, behavior: 'instant' })
     const activeDoc = docs.find((doc) => location.pathname === `/docs/${doc.slug}`)
-    const pageName = activeDoc?.title || (location.pathname === '/api' ? 'API Reference' : location.pathname === '/showcase' ? 'Creator Showcase' : 'Documentation')
+    const pageName = activeDoc?.title || (location.pathname === '/api' ? 'API Reference' : location.pathname === '/showcase' ? 'Model Showcase' : 'Documentation')
     document.title = `${pageName} — Shyne Creator`
   }, [location.pathname])
 
@@ -74,12 +128,13 @@ function AppShell() {
         <NavLink to="/docs/overview">คู่มือ</NavLink>
         <NavLink to="/docs/blockbench-plugin">Blockbench</NavLink>
         <NavLink to="/api">API</NavLink>
-        <NavLink to="/showcase">ตัวอย่าง</NavLink>
+        <NavLink to="/showcase">Showcase</NavLink>
       </nav>
       <div className="header-actions">
         <button className="search-button" onClick={() => setSearchOpen(true)}><Search size={16}/><span>ค้นหาเอกสาร</span><kbd>⌘ K</kbd></button>
         <a className="download-button" href={CURSEFORGE_URL} target="_blank" rel="noreferrer" aria-label="ดาวน์โหลด Shyne Creator จาก CurseForge"><Download size={17}/><span>ดาวน์โหลด</span></a>
         <a className="icon-button social-youtube" href={YOUTUBE_URL} target="_blank" rel="noreferrer" aria-label="YouTube ของ Shyne Creator"><Play size={20}/></a>
+        <a className="icon-button discord-button" href={DISCORD_URL} target="_blank" rel="noreferrer" aria-label="เข้าร่วม Discord ของ Shyne Creator"><MessageCircle size={19}/></a>
         <a className="icon-button" href={CONTACT_URL} target="_blank" rel="noreferrer" aria-label="ติดต่อและแจ้งปัญหา Shyne Creator"><MessageCircle size={19}/></a>
         <a className="icon-button" href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer" aria-label="ซอร์สโค้ด Shyne Creator"><Code2 size={19}/></a>
         <button className="icon-button mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-label="เปิดเมนู">{menuOpen ? <X/> : <Menu/>}</button>
@@ -218,10 +273,39 @@ function ApiPage() {
 }
 
 function ShowcasePage() {
-  const [active, setActive] = useState(0)
-  return <section className="listing-page showcase-page"><div className="listing-hero"><p>REAL CREATOR FIXTURES</p><h1>เรียนรู้จาก<br/><span>ตัวอย่างจริง</span></h1><p>ตัวอย่างเหล่านี้มาจากชุดทดสอบ Creator ในโปรเจกต์ Shyne และไม่ถูกบรรจุใน Mod JAR</p></div>
-    <div className="showcase-grid">{exampleDocs.map((example, index) => <button key={example.title} onClick={() => setActive(index)} className={active === index ? 'active' : ''}><span>0{index + 1}</span><FileCode2/><h2>{example.title}</h2><p>{example.description}</p><small>PERMISSION · {example.permission}</small><ChevronRight/></button>)}</div>
-    <div className="example-detail">{exampleDocs[active].image && <img src={exampleDocs[active].image} alt="ภาพตัวอย่าง Integration Avatar ของ Shyne"/>}<div><p className="overline">EXAMPLE 0{active + 1} <i></i></p><MarkdownContent content={exampleDocs[active].content} /></div></div><Footer/></section>
+  return <section className="listing-page showcase-page">
+    <section className="showcase-hero">
+      <div className="showcase-hero-copy">
+        <p className="overline">MODEL SHOWCASE <i></i></p>
+        <h1>หยิบโมเดลไป<br/><span>สร้างต่อได้เลย.</span></h1>
+        <p>ดาวน์โหลดไฟล์ Blockbench จากตัวอย่างจริงของ Shyne Creator ได้ทันที บางรายการมี Avatar ZIP พร้อมทดลองใน Minecraft</p>
+        <div className="showcase-hero-actions">
+          <a className="showcase-primary-action" href="#models"><Download size={18}/> เลือกโมเดล</a>
+          <a className="showcase-discord-action" href={DISCORD_URL} target="_blank" rel="noreferrer"><MessageCircle size={18}/> เข้า Discord</a>
+        </div>
+        <p className="showcase-hero-note"><Check size={16}/> ไฟล์ .bbmodel เปิดด้วย Blockbench ได้ และรายการที่มี ZIP สามารถนำไปทดลองกับ Shyne Creator ได้ทันที</p>
+      </div>
+      <div className="showcase-hero-visual" aria-label="ตัวอย่างโมเดล Deep Shynecore แบบสามมิติ">
+        <Suspense fallback={<div className="model-viewer model-fallback"><img src="shyne-icon.png" alt=""/><span>กำลังเตรียมตัวอย่าง 3D</span></div>}><ModelViewer /></Suspense>
+      </div>
+    </section>
+
+    <section className="showcase-catalog" id="models" aria-labelledby="models-heading">
+      <div className="showcase-section-head"><div><p>DOWNLOADABLE ASSETS</p><h2 id="models-heading">เริ่มจากตัวอย่างที่ใช่</h2><span>ไฟล์เหล่านี้เป็นต้นแบบสำหรับเรียนรู้ ปรับแต่ง และนำไปสร้าง Avatar ของคุณเอง</span></div><b>{showcaseModels.length} MODELS</b></div>
+      <div className="model-showcase-grid">{showcaseModels.map((model, index) => <article className="model-showcase-card" key={model.id}>
+        <div className="model-card-art"><span>0{index + 1}</span><FileCode2 size={32}/><i></i></div>
+        <div className="model-card-copy"><p>{model.label}</p><h3>{model.title}</h3><span>{model.description}</span></div>
+        <div className="model-tags">{model.tags.map((tag) => <small key={tag}>{tag}</small>)}</div>
+        <div className="model-downloads">
+          <a className="model-download primary-download" href={siteAsset(model.model)} download><Download size={16}/> ดาวน์โหลด .bbmodel</a>
+          {model.avatar ? <a className="model-download package-download" href={siteAsset(model.avatar)} download><Box size={16}/> Avatar ZIP</a> : <Link className="model-guide-link" to={model.guide}>ดูวิธีใช้งาน <ArrowRight size={15}/></Link>}
+        </div>
+      </article>)}</div>
+    </section>
+
+    <section className="showcase-community" aria-labelledby="community-heading"><div><p>SHYNE CREATOR COMMUNITY</p><h2 id="community-heading">ติดขัดตรงไหน<br/><span>คุยกับเราได้ใน Discord</span></h2><p>ถามเรื่องโมเดล, Avatar, Blockbench หรือแบ่งปันผลงานที่กำลังสร้างอยู่กับชุมชน Shyne Creator</p></div><a href={DISCORD_URL} target="_blank" rel="noreferrer"><MessageCircle size={20}/> เข้าร่วม Discord <ExternalLink size={15}/></a></section>
+    <Footer/>
+  </section>
 }
 
 function MarkdownContent({ content }: { content: string }) {
@@ -250,7 +334,7 @@ function CodeBlock({ children }: { children: ReactNode }) {
 }
 
 function Footer() {
-  return <footer><div><img src="shyne-icon.png" alt="Shyne Creator"/><span><b>SHYNE CREATOR</b><small>Create beyond the skin.</small></span></div><p>เอกสารสำหรับ Shyne Creator {version} · Minecraft {minecraftVersion} · MPL-2.0</p><div className="footer-links"><a href={YOUTUBE_URL} target="_blank" rel="noreferrer"><Play size={15}/> YouTube</a><a href={CONTACT_URL} target="_blank" rel="noreferrer"><MessageCircle size={14}/> ติดต่อ / แจ้งปัญหา</a><a href={CURSEFORGE_URL} target="_blank" rel="noreferrer">CurseForge</a><a href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer">GitHub</a></div></footer>
+  return <footer><div><img src="shyne-icon.png" alt="Shyne Creator"/><span><b>SHYNE CREATOR</b><small>Create beyond the skin.</small></span></div><p>เอกสารสำหรับ Shyne Creator {version} · Minecraft {minecraftVersion} · MPL-2.0</p><div className="footer-links"><a href={YOUTUBE_URL} target="_blank" rel="noreferrer"><Play size={15}/> YouTube</a><a href={DISCORD_URL} target="_blank" rel="noreferrer"><MessageCircle size={14}/> Discord</a><a href={CONTACT_URL} target="_blank" rel="noreferrer"><MessageCircle size={14}/> ติดต่อ / แจ้งปัญหา</a><a href={CURSEFORGE_URL} target="_blank" rel="noreferrer">CurseForge</a><a href="https://github.com/seashyne/Shyne-Creator" target="_blank" rel="noreferrer">GitHub</a></div></footer>
 }
 
 function extractHeadings(markdown: string) {

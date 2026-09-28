@@ -547,3 +547,83 @@ footer p,footer a { font-size:11px; }
   .hero-note { font-size:11px; }
   .starter-shortcuts { padding:12px; }
 }
+
+/* Model showcase */
+.showcase-page { overflow:hidden; }
+.showcase-hero {
+  min-height:570px;
+  padding:70px 7vw 64px;
+  display:grid;
+  grid-template-columns:minmax(0,1.08fr) minmax(340px,.92fr);
+  align-items:center;
+  gap:56px;
+  border-bottom:1px solid #30394a;
+  background:
+    radial-gradient(circle at 82% 10%,rgba(103,220,245,.14),transparent 27%),
+    radial-gradient(circle at 16% 105%,rgba(167,139,250,.12),transparent 34%),
+    linear-gradient(125deg,#101927,#0a111c 58%,#0b1420);
+}
+.showcase-hero-copy { max-width:670px; }
+.showcase-hero-copy .overline { margin:0; color:#8feaff; font:700 11px 'Chakra Petch'; letter-spacing:.13em; }
+.showcase-hero-copy h1 { max-width:700px; margin:15px 0 18px; color:#f5f8fc; font:700 clamp(47px,5.5vw,76px)/1.08 'Noto Sans Thai',sans-serif; letter-spacing:-.045em; }
+.showcase-hero-copy h1 span { color:#79e3fa; }
+.showcase-hero-copy>p:not(.overline):not(.showcase-hero-note) { margin:0; color:#c1ccda; font-size:17px; line-height:1.9; }
+.showcase-hero-actions { display:flex; flex-wrap:wrap; gap:12px; margin:30px 0 19px; }
+.showcase-hero-actions a { min-height:50px; padding:0 19px; display:inline-flex; align-items:center; justify-content:center; gap:9px; font-size:14px; font-weight:700; transition:.18s; }
+.showcase-primary-action { color:#071018; background:#67dcf5; border:1px solid #a1eefe; box-shadow:5px 5px 0 #214b5c; }
+.showcase-primary-action:hover { color:#061016; background:#9aebfb; transform:translate(-2px,-2px); box-shadow:7px 7px 0 #214b5c; }
+.showcase-discord-action { color:#eaf3fc; background:#202a4e; border:1px solid #59669b; }
+.showcase-discord-action:hover { color:#fff; background:#303c69; border-color:#8491ca; transform:translateY(-2px); }
+.showcase-hero-note { margin:0; padding-left:13px; display:flex; gap:9px; align-items:flex-start; color:#b9c8d8; border-left:2px solid #67dcf5; font-size:12px; line-height:1.7; }
+.showcase-hero-note svg { flex:0 0 auto; margin-top:2px; color:#76e3fb; }
+.showcase-hero-visual { display:flex; justify-content:flex-end; min-width:0; }
+.showcase-hero-visual .model-viewer { width:min(100%,470px); height:430px; }
+.showcase-catalog { padding:64px 7vw 82px; background:linear-gradient(180deg,#0c131f,#0a111b); }
+.showcase-section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:28px; margin-bottom:31px; }
+.showcase-section-head p,.showcase-community>div>p:first-child { margin:0 0 8px; color:#75e2fa; font:700 10px 'Chakra Petch'; letter-spacing:.15em; }
+.showcase-section-head h2 { margin:0 0 8px; color:#f2f6fb; font:700 34px/1.2 'Noto Sans Thai',sans-serif; letter-spacing:-.02em; }
+.showcase-section-head span { display:block; max-width:670px; color:#aebccc; font-size:14px; line-height:1.75; }
+.showcase-section-head>b { flex:0 0 auto; padding:9px 11px; color:#afeefc; background:rgba(103,220,245,.08); border:1px solid #36586a; font:600 10px 'Chakra Petch'; letter-spacing:.1em; }
+.model-showcase-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px; }
+.model-showcase-card { min-height:330px; padding:22px; display:flex; flex-direction:column; color:#eaf1f8; background:linear-gradient(145deg,#151f2f,#0e1622); border:1px solid #35445a; box-shadow:8px 9px 0 rgba(4,9,15,.35); transition:transform .2s,border-color .2s,box-shadow .2s; }
+.model-showcase-card:hover { border-color:#6b99ad; box-shadow:10px 11px 0 rgba(4,9,15,.52); transform:translate(-2px,-3px); }
+.model-card-art { position:relative; min-height:72px; display:flex; align-items:center; justify-content:center; overflow:hidden; color:#8be9fa; background:linear-gradient(135deg,rgba(103,220,245,.14),rgba(167,139,250,.07)); border:1px solid #375468; }
+.model-card-art:before,.model-card-art:after { content:""; position:absolute; width:106px; height:106px; border:1px solid rgba(132,226,249,.18); transform:rotate(45deg); }
+.model-card-art:before { right:-51px; bottom:-69px; }.model-card-art:after { left:-72px; top:-69px; }
+.model-card-art span { position:absolute; top:11px; left:12px; color:#90a2b8; font:700 10px 'Chakra Petch'; letter-spacing:.1em; }
+.model-card-art svg { z-index:1; filter:drop-shadow(0 0 11px rgba(103,220,245,.34)); }
+.model-card-art i { position:absolute; right:12px; bottom:11px; width:7px; height:7px; background:#60e6a2; border-radius:50%; box-shadow:0 0 0 4px rgba(96,230,162,.09),0 0 12px rgba(96,230,162,.65); }
+.model-card-copy { margin-top:20px; }
+.model-card-copy p { margin:0 0 7px; color:#75e2fa; font:700 10px 'Chakra Petch'; letter-spacing:.12em; }
+.model-card-copy h3 { margin:0 0 8px; color:#f3f7fc; font:700 23px/1.25 'Noto Sans Thai',sans-serif; letter-spacing:-.02em; }
+.model-card-copy>span { display:block; color:#b5c1d0; font-size:13px; line-height:1.75; }
+.model-tags { display:flex; flex-wrap:wrap; gap:6px; margin:18px 0 20px; }
+.model-tags small { padding:5px 7px; color:#b9eaf5; background:#172737; border:1px solid #315167; font:600 9px 'Chakra Petch'; letter-spacing:.05em; }
+.model-downloads { display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin-top:auto; }
+.model-download { min-height:40px; padding:0 12px; display:inline-flex; align-items:center; justify-content:center; gap:7px; font-size:12px; font-weight:700; transition:.18s; }
+.primary-download { color:#081018; background:#86eaf9; border:1px solid #b0f2fd; }
+.primary-download:hover { color:#071018; background:#b0f4fd; box-shadow:3px 3px 0 #255365; transform:translate(-1px,-1px); }
+.package-download { color:#e6e3ff; background:#24213e; border:1px solid #625b95; }
+.package-download:hover { color:#fff; background:#37305c; border-color:#968cdb; }
+.model-guide-link { display:inline-flex; align-items:center; gap:6px; padding:9px 2px; color:#c8d8e7; font-size:12px; font-weight:700; }
+.model-guide-link:hover { color:#85e6f9; }
+.showcase-community { margin:0 7vw 82px; padding:39px 43px; display:flex; align-items:center; justify-content:space-between; gap:36px; border:1px solid #4a4d77; background:radial-gradient(circle at 86% 10%,rgba(167,139,250,.24),transparent 36%),linear-gradient(120deg,#16213a,#11192a); box-shadow:10px 11px 0 rgba(3,7,12,.65); }
+.showcase-community h2 { margin:0 0 10px; color:#f3f6fb; font:700 34px/1.27 'Noto Sans Thai',sans-serif; letter-spacing:-.025em; }.showcase-community h2 span{color:#baa9ff}
+.showcase-community>div>p:last-child { max-width:600px; margin:0; color:#c0cad8; font-size:14px; line-height:1.8; }
+.showcase-community>a { flex:0 0 auto; min-height:49px; padding:0 17px; display:flex; align-items:center; gap:9px; color:#f2f5ff; background:#5865f2; border:1px solid #8e98ff; box-shadow:5px 5px 0 #292d72; font-size:13px; font-weight:700; transition:.18s; }.showcase-community>a:hover { color:#fff; background:#6c78ff; transform:translate(-2px,-2px); box-shadow:7px 7px 0 #292d72; }
+.discord-button:hover { color:#e9ecff; background:#283469; border-color:#7480ca; }
+
+@media(max-width:900px) {
+  .showcase-hero { grid-template-columns:1fr; gap:36px; padding-top:60px; }
+  .showcase-hero-visual { justify-content:flex-start; }.showcase-hero-visual .model-viewer { height:400px; }
+  .showcase-community { align-items:flex-start; flex-direction:column; }
+}
+@media(max-width:600px) {
+  .showcase-hero { min-height:0; padding:48px 22px 50px; gap:29px; }
+  .showcase-hero-copy h1 { font-size:44px; }.showcase-hero-copy>p:not(.overline):not(.showcase-hero-note) { font-size:15px; }
+  .showcase-hero-actions { margin:24px 0 18px; }.showcase-hero-actions a { width:100%; }
+  .showcase-hero-visual .model-viewer { width:100%; height:350px; }
+  .showcase-catalog { padding:47px 20px 58px; }.showcase-section-head { align-items:flex-start; flex-direction:column; gap:14px; margin-bottom:23px; }.showcase-section-head h2 { font-size:28px; }.showcase-section-head span { font-size:13px; }
+  .model-showcase-grid { grid-template-columns:1fr; }.model-showcase-card { min-height:0; padding:17px; }.model-card-copy h3 { font-size:21px; }
+  .showcase-community { margin:0 20px 55px; padding:28px 22px; gap:24px; }.showcase-community h2 { font-size:27px; }.showcase-community>a { width:100%; justify-content:center; }
+}
