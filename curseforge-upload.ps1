@@ -59,14 +59,37 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-if ([string]::IsNullOrWhiteSpace($ApiToken)) {
-    throw "Set CURSEFORGE_API_TOKEN before uploading to CurseForge."
-}
 
 # --- Paths ----------------------------------------------------------------
 $ScriptDir = $PSScriptRoot
 $GradleProps = Join-Path $ScriptDir "gradle.properties"
 $BaseUrl = "https://minecraft.curseforge.com"
+
+# Check .env if token not passed or in environment
+if ([string]::IsNullOrWhiteSpace($ApiToken)) {
+    $envCandidates = @(
+        (Join-Path $ScriptDir ".env"),
+        (Join-Path $env:USERPROFILE ".env")
+    )
+    foreach ($cand in $envCandidates) {
+        if (Test-Path $cand) {
+            $match = Get-Content $cand | Where-Object { $_ -match "^\s*CURSEFORGE_API_TOKEN\s*=\s*(.+)$" } | Select-Object -First 1
+            if ($match) {
+                $ApiToken = ($match -split "=", 2)[1].Trim(' "', "'")
+                break
+            }
+        }
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($ApiToken)) {
+    Write-Host "[X] Missing CurseForge API Token!" -ForegroundColor Red
+    Write-Host "  Please set your API token via one of the following methods:" -ForegroundColor Yellow
+    Write-Host "  1. In PowerShell: `$env:CURSEFORGE_API_TOKEN = 'your_token'" -ForegroundColor Cyan
+    Write-Host "  2. Or in .env: CURSEFORGE_API_TOKEN=your_token" -ForegroundColor Cyan
+    Write-Host "  3. Generate token at: https://authors-old.curseforge.com/account/api-tokens" -ForegroundColor Gray
+    throw "Set CURSEFORGE_API_TOKEN before uploading to CurseForge."
+}
 
 # --- Helpers --------------------------------------------------------------
 
