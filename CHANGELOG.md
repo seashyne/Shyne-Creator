@@ -1,3 +1,13 @@
+## Shyne Creator v2.12.3
+
+### API Documentation, Contracts & Power UI
+
+- Added `API_CONTRACTS_TH.md` as the public index for Avatar, Lua, Render, Rig, Gameplay, Asset Package and Cloud contracts.
+- Updated Standard, Lua, Render, Rig, Gameplay, Creator SDK, Cloud, Public Share and complete API reference documentation to the 2.12.3 compatibility scope.
+- Expanded Gameplay API documentation with server authority, skill/item/weapon schemas, item-use hook data, registry commands and native PNG icon behavior.
+- Published Power & Asset Package 1.0 and the complete API reference in the Docs site navigation.
+- Mana UI now stays hidden until an active Avatar has a selected skill that spends mana; removed the misleading fallback `100 / 100` from the Action Deck, HUD and ability wheel.
+
 ## Shyne Creator v2.12.0
 
 ### 🌐 Cloudflare R2 Ecosystem & Cloud Sync (Live Web API Backend)

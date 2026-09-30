@@ -1,5 +1,7 @@
 # Shyne Public ZIP Share
 
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.3` และ Cloud API `2.2` ดู API contracts ที่เกี่ยวข้องได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+
 Public Share แยกจาก Private Cloud Backup โฟลเดอร์พัฒนาและไฟล์ที่ Restore ยังคงเป็น Avatar folder ตามปกติ ส่วนสำเนาที่ Publish จะเป็น ZIP มาตรฐานซึ่ง Shyne Creator สร้างและ Backend ตรวจสอบก่อนเผยแพร่
 
 ## สัญญา Public ZIP 2.2

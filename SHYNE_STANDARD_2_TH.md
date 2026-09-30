@@ -1,5 +1,7 @@
 # Shyne Avatar Standard 2.0
 
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.3` และ `avatar.schema.json` คือ contract ที่ตรวจรูปแบบ `avatar.json` จริง ดู API ที่เกี่ยวข้องได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+
 Shyne Avatar Standard 2.0 เป็นมาตรฐานแบบ **model-first**: งานทั่วไปควรสร้างให้เสร็จจาก Blockbench และ `avatar.json` โดยไม่ต้องมี `script.lua` เป้าหมายคือให้ผู้สร้างเริ่มจากโมเดล, hierarchy, `parent_type` และ animation ที่ตั้งชื่อชัดเจน แล้วให้ Shyne จัดการพฤติกรรมพื้นฐานให้
 
 Standard 2.0 ทำงานบน Shyne runtime โดยตรง ไม่ติดตั้ง ไม่โหลด และไม่เรียก Figura runtime ไฟล์จาก Figura อาจใช้เป็นข้อมูลอ้างอิงตอนย้าย geometry, texture และ animation เท่านั้น มาตรฐานนี้ **ไม่โหลดสคริปต์ Figura หรือ compatibility layer รุ่นเก่า** และรับเฉพาะสัญญา API 2.0

@@ -1,5 +1,7 @@
 # Shyne Avatar Cloud API v2.2
 
+เอกสาร HTTP นี้ใช้ร่วมกับ Shyne Creator `2.12.3`; Cloud API แยกจาก Avatar Lua และ Asset Package contract ดูภาพรวมได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+
 Base URL: `https://shyne-avatar-cloud.jirayut-wh.workers.dev`
 
 API แยก Private Backup ออกจาก Public Share ชัดเจน ทุก endpoint ที่อ่านหรือแก้ไฟล์ต้องใช้ `Authorization: Bearer <token>` ส่วน metadata ใน Discover อ่านได้โดยไม่ต้อง Sign in

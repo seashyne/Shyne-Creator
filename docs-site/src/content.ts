@@ -2,6 +2,7 @@ import overview from '../../README.md?raw'
 import playerQuickstart from '../../PLAYER_QUICKSTART_TH.md?raw'
 import quickstart from '../../CREATOR_QUICKSTART_TH.md?raw'
 import standard from '../../SHYNE_STANDARD_2_TH.md?raw'
+import apiContracts from '../../API_CONTRACTS_TH.md?raw'
 import blockbenchPlugin from '../../tools/blockbench/README_TH.md?raw'
 import blockbench from '../../BLOCKBENCH_ANIMATION_STANDARD.md?raw'
 import avatarSystem from '../../AVATAR_SYSTEM.md?raw'
@@ -9,6 +10,8 @@ import rig from '../../RIG_API_TH.md?raw'
 import lua from '../../SHYNE_LUA_API_TH.md?raw'
 import render from '../../CUSTOM_RENDER_API_TH.md?raw'
 import gameplay from '../../SHYNE_GAMEPLAY_API_TH.md?raw'
+import powerAssets from '../../POWER_ASSET_PACKAGE_TH.md?raw'
+import completeApi from '../../SHYNE_API_COMPLETE_TH.md?raw'
 import cloud from '../../AVATAR_CLOUD.md?raw'
 import cloudApi from '../../CLOUD_API.md?raw'
 import publicShare from '../../PUBLIC_SHARE.md?raw'
@@ -37,7 +40,7 @@ export type DocItem = {
   api?: boolean
 }
 
-export const version = '2.12.2'
+export const version = '2.12.3'
 export const minecraftVersion = '26.3'
 
 const installation = `# ติดตั้ง Shyne Creator
@@ -54,8 +57,8 @@ Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}*
 
 | คุณต้องการทำอะไร | ไฟล์ที่ต้องใช้ |
 | --- | --- |
-| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-2.12.2.jar\` พร้อม Fabric API |
-| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-2.12.2.jar\` |
+| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-2.12.3.jar\` พร้อม Fabric API |
+| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-2.12.3.jar\` |
 | สร้าง Avatar ด้วย Blockbench | Shyne Creator Kit — **ห้ามนำไปใส่ในโฟลเดอร์ mods** |
 
 ## ความต้องการของระบบ
@@ -71,13 +74,13 @@ Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}*
 ## ติดตั้งบน Fabric
 
 1. ติดตั้ง Fabric Loader สำหรับ Minecraft ${minecraftVersion}
-2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.12.2.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
+2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.12.3.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมแล้วตรวจว่ามีโลโก้ Shyne ในหน้าเมนูหลัก หรือเมนู \`Esc → อวตาร\`
 
 ## ติดตั้งบน NeoForge
 
 1. ติดตั้ง NeoForge สำหรับ Minecraft ${minecraftVersion}
-2. ใส่ไฟล์ \`shyne-creator-neoforge-2.12.2.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
+2. ใส่ไฟล์ \`shyne-creator-neoforge-2.12.3.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมด้วยโปรไฟล์ NeoForge แล้วตรวจว่ามีเมนู \`Esc → อวตาร\`
 
 ## ติดตั้งเสร็จแล้วทำอะไรต่อ
@@ -110,6 +113,7 @@ export const docs: DocItem[] = [
   { slug: 'player-quickstart', title: 'เริ่มใช้ Shyne ใน 1 นาที', shortTitle: 'เริ่มใช้ Shyne', description: 'ติดตั้งแล้วไปต่ออย่างไร ตั้งแต่เปิดคลังจนเลือกใช้ Avatar', category: 'เริ่มต้น', icon: 'gamepad', content: playerQuickstart },
   { slug: 'first-avatar', title: 'สร้าง Avatar แรก', shortTitle: 'สร้าง Avatar แรก', description: 'สำหรับ Creator: จากโปรเจกต์ Blockbench ไปสู่ Avatar ที่เล่นในเกมได้', category: 'Blockbench', icon: 'sparkles', content: quickstart },
   { slug: 'standard-2', title: 'Shyne Avatar Standard 2.0', shortTitle: 'Standard 2.0', description: 'สัญญา Model-first, profile และ declarative behavior', category: 'สร้าง Avatar', icon: 'box', content: standard },
+  { slug: 'api-contracts', title: 'API Contracts', shortTitle: 'API Contracts', description: 'ดัชนี contract, schema และ trust boundary ของ Creator API ทุกชุด', category: 'API และระบบ', icon: 'book', content: apiContracts, api: true },
   { slug: 'blockbench-plugin', title: 'เริ่มใช้ Blockbench กับ Shyne', shortTitle: 'คู่มือ Blockbench', description: 'สำหรับมือใหม่: รู้จักหน้าจอ สร้างโมเดล ใส่ Texture ทำ Animation และ Export เข้าเกม', category: 'Blockbench', icon: 'wrench', content: blockbenchPlugin },
   { slug: 'avatar-system', title: 'ระบบ Avatar', shortTitle: 'ระบบ Avatar', description: 'ตำแหน่งไฟล์ outfit, palette, client API และขอบเขตความปลอดภัย', category: 'สร้าง Avatar', icon: 'layers', content: avatarSystem },
   { slug: 'blockbench-animation', title: 'Blockbench Animation Standard', shortTitle: 'Animation Standard', description: 'รูปแบบแอนิเมชัน Expression และค่าที่ runtime รองรับ', category: 'Blockbench', icon: 'play', content: blockbench },
@@ -117,6 +121,8 @@ export const docs: DocItem[] = [
   { slug: 'lua-api', title: 'Shyne Native Lua API — Standard 2.0', shortTitle: 'Lua API 2.0', description: 'API หลักสำหรับโมเดล state, network, event, sound และ input', category: 'API และระบบ', icon: 'braces', content: lua, api: true },
   { slug: 'render-api', title: 'Custom Render API 1.3', shortTitle: 'Render API 1.3', description: 'Primitive, HUD, world task, native bone binding และ performance budget', category: 'API และระบบ', icon: 'palette', content: render, api: true },
   { slug: 'gameplay-api', title: 'Shyne Gameplay API', shortTitle: 'Gameplay API', description: 'สร้าง item, skill, power และ combat system ฝั่งเซิร์ฟเวอร์', category: 'API และระบบ', icon: 'gamepad', content: gameplay, api: true },
+  { slug: 'asset-package', title: 'Power & Asset Package 1.0', shortTitle: 'Asset Package', description: 'แพ็ก skill/item และ PNG icon สำหรับ native UI โดยไม่มี WebView', category: 'API และระบบ', icon: 'box', content: powerAssets, api: true },
+  { slug: 'api-reference', title: 'API Reference ฉบับสมบูรณ์', shortTitle: 'API Reference', description: 'รวม Native Lua, Render, Rig, Gameplay, Cloud และ Figura compatibility', category: 'API และระบบ', icon: 'braces', content: completeApi, api: true },
   { slug: 'cloud', title: 'Shyne Avatar Cloud', shortTitle: 'Avatar Cloud', description: 'Private backup, restore, public share และสถาปัตยกรรม Cloud', category: 'API และระบบ', icon: 'cloud', content: cloud },
   { slug: 'cloud-api', title: 'Avatar Cloud API v2.2', shortTitle: 'Cloud API v2.2', description: 'Authentication, private backup และ Public ZIP endpoints', category: 'API และระบบ', icon: 'cloud', content: cloudApi, api: true },
   { slug: 'security', title: 'Security Policy', shortTitle: 'ความปลอดภัย', description: 'Trust model, permission และวิธีรายงานช่องโหว่', category: 'เผยแพร่และพัฒนา', icon: 'shield', content: security },
@@ -139,9 +145,10 @@ export const exampleDocs = [
 
 export const fileToSlug: Record<string, string> = {
   'README.md': 'overview', 'PLAYER_QUICKSTART_TH.md': 'player-quickstart', 'CREATOR_QUICKSTART_TH.md': 'first-avatar', 'SHYNE_STANDARD_2_TH.md': 'standard-2',
+  'API_CONTRACTS_TH.md': 'api-contracts',
   'tools/blockbench/README_TH.md': 'blockbench-plugin',
   'AVATAR_SYSTEM.md': 'avatar-system', 'BLOCKBENCH_ANIMATION_STANDARD.md': 'blockbench-animation', 'RIG_API_TH.md': 'rig-api',
-  'SHYNE_LUA_API_TH.md': 'lua-api', 'CUSTOM_RENDER_API_TH.md': 'render-api', 'SHYNE_GAMEPLAY_API_TH.md': 'gameplay-api',
+  'SHYNE_LUA_API_TH.md': 'lua-api', 'CUSTOM_RENDER_API_TH.md': 'render-api', 'SHYNE_GAMEPLAY_API_TH.md': 'gameplay-api', 'POWER_ASSET_PACKAGE_TH.md': 'asset-package', 'SHYNE_API_COMPLETE_TH.md': 'api-reference',
   'AVATAR_CLOUD.md': 'cloud', 'CLOUD_API.md': 'cloud-api', 'SECURITY.md': 'security', 'PUBLIC_SHARE.md': 'public-share',
   'MULTIPLAYER_TESTING.md': 'multiplayer-testing', 'CREATOR_SDK_TH.md': 'creator-sdk', 'ARCHITECTURE_TH.md': 'architecture',
   'RULES.md': 'rules', 'CHANGELOG.md': 'changelog',

@@ -1,5 +1,7 @@
 # 📖 Shyne Creator — API Reference ฉบับสมบูรณ์
 
+> ตรวจทานกับ Shyne Creator `2.12.3` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
+
 > **เวอร์ชัน:** `2.10.0-alpha-26.3` | **Standard:** `2.0` | **ภาษา:** ไทย  
 > เอกสารนี้รวม **ทุก API** ของ Shyne Creator ไว้ในที่เดียว
 
@@ -1190,4 +1192,4 @@ figura.compatibility_level -- "100%"
 ---
 
 > 📝 เอกสารนี้สร้างอัตโนมัติจาก `SHYNE_LUA_API_TH.md`, `CUSTOM_RENDER_API_TH.md`, `RIG_API_TH.md`, `SHYNE_GAMEPLAY_API_TH.md`, `CLOUD_API.md` และ `60_figura_compat.lua`  
-> อัปเดตล่าสุด: 2026-09-24 | Shyne Creator v2.10.0-alpha-26.3
+> อัปเดตล่าสุด: 2026-09-30 | Shyne Creator v2.12.3

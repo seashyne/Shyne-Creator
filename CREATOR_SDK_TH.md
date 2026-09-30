@@ -1,6 +1,6 @@
 # Shyne Creator SDK
 
-เอกสารนี้ตรงกับ Shyne Creator `2.12.0`
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.3` schema ใน `shyne_sdk/schemas/` คือ contract สำหรับ JSON ของ Creator ดูภาพรวมได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 เอกสารนี้เป็นจุดเริ่มต้นสำหรับมอดเสริมที่สร้าง Power, Skill และ Avatar โดยไม่ฝัง content ตัวอย่างไว้ใน Shyne Creator
 
@@ -10,14 +10,19 @@
 shyne-mods/<pack-id>/
 ├─ mod.json
 ├─ main.lua
+├─ shyne-package.json        # optional; required when skill/item uses native PNG icon
+├─ assets/icons/
+│  └─ arc_bolt.png
 ├─ skills/
 │  └─ dash.json
 ├─ weapons/
 │  └─ focus.json
 ├─ items/
 │  └─ aether_crystal.json
-└─ bbmodels/
-   └─ effect.bbmodel
+├─ bbmodels/
+│  └─ effect.bbmodel
+└─ sources/icons/
+   └─ arc_bolt.svg           # optional editor source; never read at runtime
 ```
 
 Server เป็นเจ้าของ profile, mana, cooldown, damage, projectile และ summon Client ส่งเพียง input intent เช่นช่อง Primary/Secondary/Utility/Ultimate ห้ามเขียน Power โดยเชื่อค่าจาก client
@@ -76,6 +81,25 @@ end
 
 Schema อยู่ที่ `src/main/resources/shyne_sdk/schemas` และคู่มือ API อยู่ที่ `SHYNE_LUA_API_TH.md` ส่วน bootstrap ภายในถูกแบ่งไว้ที่ `src/main/resources/shyne_runtime/lua/avatar/` โดย `shyne_avatar.lua` เป็นเพียง index ผู้สร้าง Avatar ไม่ต้องโหลดโมดูลเหล่านี้เอง
 
+## Native PNG icon และ Asset Package
+
+เมื่อกำหนด `icon` ใน skill หรือ item ต้องวาง `shyne-package.json` ที่ root เดียวกับ `skills/` หรือ `items/` และประกาศ asset ID ให้ตรงกัน:
+
+```json
+{
+  "format": "shyne_asset_package",
+  "format_version": 1,
+  "id": "arcane_pack",
+  "assets": [{
+    "id": "arc_bolt",
+    "type": "png_icon",
+    "path": "assets/icons/arc_bolt.png"
+  }]
+}
+```
+
+เกมอ่าน PNG package-local เท่านั้น ไม่โหลด SVG, React, JavaScript, URL หรือ path ภายนอกแพ็ก ข้อกำหนดขนาดและตัวอย่างเต็มอยู่ที่ [POWER_ASSET_PACKAGE_TH.md](POWER_ASSET_PACKAGE_TH.md)
+
 ## โครง Avatar
 
 ```text
@@ -106,7 +130,7 @@ shyne-mods/avatars/<avatar-id>/
 
 ### Avatar แบบ Overlay
 
-สำหรับหู หาง ปีก หรือ armor cosmetic ที่ยังต้องการให้เห็น skin/armor ของ Minecraft ให้ใช้ `"profile": "accessory"` และกำหนด `parent_type` ของ bone ใน Blockbench เป็น `Head`, `Body`, `LeftArm`, `RightArm`, `LeftLeg` หรือ `RightLeg` Shyne 2.8.0 จะผูก bone ตามส่วนผู้เล่นอัตโนมัติ แม้ไม่มี Lua script โดย pose ของ vanilla part จะซ้อนกับ animation ของ bone อย่างเป็น parent transform
+สำหรับหู หาง ปีก หรือ armor cosmetic ที่ยังต้องการให้เห็น skin/armor ของ Minecraft ให้ใช้ `"profile": "accessory"` และกำหนด `parent_type` ของ bone ใน Blockbench เป็น `Head`, `Body`, `LeftArm`, `RightArm`, `LeftLeg` หรือ `RightLeg` Shyne Creator 2.12.3 จะผูก bone ตามส่วนผู้เล่นอัตโนมัติ แม้ไม่มี Lua script โดย pose ของ vanilla part จะซ้อนกับ animation ของ bone อย่างเป็น parent transform
 
 หาก asset จำเป็นต้องสลับ attachment ระหว่างเล่น จึงค่อยระบุ `main` และใช้ Shyne-native Lua:
 

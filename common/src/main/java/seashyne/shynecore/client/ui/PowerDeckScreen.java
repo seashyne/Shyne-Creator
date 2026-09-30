@@ -179,10 +179,10 @@ public class PowerDeckScreen extends Screen {
 
     private void renderManaBar(GuiGraphicsExtractor graphics) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-        PowerState state = ClientAnimationState.getPowerState(mc.player.getUUID());
-        double mana = state != null ? state.mana() : 100.0;
-        double maxMana = state != null ? state.maxMana() : 100.0;
+        PowerState state = PowerUiVisibility.activeManaState(mc);
+        if (state == null) return;
+        double mana = state.mana();
+        double maxMana = state.maxMana();
         int barW = 140, barH = 12;
         int barX = this.width - barW - 16, barY = 14;
         graphics.fill(barX, barY, barX + barW, barY + barH, 0xFF141E30);

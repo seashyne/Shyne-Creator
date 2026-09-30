@@ -33,9 +33,7 @@ public final class PowerHudOverlay {
 
         int screenWidth = graphics.guiWidth();
         int screenHeight = graphics.guiHeight();
-        PowerState state = ClientAnimationState.getPowerState(mc.player.getUUID());
-        double mana = state != null ? state.mana() : 100.0;
-        double maxMana = state != null ? state.maxMana() : 100.0;
+        PowerState manaState = PowerUiVisibility.activeManaState(mc);
 
         // The deck itself is unbounded. The HUD uses up to three responsive rows and
         // renders a final "+N" cell when more actions exist; every hidden action remains
@@ -57,16 +55,21 @@ public final class PowerHudOverlay {
         int deckTop = displayedRows == 0 ? screenHeight : bottomSlotY - (displayedRows - 1) * rowHeight;
 
         // ── Mana Bar ─────────────────────────────────────────────────────
-        // Keep it just above the top deck row instead of drawing through action badges.
-        int barW = 96, barH = 10;
-        int barX = 10, barY = displayedRows == 0 ? screenHeight - 22 : Math.max(HUD_MARGIN, deckTop - barH - 5);
-        graphics.fill(barX, barY, barX + barW, barY + barH, BG_BOX);
-        float ratio = maxMana > 0 ? (float) Math.min(1.0, mana / maxMana) : 1f;
-        graphics.fill(barX + 1, barY + 1, barX + (int) ((barW - 2) * ratio), barY + barH - 1, ACCENT_CYAN);
-        graphics.outline(barX, barY, barW, barH, BORDER_BOX);
-        String manaStr = String.format(Locale.ROOT, "%.0f / %.0f", mana, maxMana);
-        graphics.text(mc.font, Component.literal(manaStr),
-            barX + (barW - mc.font.width(manaStr)) / 2, barY + 1, 0xFFFFFFFF, true);
+        // A default 100/100 is not a real resource. Render only for a selected
+        // mana-consuming skill, and keep it clear of action badges.
+        if (manaState != null) {
+            int barW = 96, barH = 10;
+            int barX = 10, barY = displayedRows == 0 ? screenHeight - 22 : Math.max(HUD_MARGIN, deckTop - barH - 5);
+            graphics.fill(barX, barY, barX + barW, barY + barH, BG_BOX);
+            double mana = manaState.mana();
+            double maxMana = manaState.maxMana();
+            float ratio = (float) Math.min(1.0, Math.max(0.0, mana / maxMana));
+            graphics.fill(barX + 1, barY + 1, barX + (int) ((barW - 2) * ratio), barY + barH - 1, ACCENT_CYAN);
+            graphics.outline(barX, barY, barW, barH, BORDER_BOX);
+            String manaStr = String.format(Locale.ROOT, "%.0f / %.0f", mana, maxMana);
+            graphics.text(mc.font, Component.literal(manaStr),
+                barX + (barW - mc.font.width(manaStr)) / 2, barY + 1, 0xFFFFFFFF, true);
+        }
 
         // ── Dynamic Deck Slots ───────────────────────────────────────────
         for (int row = 0; row < displayedRows; row++) {

@@ -79,11 +79,12 @@ public class PowerRadialWheelScreen extends Screen {
         graphics.outline(cx - hubR, cy - hubR, hubR * 2, hubR * 2, ACCENT_CYAN);
 
         Minecraft mc = Minecraft.getInstance();
-        PowerState state = mc.player != null ? ClientAnimationState.getPowerState(mc.player.getUUID()) : null;
-        double mana = state != null ? state.mana() : 100.0;
-        String manaStr = String.format(Locale.ROOT, "%.0f MP", mana);
         graphics.text(this.font, Component.literal("✦ ABILITY"), cx - this.font.width("✦ ABILITY") / 2, cy - 10, ACCENT_CYAN, true);
-        graphics.text(this.font, Component.literal(manaStr), cx - this.font.width(manaStr) / 2, cy + 2, 0xFFFFFFFF, false);
+        PowerState state = PowerUiVisibility.activeManaState(mc);
+        if (state != null) {
+            String manaStr = String.format(Locale.ROOT, "%.0f MP", state.mana());
+            graphics.text(this.font, Component.literal(manaStr), cx - this.font.width(manaStr) / 2, cy + 2, 0xFFFFFFFF, false);
+        }
     }
 
     private void drawSlices(GuiGraphicsExtractor graphics, int cx, int cy, int radius) {

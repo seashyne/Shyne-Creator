@@ -1,5 +1,7 @@
 # Shyne Creator Asset Package 1.0
 
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.3` และ `shyne_asset_package.schema.json` คือ contract ที่ตรวจ manifest จริง ดู API อื่นที่เกี่ยวข้องได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+
 Creator Asset Package คือแพ็กคอนเทนต์สำหรับสกิล, ไอเท็ม และไอคอน native UI
 มันไม่ใช้ WebView, React หรือ SVG runtime ภายใน Minecraft: UI ในเกมเป็น native Java และรับเฉพาะ PNG ที่ผ่านการตรวจแล้ว
 
@@ -52,6 +54,22 @@ my_power_pack/
 
 `id` ของ asset เป็นชื่อคงที่ที่สกิลอ้างถึง ไม่ใช่ path และไม่ใช่ URL. `source_svg` มีไว้เชื่อมกับต้นฉบับจาก editor เท่านั้น; Minecraft จะไม่อ่านหรือ rasterize SVG.
 
+### Contract ของ manifest
+
+| Field | ข้อกำหนด |
+|---|---|
+| `format` | ต้องเป็น `shyne_asset_package` |
+| `format_version` | ต้องเป็นเลข `1` |
+| `id` | required; ตัวพิมพ์เล็ก ตัวเลข `.`, `_`, `-` ความยาว 1–64 |
+| `name`, `version` | optional metadata สำหรับแสดงใน registry |
+| `assets` | required; ได้สูงสุด 256 entries |
+| `assets[].id` | required; ID ที่ skill/item ใช้อ้าง `icon` |
+| `assets[].type` | ต้องเป็น `png_icon` |
+| `assets[].path` | required; PNG ใต้ `assets/icons/` เท่านั้น |
+| `assets[].source_svg` | optional source สำหรับ editor; ไม่มีผลต่อ runtime |
+
+`shyne-package.json` สามารถอยู่ร่วมกับ `mod.json` และ `main.lua` ใน Gameplay pack เดียวกันได้; runtime จะใช้ manifest เพื่อ resolve icon ของ JSON ใต้ `skills/` และ `items/`
+
 ## สกิลหรือไอเท็มที่ใช้ไอคอน
 
 ```json
@@ -66,7 +84,7 @@ my_power_pack/
 }
 ```
 
-`icon` ต้องตรงกับ `assets[].id` ที่มี `type: "png_icon"` ใน `shyne-package.json` เดียวกัน
+`icon` ต้องตรงกับ `assets[].id` ที่มี `type: "png_icon"` ใน `shyne-package.json` เดียวกัน Schema รายละเอียดของ definition อยู่ที่ [`skill.schema.json`](common/src/main/resources/shyne_sdk/schemas/skill.schema.json) และ [`item.schema.json`](common/src/main/resources/shyne_sdk/schemas/item.schema.json)
 
 ไอเท็มอ้าง icon แบบเดียวกัน และจะปรากฏพร้อมรายละเอียดในหน้า Creator Content. ผู้สร้างไม่ต้องเลือกประเภทหรือระดับความหายากเพื่อให้ไอเท็มใช้ได้; `rarity` เป็นข้อมูลตกแต่ง Minecraft แบบเลือกใส่ได้เท่านั้น:
 
