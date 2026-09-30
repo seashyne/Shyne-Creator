@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../common/src/main/resources/shyne_sdk/schemas/item.schema.json",
+  "item_id": "arcane.focus",
+  "display_name": "Arcane Focus",
+  "description": [
+    "A crystalline focus charged with arcane static.",
+    "Right-click to cast Arc Bolt."
+  ],
+  "icon": "arc_bolt",
+  "max_stack": 1,
+  "glint": true,
+  "use_skill": "arcane.arc_bolt",
+  "cooldown_ticks": 16
+}

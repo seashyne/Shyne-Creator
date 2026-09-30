@@ -10,18 +10,20 @@ final class ShyneSettingsControls {
     private ShyneSettingsControls() {}
 
     enum Category {
-        INTERFACE("screen.shyne_core.category.interface", "screen.shyne_core.category.interface.short"),
-        AVATAR("screen.shyne_core.category.avatar", "screen.shyne_core.category.avatar.short"),
-        CLOUD("screen.shyne_core.category.cloud", "screen.shyne_core.category.cloud.short"),
-        ADVANCED("screen.shyne_core.category.advanced", "screen.shyne_core.category.advanced.short"),
-        CREATOR("screen.shyne_core.category.creator", "screen.shyne_core.category.creator.short");
+        INTERFACE("screen.shyne_core.category.interface", "screen.shyne_core.category.interface.short", "screen.shyne_core.category.interface.desc"),
+        AVATAR("screen.shyne_core.category.avatar", "screen.shyne_core.category.avatar.short", "screen.shyne_core.category.avatar.desc"),
+        CLOUD("screen.shyne_core.category.cloud", "screen.shyne_core.category.cloud.short", "screen.shyne_core.category.cloud.desc"),
+        ADVANCED("screen.shyne_core.category.advanced", "screen.shyne_core.category.advanced.short", "screen.shyne_core.category.advanced.desc"),
+        CREATOR("screen.shyne_core.category.creator", "screen.shyne_core.category.creator.short", "screen.shyne_core.category.creator.desc");
 
         final String translationKey;
         final String compactTranslationKey;
+        final String descriptionKey;
 
-        Category(String translationKey, String compactTranslationKey) {
+        Category(String translationKey, String compactTranslationKey, String descriptionKey) {
             this.translationKey = translationKey;
             this.compactTranslationKey = compactTranslationKey;
+            this.descriptionKey = descriptionKey;
         }
     }
 

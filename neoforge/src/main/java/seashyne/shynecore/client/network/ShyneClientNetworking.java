@@ -51,6 +51,7 @@ public final class ShyneClientNetworking {
             else if (type.equals(ShyneNetwork.SYNC_ATTACHMENTS_PAYLOAD)) ClientAnimationState.handleAttachmentSync(json);
             else if (type.equals(ShyneNetwork.SYNC_POWER_PAYLOAD)) ClientAnimationState.handlePowerSync(json);
             else if (type.equals(ShyneNetwork.SYNC_SKILLS_PAYLOAD)) ClientAnimationState.handleSkillSync(json);
+            else if (type.equals(ShyneNetwork.SYNC_ITEMS_PAYLOAD)) ClientAnimationState.handleItemSync(json);
             else if (type.equals(ShyneNetwork.SYNC_PROFILES_PAYLOAD)) ClientAnimationState.handleProfileSync(json);
             else if (type.equals(ShyneNetwork.SYNC_WEAPONS_PAYLOAD)) ClientAnimationState.handleWeaponSync(json);
             else if (type.equals(ShyneNetwork.SYNC_LOADOUTS_PAYLOAD)) ClientAnimationState.handleLoadoutSync(json);
@@ -106,6 +107,14 @@ public final class ShyneClientNetworking {
     public static void sendSkillKey(String skill, int slot) {
         if (serverSupports(ShyneNetwork.CAP_SERVER_AUTHORITATIVE_GAMEPLAY) && canSend(ShyneNetwork.SKILL_KEY)) {
             ClientPacketDistributor.sendToServer(new ShyneNetwork.SkillKeyPayload(skill, slot));
+        }
+    }
+
+    /** Sends a locally configured action-deck selection for server-side permission and cast checks. */
+    public static void sendCustomDeckSkill(String skillId) {
+        if (skillId == null || skillId.isBlank()) return;
+        if (serverSupports(ShyneNetwork.CAP_DYNAMIC_ACTION_DECK) && canSend(ShyneNetwork.SKILL_KEY)) {
+            ClientPacketDistributor.sendToServer(new ShyneNetwork.SkillKeyPayload(skillId, ShyneNetwork.DYNAMIC_ACTION_DECK_SLOT));
         }
     }
 

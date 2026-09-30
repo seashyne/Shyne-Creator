@@ -10,6 +10,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Stream;
 
 /**
  * Discovers declarative skill definitions from external {@code shyne-mods} packs.
@@ -21,9 +22,13 @@ public class SkillRegistry {
     public interface Listener { void onSkillRegistrySync(Collection<SkillDefinition> skills); }
 
     private static final Gson GSON = new GsonBuilder().create();
+    /** Retain only a bounded amount of icon source data on a dedicated server. */
+    private static final long MAX_ICON_REGISTRY_BYTES = 4L * 1024L * 1024L;
     private final Map<String, SkillDefinition> skills = new ConcurrentHashMap<>();
+    private final Map<String, SkillIconAsset> iconAssets = new ConcurrentHashMap<>();
     private final List<Listener> listeners = new CopyOnWriteArrayList<>();
     private final ContentDiagnostics diagnostics;
+    private long iconRegistryBytes;
 
     public SkillRegistry() {
         this(null);
@@ -36,18 +41,22 @@ public class SkillRegistry {
     public void addListener(Listener listener) { listeners.add(listener); }
     public Collection<SkillDefinition> all() { return List.copyOf(skills.values()); }
     public SkillDefinition get(String skillId) { return skills.get(skillId); }
+    /** Returns the verified, package-local PNG attached to a skill, if one was declared. */
+    public SkillIconAsset iconAsset(String skillId) { return iconAssets.get(skillId); }
     public boolean contains(String skillId) { return skills.containsKey(skillId); }
-    public void clear() { skills.clear(); notifyListeners(); }
+    public synchronized void clear() { skills.clear(); iconAssets.clear(); iconRegistryBytes = 0; notifyListeners(); }
 
     public void discover(Path shyneModsDir) {
         skills.clear();
+        iconAssets.clear();
+        iconRegistryBytes = 0;
         if (diagnostics != null) diagnostics.clearSource("skill");
         if (shyneModsDir == null || !Files.isDirectory(shyneModsDir)) {
             notifyListeners();
             return;
         }
-        try {
-            Files.walk(shyneModsDir)
+        try (Stream<Path> paths = Files.walk(shyneModsDir)) {
+            paths
                 .filter(p -> Files.isRegularFile(p) && p.getFileName().toString().endsWith(".json"))
                 .filter(p -> p.toString().replace('\\', '/').contains("/skills/"))
                 .sorted()
@@ -72,6 +81,20 @@ public class SkillRegistry {
             if (def.skillId().isBlank()) {
                 if (diagnostics != null) diagnostics.error("skill", inferId(path), path, "Skill definition has a blank skill_id.", "Set skill_id to a unique string like mage.arc_bolt.");
                 return Optional.empty();
+            }
+            SkillIconAsset.Resolution icon = SkillIconAsset.resolve(path, def.icon());
+            if (icon.hasAsset()) {
+                if (!putIcon(def.skillId(), icon.asset()) && diagnostics != null) {
+                    diagnostics.warn("skill", def.skillId(), path,
+                        "Skill icon was ignored because the registry PNG budget is full.",
+                        "Keep total icon PNG data under " + (MAX_ICON_REGISTRY_BYTES / (1024 * 1024)) + " MiB.");
+                }
+            } else {
+                removeIcon(def.skillId());
+                if (icon.hasError() && diagnostics != null) {
+                    diagnostics.warn("skill", def.skillId(), path, "Skill icon was ignored: " + icon.error(),
+                        "Declare a png_icon in shyne-package.json and point icon to its asset id.");
+                }
             }
             SkillDefinition existing = skills.put(def.skillId(), def);
             if (existing != null && diagnostics != null) {
@@ -142,6 +165,27 @@ public class SkillRegistry {
     private void notifyListeners() {
         Collection<SkillDefinition> snapshot = all();
         for (Listener listener : listeners) listener.onSkillRegistrySync(snapshot);
+    }
+
+    private synchronized boolean putIcon(String skillId, SkillIconAsset next) {
+        if (skillId == null || next == null) return false;
+        SkillIconAsset previous = iconAssets.get(skillId);
+        long withoutPrevious = iconRegistryBytes - (previous == null ? 0L : previous.byteSize());
+        if (next.byteSize() > MAX_ICON_REGISTRY_BYTES - Math.max(0L, withoutPrevious)) {
+            if (previous != null) {
+                iconAssets.remove(skillId);
+                iconRegistryBytes = Math.max(0L, withoutPrevious);
+            }
+            return false;
+        }
+        iconAssets.put(skillId, next);
+        iconRegistryBytes = Math.max(0L, withoutPrevious) + next.byteSize();
+        return true;
+    }
+
+    private synchronized void removeIcon(String skillId) {
+        SkillIconAsset removed = iconAssets.remove(skillId);
+        if (removed != null) iconRegistryBytes = Math.max(0L, iconRegistryBytes - removed.byteSize());
     }
 
     private static String getString(JsonObject obj, String key, String def) {

@@ -33,6 +33,7 @@ public final class ShyneClientNetworking {
         ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_ATTACHMENTS_PAYLOAD, (payload, context) -> context.client().execute(() -> ClientAnimationState.handleAttachmentSync(payload.json())));
         ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_POWER_PAYLOAD, (payload, context) -> context.client().execute(() -> ClientAnimationState.handlePowerSync(payload.json())));
         ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_SKILLS_PAYLOAD, (payload, context) -> context.client().execute(() -> ClientAnimationState.handleSkillSync(payload.json())));
+        ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_ITEMS_PAYLOAD, (payload, context) -> context.client().execute(() -> ClientAnimationState.handleItemSync(payload.json())));
         ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_PROFILES_PAYLOAD, (payload, context) -> context.client().execute(() -> ClientAnimationState.handleProfileSync(payload.json())));
         ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_WEAPONS_PAYLOAD, (payload, context) -> context.client().execute(() -> ClientAnimationState.handleWeaponSync(payload.json())));
         ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_LOADOUTS_PAYLOAD, (payload, context) -> context.client().execute(() -> ClientAnimationState.handleLoadoutSync(payload.json())));
@@ -95,6 +96,15 @@ public final class ShyneClientNetworking {
     public static void sendSkillKey(String skill, int slot) {
         if (serverSupports(ShyneNetwork.CAP_SERVER_AUTHORITATIVE_GAMEPLAY) && ClientPlayNetworking.canSend(ShyneNetwork.SKILL_KEY_PAYLOAD)) {
             ClientPlayNetworking.send(new ShyneNetwork.SkillKeyPayload(skill, slot));
+        }
+    }
+
+    /** Sends a locally configured action-deck selection for server-side permission and cast checks. */
+    public static void sendCustomDeckSkill(String skillId) {
+        if (skillId == null || skillId.isBlank()) return;
+        if (serverSupports(ShyneNetwork.CAP_DYNAMIC_ACTION_DECK)
+            && ClientPlayNetworking.canSend(ShyneNetwork.SKILL_KEY_PAYLOAD)) {
+            ClientPlayNetworking.send(new ShyneNetwork.SkillKeyPayload(skillId, ShyneNetwork.DYNAMIC_ACTION_DECK_SLOT));
         }
     }
 

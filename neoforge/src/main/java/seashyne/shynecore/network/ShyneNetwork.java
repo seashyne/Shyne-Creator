@@ -29,6 +29,8 @@ import seashyne.shynecore.avatar.PngTextureValidator;
 import seashyne.shynecore.equipment.EquipmentLoadout;
 import seashyne.shynecore.equipment.EquipmentRuntime;
 import seashyne.shynecore.equipment.WeaponDefinition;
+import seashyne.shynecore.item.ShyneItemDefinition;
+import seashyne.shynecore.item.ShyneItemRuntime;
 import seashyne.shynecore.model.*;
 import seashyne.shynecore.power.PowerState;
 import seashyne.shynecore.power.PowerStateMachine;
@@ -36,6 +38,7 @@ import seashyne.shynecore.profile.PlayerProfile;
 import seashyne.shynecore.profile.PlayerProfileRuntime;
 import seashyne.shynecore.skill.SkillDefinition;
 import seashyne.shynecore.skill.SkillExecutor;
+import seashyne.shynecore.skill.SkillIconAsset;
 import seashyne.shynecore.skill.SkillRegistry;
 import seashyne.shynecore.skill.SkillSlot;
 
@@ -49,10 +52,15 @@ import java.util.stream.Collectors;
 import static seashyne.shynecore.network.ShyneNetworkValidator.*;
 
 public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.Listener, AttachmentRuntime.Listener,
-    PowerStateMachine.Listener, SkillRegistry.Listener, PlayerProfileRuntime.Listener, EquipmentRuntime.Listener {
+    PowerStateMachine.Listener, SkillRegistry.Listener, PlayerProfileRuntime.Listener, EquipmentRuntime.Listener, ShyneItemRuntime.Listener {
 
-    public static final int PROTOCOL_VERSION = 14;
+    public static final int PROTOCOL_VERSION = 17;
     public static final String CAP_SERVER_AUTHORITATIVE_GAMEPLAY = "gameplay.server_authoritative";
+    public static final String CAP_DYNAMIC_ACTION_DECK = "gameplay.dynamic_action_deck_v1";
+    public static final String CAP_SKILL_ICON_ASSETS = "content.skill_icon_assets_v1";
+    public static final String CAP_ITEM_CATALOG = "content.item_catalog_v1";
+    /** Sentinel carried in {@link SkillKeyPayload} for a client-configured action-deck cast. */
+    public static final int DYNAMIC_ACTION_DECK_SLOT = -1;
     public static final String CAP_CONTENT_REGISTRY_SYNC = "content.registry_sync";
     public static final String CAP_AVATAR_PEER_SNAPSHOT = "avatar.peer_snapshot_v2";
     public static final String CAP_PLAYER_TAB_STATUS = "player.tab_status_v1";
@@ -62,6 +70,9 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public static final String CAP_PACKET_COMPRESSION = "network.compression_v1";
     public static final List<String> SERVER_CAPABILITIES = List.of(
         CAP_SERVER_AUTHORITATIVE_GAMEPLAY,
+        CAP_DYNAMIC_ACTION_DECK,
+        CAP_SKILL_ICON_ASSETS,
+        CAP_ITEM_CATALOG,
         CAP_CONTENT_REGISTRY_SYNC,
         CAP_AVATAR_PEER_SNAPSHOT,
         CAP_PLAYER_TAB_STATUS,
@@ -79,6 +90,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public static final Identifier SYNC_ATTACHMENTS = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "sync_attachments");
     public static final Identifier SYNC_POWER = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "sync_power");
     public static final Identifier SYNC_SKILLS = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "sync_skills");
+    public static final Identifier SYNC_ITEMS = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "sync_items");
     public static final Identifier SYNC_PROFILES = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "sync_profiles");
     public static final Identifier SYNC_WEAPONS = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "sync_weapons");
     public static final Identifier SYNC_LOADOUTS = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "sync_loadouts");
@@ -101,6 +113,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public static final CustomPacketPayload.Type<JsonPayload> SYNC_ATTACHMENTS_PAYLOAD = new CustomPacketPayload.Type<>(SYNC_ATTACHMENTS);
     public static final CustomPacketPayload.Type<JsonPayload> SYNC_POWER_PAYLOAD = new CustomPacketPayload.Type<>(SYNC_POWER);
     public static final CustomPacketPayload.Type<JsonPayload> SYNC_SKILLS_PAYLOAD = new CustomPacketPayload.Type<>(SYNC_SKILLS);
+    public static final CustomPacketPayload.Type<JsonPayload> SYNC_ITEMS_PAYLOAD = new CustomPacketPayload.Type<>(SYNC_ITEMS);
     public static final CustomPacketPayload.Type<JsonPayload> SYNC_PROFILES_PAYLOAD = new CustomPacketPayload.Type<>(SYNC_PROFILES);
     public static final CustomPacketPayload.Type<JsonPayload> SYNC_WEAPONS_PAYLOAD = new CustomPacketPayload.Type<>(SYNC_WEAPONS);
     public static final CustomPacketPayload.Type<JsonPayload> SYNC_LOADOUTS_PAYLOAD = new CustomPacketPayload.Type<>(SYNC_LOADOUTS);
@@ -161,6 +174,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     private final SkillRegistry skillRegistry;
     private final PlayerProfileRuntime profileRuntime;
     private final EquipmentRuntime equipmentRuntime;
+    private final ShyneItemRuntime itemRuntime;
     private final Map<UUID, NetAvatarSnapshot> latestAvatarSnapshots = new HashMap<>();
     private final Map<UUID, Long> lastAvatarSnapshotAtNanos = new HashMap<>();
     private final Map<UUID, Long> lastAvatarFullSnapshotAtNanos = new HashMap<>();
@@ -179,7 +193,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
 
     public ShyneNetwork(BbModelRegistry registry, AnimationRuntime animationRuntime, AttachmentRuntime attachmentRuntime,
                         PowerStateMachine powerStateMachine, SkillExecutor skillExecutor, SkillRegistry skillRegistry,
-                        PlayerProfileRuntime profileRuntime, EquipmentRuntime equipmentRuntime) {
+                        PlayerProfileRuntime profileRuntime, EquipmentRuntime equipmentRuntime, ShyneItemRuntime itemRuntime) {
         this.registry = registry;
         this.animationRuntime = animationRuntime;
         this.attachmentRuntime = attachmentRuntime;
@@ -188,6 +202,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         this.skillRegistry = skillRegistry;
         this.profileRuntime = profileRuntime;
         this.equipmentRuntime = equipmentRuntime;
+        this.itemRuntime = itemRuntime;
         activeInstance = this;
         this.registry.addListener(this);
         this.animationRuntime.addListener(this);
@@ -196,6 +211,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         this.skillRegistry.addListener(this);
         this.profileRuntime.addListener(this);
         this.equipmentRuntime.addListener(this);
+        this.itemRuntime.addListener(this);
     }
 
     public static void registerPayloads(IEventBus modEventBus) {
@@ -275,8 +291,19 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
 
     private void handleSkillKey(ServerPlayer player, SkillKeyPayload payload) {
         if (!compatibleClients.contains(player.getUUID())) return;
+
+        if (payload.slot() == DYNAMIC_ACTION_DECK_SLOT) {
+            String skillId = payload.skill() == null ? "" : payload.skill().trim();
+            SkillDefinition definition = skillRegistry.get(skillId);
+            if (definition == null || !profileRuntime.canUseSkill(player, skillId)) return;
+            SkillSlot presentationSlot = definition.defaultSlot() == null ? SkillSlot.PRIMARY : definition.defaultSlot();
+            skillExecutor.execute(player, skillId, presentationSlot, "dynamic_deck", DYNAMIC_ACTION_DECK_SLOT);
+            return;
+        }
+
         SkillSlot mappedSlot = resolveSkillSlot(payload.skill(), payload.slot());
         String equippedSkill = profileRuntime.equippedSkill(player.getUUID(), mappedSlot);
+        // The legacy packet describes input intent only. The server-owned profile decides what can run.
         if (equippedSkill == null || equippedSkill.isBlank()) return;
         skillExecutor.execute(player, equippedSkill, mappedSlot, payload.skill(), payload.slot());
     }
@@ -426,16 +453,56 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     @Override public void onStop(UUID entityId) { if (server != null) broadcast(STOP_ANIMATION, GSON.toJson(new StopPayload(entityId.toString()))); }
     @Override public void onAttachmentSync(Collection<AttachedModelState> attachments) { if (server != null) broadcast(SYNC_ATTACHMENTS, GSON.toJson(new AttachmentSyncPayload(attachments.stream().map(NetAttachment::from).toList()))); }
     @Override public void onPowerStatesSync(Collection<PowerState> states) { if (server != null) broadcast(SYNC_POWER, GSON.toJson(new PowerSyncPayload(states.stream().map(NetPowerState::from).toList()))); }
-    @Override public void onSkillRegistrySync(Collection<SkillDefinition> skills) { if (server != null) broadcast(SYNC_SKILLS, GSON.toJson(new SkillSyncPayload(skills.stream().map(NetSkillDefinition::from).toList()))); }
+    @Override public void onSkillRegistrySync(Collection<SkillDefinition> skills) { if (server != null) broadcast(SYNC_SKILLS, GSON.toJson(new SkillSyncPayload(syncedSkills()))); }
+    @Override public void onItemRegistrySync(Collection<ShyneItemDefinition> items) { if (server != null) broadcast(SYNC_ITEMS, GSON.toJson(new ItemSyncPayload(syncedItems()))); }
     @Override public void onProfileSync(Collection<PlayerProfile> profiles) { if (server != null) broadcast(SYNC_PROFILES, GSON.toJson(new ProfileSyncPayload(profiles.stream().map(NetPlayerProfile::from).toList()))); }
     @Override public void onWeaponRegistrySync(Collection<WeaponDefinition> weapons) { if (server != null) broadcast(SYNC_WEAPONS, GSON.toJson(new WeaponSyncPayload(weapons.stream().map(NetWeaponDefinition::from).toList()))); }
     @Override public void onLoadoutSync(Collection<EquipmentLoadout> loadouts) { if (server != null) broadcast(SYNC_LOADOUTS, GSON.toJson(new LoadoutSyncPayload(loadouts.stream().map(NetEquipmentLoadout::from).toList()))); }
+
+    /** Builds a stable, bounded skill snapshot so artwork cannot overrun the shared JSON packet limit. */
+    private List<NetSkillDefinition> syncedSkills() {
+        List<SkillDefinition> definitions = skillRegistry.all().stream()
+            .sorted(Comparator.comparing(SkillDefinition::skillId))
+            .toList();
+        List<NetSkillDefinition> synced = new ArrayList<>(definitions.size());
+        int remainingIconBytes = SkillIconAsset.MAX_SYNC_BYTES;
+        for (SkillDefinition definition : definitions) {
+            SkillIconAsset icon = skillRegistry.iconAsset(definition.skillId());
+            if (icon != null && icon.byteSize() <= remainingIconBytes) {
+                remainingIconBytes -= icon.byteSize();
+            } else {
+                icon = null;
+            }
+            synced.add(NetSkillDefinition.from(definition, icon));
+        }
+        return List.copyOf(synced);
+    }
+
+    /** Builds a stable, bounded item snapshot including creator PNG icons. */
+    private List<NetItemDefinition> syncedItems() {
+        List<ShyneItemDefinition> definitions = itemRuntime.all().stream()
+            .sorted(Comparator.comparing(ShyneItemDefinition::itemId))
+            .toList();
+        List<NetItemDefinition> synced = new ArrayList<>(definitions.size());
+        int remainingIconBytes = SkillIconAsset.MAX_SYNC_BYTES;
+        for (ShyneItemDefinition definition : definitions) {
+            SkillIconAsset icon = itemRuntime.iconAsset(definition.itemId());
+            if (icon != null && icon.byteSize() <= remainingIconBytes) {
+                remainingIconBytes -= icon.byteSize();
+            } else {
+                icon = null;
+            }
+            synced.add(NetItemDefinition.from(definition, icon));
+        }
+        return List.copyOf(synced);
+    }
 
     public void sendModelSync(ServerPlayer player) { send(player, SYNC_MODELS, GSON.toJson(new ModelSyncPayload(toNetModels(registry.all())))); }
     public void sendActiveSync(ServerPlayer player) { send(player, SYNC_ACTIVE, GSON.toJson(new ActiveSyncPayload(animationRuntime.allActive().stream().map(NetPlayback::from).toList()))); }
     public void sendAttachmentSync(ServerPlayer player) { send(player, SYNC_ATTACHMENTS, GSON.toJson(new AttachmentSyncPayload(attachmentRuntime.allAttached().stream().map(NetAttachment::from).toList()))); }
     public void sendPowerSync(ServerPlayer player) { send(player, SYNC_POWER, GSON.toJson(new PowerSyncPayload(powerStateMachine.all().stream().map(NetPowerState::from).toList()))); }
-    public void sendSkillSync(ServerPlayer player) { send(player, SYNC_SKILLS, GSON.toJson(new SkillSyncPayload(skillRegistry.all().stream().map(NetSkillDefinition::from).toList()))); }
+    public void sendSkillSync(ServerPlayer player) { send(player, SYNC_SKILLS, GSON.toJson(new SkillSyncPayload(syncedSkills()))); }
+    public void sendItemSync(ServerPlayer player) { send(player, SYNC_ITEMS, GSON.toJson(new ItemSyncPayload(syncedItems()))); }
     public void sendProfileSync(ServerPlayer player) { send(player, SYNC_PROFILES, GSON.toJson(new ProfileSyncPayload(profileRuntime.all().stream().map(NetPlayerProfile::from).toList()))); }
     public void sendWeaponSync(ServerPlayer player) { send(player, SYNC_WEAPONS, GSON.toJson(new WeaponSyncPayload(equipmentRuntime.allWeapons().stream().map(NetWeaponDefinition::from).toList()))); }
     public void sendLoadoutSync(ServerPlayer player) { send(player, SYNC_LOADOUTS, GSON.toJson(new LoadoutSyncPayload(equipmentRuntime.allLoadouts().stream().map(NetEquipmentLoadout::from).toList()))); }
@@ -612,6 +679,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         sendPowerSync(player);
         sendPowerConfigSync(player);
         sendSkillSync(player);
+        sendItemSync(player);
         sendProfileSync(player);
         sendWeaponSync(player);
         sendLoadoutSync(player);
@@ -756,6 +824,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         ids.put(SYNC_ATTACHMENTS, SYNC_ATTACHMENTS_PAYLOAD);
         ids.put(SYNC_POWER, SYNC_POWER_PAYLOAD);
         ids.put(SYNC_SKILLS, SYNC_SKILLS_PAYLOAD);
+        ids.put(SYNC_ITEMS, SYNC_ITEMS_PAYLOAD);
         ids.put(SYNC_PROFILES, SYNC_PROFILES_PAYLOAD);
         ids.put(SYNC_WEAPONS, SYNC_WEAPONS_PAYLOAD);
         ids.put(SYNC_LOADOUTS, SYNC_LOADOUTS_PAYLOAD);
@@ -795,6 +864,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public record AttachmentSyncPayload(List<NetAttachment> attachments) {}
     public record PowerSyncPayload(List<NetPowerState> states) {}
     public record SkillSyncPayload(List<NetSkillDefinition> skills) {}
+    public record ItemSyncPayload(List<NetItemDefinition> items) {}
     public record ProfileSyncPayload(List<NetPlayerProfile> profiles) {}
     public record WeaponSyncPayload(List<NetWeaponDefinition> weapons) {}
     public record LoadoutSyncPayload(List<NetEquipmentLoadout> loadouts) {}
@@ -816,7 +886,26 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     }
     public record NetAttachment(String entityId, String entityName, String modelId, float offsetX, float offsetY, float offsetZ, float scale, String anchorBone, boolean visible) { public static NetAttachment from(AttachedModelState state) { return new NetAttachment(state.entityId().toString(), state.entityName(), state.modelId(), state.offsetX(), state.offsetY(), state.offsetZ(), state.scale(), state.anchorBone(), state.visible()); } public AttachedModelState toRuntime() { return new AttachedModelState(UUID.fromString(entityId), entityName, modelId, offsetX, offsetY, offsetZ, scale, anchorBone, visible); } }
     public record NetPowerState(String entityId, String comboId, int stage, String branch, long startedAtMillis, long updatedAtMillis, long resetAtMillis, long cooldownEndsAtMillis, double mana, double maxMana, String currentAnimation, boolean locked) { public static NetPowerState from(PowerState state) { return new NetPowerState(state.entityId().toString(), state.comboId(), state.stage(), state.branch(), state.startedAtMillis(), state.updatedAtMillis(), state.resetAtMillis(), state.cooldownEndsAtMillis(), state.mana(), state.maxMana(), state.currentAnimation(), state.locked()); } public PowerState toRuntime() { return new PowerState(UUID.fromString(entityId), comboId, stage, branch, startedAtMillis, updatedAtMillis, resetAtMillis, cooldownEndsAtMillis, mana, maxMana, currentAnimation, locked); } }
-    public record NetSkillDefinition(String skillId, String displayName, String castType, String defaultSlot, double manaCost, int cooldownTicks, String modelId, String animation, List<String> tags) { public static NetSkillDefinition from(SkillDefinition def) { return new NetSkillDefinition(def.skillId(), def.displayName(), def.castType().name(), def.defaultSlot().name(), def.manaCost(), def.cooldownTicks(), def.modelId(), def.animation(), def.tags()); } }
+    public record NetPngIcon(String assetId, String relativePath, String contentHash, int width, int height, String contentBase64) {
+        public static NetPngIcon from(SkillIconAsset asset) {
+            return asset == null ? null : new NetPngIcon(asset.assetId(), asset.relativePath(), asset.contentHash(), asset.width(), asset.height(), asset.contentBase64());
+        }
+    }
+    public record NetSkillDefinition(String skillId, String displayName, String castType, String defaultSlot, double manaCost, int cooldownTicks, String modelId, String animation, String icon, NetPngIcon iconAsset, List<String> tags) {
+        public static NetSkillDefinition from(SkillDefinition def) { return from(def, null); }
+        public static NetSkillDefinition from(SkillDefinition def, SkillIconAsset asset) {
+            return new NetSkillDefinition(def.skillId(), def.displayName(), def.castType().name(), def.defaultSlot().name(), def.manaCost(), def.cooldownTicks(), def.modelId(), def.animation(), def.icon(), NetPngIcon.from(asset), def.tags());
+        }
+    }
+    public record NetItemDefinition(String itemId, String displayName, List<String> description, String icon, String modelId,
+                                    String rarity, int maxStack, boolean glint, String useSkill, String weaponId,
+                                    int cooldownTicks, boolean consumeOnUse, NetPngIcon iconAsset) {
+        public static NetItemDefinition from(ShyneItemDefinition def, SkillIconAsset asset) {
+            return new NetItemDefinition(def.itemId(), def.displayName(), def.description(), def.icon(), def.modelId(),
+                def.rarity().name(), def.maxStack(), def.glint(), def.useSkill(), def.weaponId(), def.cooldownTicks(),
+                def.consumeOnUse(), NetPngIcon.from(asset));
+        }
+    }
     public record NetPlayerProfile(String playerId, String playerName, int level, long experience, int statPoints, int skillPoints, String playerClass, List<String> unlockedSkills, Map<String, String> equippedSkills, Map<String, Integer> attributes, String teamId, long updatedAtMillis) { public static NetPlayerProfile from(PlayerProfile profile) { return new NetPlayerProfile(profile.playerId().toString(), profile.playerName(), profile.level(), profile.experience(), profile.statPoints(), profile.skillPoints(), profile.playerClass(), profile.unlockedSkills(), profile.equippedSkills(), profile.attributes(), profile.teamId(), profile.updatedAtMillis()); } }
     public record NetWeaponDefinition(String weaponId, String displayName, String itemId, String modelId, String classTag, List<String> grantedSkills, Map<String, Double> statModifiers) { public static NetWeaponDefinition from(WeaponDefinition definition) { return new NetWeaponDefinition(definition.weaponId(), definition.displayName(), definition.itemId(), definition.modelId(), definition.classTag(), definition.grantedSkills(), definition.statModifiers()); } }
     public record NetEquipmentLoadout(String entityId, String mainHandWeaponId, String offHandWeaponId, Map<String, String> slots, long updatedAtMillis) { public static NetEquipmentLoadout from(EquipmentLoadout loadout) { return new NetEquipmentLoadout(loadout.entityId().toString(), loadout.mainHandWeaponId(), loadout.offHandWeaponId(), loadout.slots(), loadout.updatedAtMillis()); } }

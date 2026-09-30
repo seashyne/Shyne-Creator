@@ -1,7 +1,6 @@
 package seashyne.shynecore.client.avatar;
 
 import org.luaj.vm2.compiler.LuaC;
-import seashyne.shynecore.client.config.ShyneClientSettings;
 import seashyne.shynecore.model.BbModelDefinition;
 import seashyne.shynecore.model.BbModelParser;
 import seashyne.shynecore.client.render.ShyneExpressionEngine;
@@ -103,13 +102,17 @@ public final class AvatarValidator {
     }
 
     private static void validateModel(Path root, BbModelDefinition model, AvatarManifest manifest, List<AvatarValidationReport.Issue> issues) throws IOException {
-        if (model.bones().size() > ShyneClientSettings.avatarMaxBones) error(issues, "bone_limit", "Model exceeds the configured bone limit", manifest.model());
-        if (model.cubes().size() + model.meshes().size() > ShyneClientSettings.avatarMaxCubes) error(issues, "cube_limit", "Model exceeds the configured render-element limit", manifest.model());
-        if (model.animations().size() > ShyneClientSettings.avatarMaxAnimations) error(issues, "animation_limit", "Model exceeds the configured animation limit", manifest.model());
-        if (model.textures().size() > ShyneClientSettings.avatarMaxTextures) error(issues, "texture_limit", "Model exceeds the configured texture limit", manifest.model());
-        if (model.textureWidth() <= 0 || model.textureWidth() > ShyneClientSettings.avatarMaxTextureSize
-            || model.textureHeight() <= 0 || model.textureHeight() > ShyneClientSettings.avatarMaxTextureSize) {
-            error(issues, "texture_canvas", "Model texture canvas is outside the configured size limit", manifest.model());
+        // Local creators should be able to use their own work without selecting a
+        // hardware profile first. Large assets are still called out as advice;
+        // they are not made unusable by an arbitrary client-side budget.
+        if (model.bones().size() > 4096) warning(issues, "large_bone_count", "Large model: " + model.bones().size() + " bones. It is allowed locally.", manifest.model());
+        if (model.cubes().size() + model.meshes().size() > 16384) warning(issues, "large_render_count", "Large model: " + (model.cubes().size() + model.meshes().size()) + " render elements. It is allowed locally.", manifest.model());
+        if (model.animations().size() > 512) warning(issues, "large_animation_count", "Large model: " + model.animations().size() + " animations. It is allowed locally.", manifest.model());
+        if (model.textures().size() > 256) warning(issues, "large_texture_count", "Large model: " + model.textures().size() + " textures. It is allowed locally.", manifest.model());
+        if (model.textureWidth() <= 0 || model.textureHeight() <= 0) {
+            error(issues, "texture_canvas", "Model texture canvas must have a positive size", manifest.model());
+        } else if (model.textureWidth() > 8192 || model.textureHeight() > 8192) {
+            warning(issues, "large_texture_canvas", "Large texture canvas: " + model.textureWidth() + "×" + model.textureHeight() + ". It is allowed locally.", manifest.model());
         }
 
         duplicateNames(model.bones().stream().map(bone -> bone.name()).toList(), "bone", issues, manifest.model());
@@ -127,19 +130,19 @@ public final class AvatarValidator {
             String relative = normalize(texture.relativePath());
             used.add(relative);
             if (!declared.isEmpty() && !declared.contains(relative)) {
-                if (manifest.isFiguraImport()) {
-                    warning(issues, "texture_undeclared", "Model texture is not declared in avatar.json (Figura import): " + texture.relativePath(), manifest.model());
-                } else {
-                    error(issues, "texture_undeclared", "Model texture is not declared in avatar.json: " + texture.relativePath(), manifest.model());
-                }
+                warning(issues, "texture_undeclared", "Model texture is not listed in avatar.json; it will still be loaded from the Avatar folder: " + texture.relativePath(), manifest.model());
             }
             if (modelRoot == null || relative.isBlank()) {
                 error(issues, "texture_path", "Model contains an empty texture path", manifest.model());
                 continue;
             }
             Path file = modelRoot.resolve(relative.replace('/', java.io.File.separatorChar)).normalize();
-            if (!file.startsWith(root) || !Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
-                error(issues, "texture_missing", "Texture file is missing: " + texture.relativePath(), texture.relativePath());
+            if (!file.startsWith(root)) {
+                error(issues, "texture_outside_pack", "Texture must be inside the Avatar folder. Copy it into this pack: " + texture.relativePath(), texture.relativePath());
+                continue;
+            }
+            if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
+                error(issues, "texture_missing", "Texture file is missing from this Avatar pack: " + texture.relativePath(), texture.relativePath());
                 continue;
             }
             long size = Files.size(file);
@@ -149,7 +152,7 @@ public final class AvatarValidator {
         }
         if (textureBytes > MAX_TEXTURE_TOTAL_BYTES) error(issues, "texture_total_size", "Avatar textures exceed the 64 MiB multiplayer limit", manifest.model());
         for (String value : declared) {
-            if (!used.contains(value) && !manifest.isFiguraImport()) warning(issues, "texture_unused", "Declared texture is not used by the model", value);
+            if (!used.contains(value)) warning(issues, "texture_unused", "Listed texture is not used by the model", value);
         }
     }
 
@@ -315,8 +318,10 @@ public final class AvatarValidator {
                 reader.setInput(input, true, true);
                 int width = reader.getWidth(0);
                 int height = reader.getHeight(0);
-                if (width <= 0 || height <= 0 || width > ShyneClientSettings.avatarMaxTextureSize || height > ShyneClientSettings.avatarMaxTextureSize) {
-                    error(issues, "texture_dimensions", "Texture dimensions exceed the configured limit", relative);
+                if (width <= 0 || height <= 0) {
+                    error(issues, "texture_dimensions", "Texture dimensions must be positive", relative);
+                } else if (width > 8192 || height > 8192) {
+                    warning(issues, "large_texture_dimensions", "Large texture: " + width + "×" + height + ". It is allowed locally.", relative);
                 }
                 if (!"png".equalsIgnoreCase(reader.getFormatName())) error(issues, "texture_format", "Avatar textures must be PNG files", relative);
             } finally {

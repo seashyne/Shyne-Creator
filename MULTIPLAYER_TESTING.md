@@ -68,6 +68,6 @@ Search the logs for `ShyneNetwork`, `ERROR`, `Exception`, `Rejected`, and `disco
 
 ## Known scope
 
-Protocol ปัจจุบันคือ 14 และเพิ่ม revision ACK สำหรับ snapshot/full model/clear พร้อมส่งเวลา animation เป็น elapsed age เพื่อไม่อิงนาฬิกาของแต่ละเครื่อง Remote Avatar สมัครรับเป็นรายผู้เล่น ดังนั้น Block จะหยุดข้อมูลของผู้เล่นนั้นตั้งแต่ Server ขณะที่ model upload และ pose update ใช้งบ rate limit แยกกัน `physicsPreset` ของ bone เดินทางพร้อม model snapshot, pose จาก physics/Lua ส่งได้สูงสุดประมาณ 10 Hz และ client ปลายทาง interpolate 100 ms
+Protocol ปัจจุบันคือ 17 และเพิ่ม revision ACK สำหรับ snapshot/full model/clear พร้อมส่งเวลา animation เป็น elapsed age เพื่อไม่อิงนาฬิกาของแต่ละเครื่อง Remote Avatar สมัครรับเป็นรายผู้เล่น ดังนั้น Block จะหยุดข้อมูลของผู้เล่นนั้นตั้งแต่ Server ขณะที่ model upload และ pose update ใช้งบ rate limit แยกกัน `physicsPreset` ของ bone เดินทางพร้อม model snapshot, pose จาก physics/Lua ส่งได้สูงสุดประมาณ 10 Hz และ client ปลายทาง interpolate 100 ms. Protocol นี้เพิ่ม dynamic action-deck casts ซึ่ง server จะตรวจว่าผู้เล่นปลดล็อกสกิลแล้วหรือ server เปิด free selection ก่อนรันสกิลเสมอ และ sync PNG icons ที่ผ่านการตรวจสำหรับทั้ง skill และ item catalog จาก Creator package ด้วย
 
 แพ็กเก็ต Avatar JSON มีเพดาน 2 MiB และ client จะ preflight ก่อนส่งโดยไม่ล้าง dirty revision เมื่อใหญ่เกินกำหนด PNG ที่รับจาก peer ต้องมี IHDR ถูกต้อง ขนาดด้านละไม่เกิน 4096 px และงบรวมไม่เกิน 16,777,216 pixels ต่อ model ดังนั้นแพ็กใหญ่มากต้องลด texture หรือใช้ระบบ Cloud manifest/cache แทนการฝัง asset ทั้งหมดใน peer snapshot

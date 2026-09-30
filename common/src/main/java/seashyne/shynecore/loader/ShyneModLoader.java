@@ -7,6 +7,7 @@ import seashyne.shynecore.bridge.ActionBus;
 import seashyne.shynecore.diagnostics.ContentDiagnostics;
 import seashyne.shynecore.model.BbModelRegistry;
 import seashyne.shynecore.script.LuaScriptRuntime;
+import seashyne.shynecore.skill.SkillIconAsset;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -14,7 +15,8 @@ import java.nio.file.*;
 import java.util.*;
 
 /**
- * Loads Lua-only content packs from the external {@code shyne-mods/} directory.
+ * Loads external Lua content packs and native visual skill/item packages from the
+ * {@code shyne-mods/} directory.
  *
  * <p>No user Avatar or model is bundled into the mod JAR. Every pack resolves its
  * manifest, entry script and declared files inside its own directory.</p>
@@ -61,6 +63,12 @@ public final class ShyneModLoader {
 
     private void loadMod(Path modDir) {
         Path modJson = modDir.resolve("mod.json");
+        // A visual skill package deliberately has no Lua entrypoint. Treat it as valid
+        // content instead of emitting a misleading "main.lua was not found" warning.
+        if (!Files.isRegularFile(modJson) && Files.isRegularFile(modDir.resolve(SkillIconAsset.MANIFEST_FILE))) {
+            loadAssetPackage(modDir);
+            return;
+        }
         ModInfo info = new ModInfo();
         info.path = modDir;
         String entryName = "main.lua";
@@ -107,6 +115,32 @@ public final class ShyneModLoader {
         }
         runtimes.put(info.id, runtime);
         loadedMods.add(info);
+    }
+
+    private void loadAssetPackage(Path packageDir) {
+        Path manifestPath = packageDir.resolve(SkillIconAsset.MANIFEST_FILE);
+        try (Reader reader = Files.newBufferedReader(manifestPath)) {
+            JsonObject manifest = GSON.fromJson(reader, JsonObject.class);
+            String format = string(manifest, "format", "");
+            int formatVersion = manifest != null && manifest.has("format_version") ? manifest.get("format_version").getAsInt() : -1;
+            if (!SkillIconAsset.PACKAGE_FORMAT.equals(format) || formatVersion != SkillIconAsset.PACKAGE_FORMAT_VERSION) {
+                reject(packageDir.getFileName().toString(), manifestPath,
+                    "Unsupported shyne-package.json format.",
+                    "Use format '" + SkillIconAsset.PACKAGE_FORMAT + "' with format_version " + SkillIconAsset.PACKAGE_FORMAT_VERSION + ".");
+                return;
+            }
+            ModInfo info = new ModInfo();
+            info.path = packageDir;
+            info.id = string(manifest, "id", packageDir.getFileName().toString());
+            info.name = string(manifest, "name", info.id);
+            info.version = string(manifest, "version", "0.0.1");
+            info.author = "creator-package";
+            info.description = "Native PNG content assets";
+            loadedMods.add(info);
+        } catch (Exception error) {
+            reject(packageDir.getFileName().toString(), manifestPath,
+                "Bad shyne-package.json: " + error.getMessage(), "Fix the JSON syntax and package schema.");
+        }
     }
 
     private void reject(String id, Path path, String message, String fix) {

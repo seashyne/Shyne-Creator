@@ -14,7 +14,11 @@
     "combo_window_ticks": {"type": "integer", "minimum": 0},
     "model_id": {"type": "string"},
     "animation": {"type": "string"},
-    "icon": {"type": "string"},
+    "icon": {
+      "type": "string",
+      "description": "The id of a png_icon declared in the containing shyne-package.json.",
+      "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+    },
     "tags": {"type": "array", "items": {"type": "string"}},
     "requirement": {
       "type": "object",

@@ -97,15 +97,25 @@ public class PlayerProfileRuntime {
         if (skillId == null || skillId.isBlank()) {
             equipped.remove(slot.name().toLowerCase(Locale.ROOT));
         } else {
-            if (skillRegistry.get(skillId) == null) return false;
-            boolean allow = seashyne.shynecore.power.PowerServerConfig.get().isFreeSelection()
-                || current.unlockedSkills().contains(skillId);
-            if (!allow) return false;
+            if (!canUseSkill(player, skillId)) return false;
             equipped.put(slot.name().toLowerCase(Locale.ROOT), skillId);
         }
         profiles.put(player.getUUID(), new PlayerProfile(player.getUUID(), player.getName().getString(), current.level(), current.experience(), current.statPoints(), current.skillPoints(), current.playerClass(), current.unlockedSkills(), Map.copyOf(equipped), current.attributes(), current.teamId(), System.currentTimeMillis()));
         notifyListeners();
         return true;
+    }
+
+    /**
+     * Verifies that a player may select a registered skill outside the legacy fixed-slot loadout.
+     * The dynamic action deck is deliberately client-configured, but selection still remains
+     * server-authoritative: a skill must be known and either unlocked or allowed by the server's
+     * free-selection policy. Requirement, cooldown, mana, and ban checks remain in SkillExecutor.
+     */
+    public boolean canUseSkill(ServerPlayer player, String skillId) {
+        if (player == null || skillId == null || skillId.isBlank() || skillRegistry.get(skillId) == null) return false;
+        PlayerProfile current = getOrCreate(player);
+        return seashyne.shynecore.power.PowerServerConfig.get().isFreeSelection()
+            || current.unlockedSkills().contains(skillId);
     }
 
     public String equippedSkill(UUID playerId, SkillSlot slot) {

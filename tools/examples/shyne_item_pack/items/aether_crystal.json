@@ -6,7 +6,6 @@
     "Right-click to awaken its power"
   ],
   "model": "shyne_creator:artifact",
-  "rarity": "rare",
   "max_stack": 1,
   "glint": true,
   "cooldown_ticks": 30,

@@ -353,13 +353,8 @@ public final class AvatarLifecycleManager {
     }
 
     public static void validateModel(BbModelDefinition model, Path avatarRoot) throws IOException {
-        if (model.bones().size() > ShyneClientSettings.avatarMaxBones) throw new IOException("model has more than configured avatarMaxBones (" + ShyneClientSettings.avatarMaxBones + ")");
-        if (model.cubes().size() + model.meshes().size() > ShyneClientSettings.avatarMaxCubes) throw new IOException("model has more render elements than configured avatarMaxCubes (" + ShyneClientSettings.avatarMaxCubes + ")");
-        if (model.animations().size() > ShyneClientSettings.avatarMaxAnimations) throw new IOException("model has more than configured avatarMaxAnimations (" + ShyneClientSettings.avatarMaxAnimations + ")");
-        if (model.textures().size() > ShyneClientSettings.avatarMaxTextures) throw new IOException("model has more than configured avatarMaxTextures (" + ShyneClientSettings.avatarMaxTextures + ")");
-        int maxTextureSize = ShyneClientSettings.avatarMaxTextureSize;
-        if (model.textureWidth() <= 0 || model.textureWidth() > maxTextureSize || model.textureHeight() <= 0 || model.textureHeight() > maxTextureSize) {
-            throw new IOException("model texture size must be between 1 and configured avatarMaxTextureSize (" + maxTextureSize + ")");
+        if (model.textureWidth() <= 0 || model.textureHeight() <= 0) {
+            throw new IOException("model texture size must be positive");
         }
         Path safeRoot = avatarRoot.toRealPath();
         Path modelRoot = model.sourceFile().toAbsolutePath().normalize().getParent();
@@ -372,13 +367,9 @@ public final class AvatarLifecycleManager {
     }
 
     public static void validateDeclaredTextures(BbModelDefinition model, AvatarManifest manifest) throws IOException {
-        if (manifest.isFiguraImport() || manifest.textures() == null || manifest.textures().isEmpty()) return;
-        Set<String> declared = new HashSet<>();
-        for (String texture : manifest.textures()) declared.add(normalizeTextureName(texture));
-        for (var texture : model.textures()) {
-            String relative = normalizeTextureName(texture.relativePath());
-            if (!declared.contains(relative)) throw new IOException("model texture is not declared in avatar.json: " + texture.relativePath());
-        }
+        // Texture declarations are optional creator metadata. The model itself is
+        // authoritative for local loading; containment and file checks happen in
+        // validateModel/AvatarValidator instead of blocking free-form packages.
     }
 
     private static String normalizeTextureName(String value) {

@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../common/src/main/resources/shyne_sdk/schemas/shyne_asset_package.schema.json",
+  "format": "shyne_asset_package",
+  "format_version": 1,
+  "id": "arcane_power_pack",
+  "name": "Arcane Power Pack",
+  "version": "1.0.0",
+  "assets": [
+    {
+      "id": "arc_bolt",
+      "type": "png_icon",
+      "path": "assets/icons/arc_bolt.png",
+      "source_svg": "sources/icons/arc_bolt.svg"
+    }
+  ]
+}

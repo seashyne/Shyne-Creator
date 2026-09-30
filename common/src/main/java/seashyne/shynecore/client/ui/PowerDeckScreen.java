@@ -1,48 +1,61 @@
 package seashyne.shynecore.client.ui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
-import seashyne.shynecore.client.network.ShyneClientNetworking;
 import seashyne.shynecore.client.state.ClientAnimationState;
 import seashyne.shynecore.client.state.ClientPowerConfig;
+import seashyne.shynecore.client.state.CustomDeckManager;
+import seashyne.shynecore.client.render.SkillIconTextures;
+import seashyne.shynecore.client.state.CustomDeckManager.ActionSlot;
+import seashyne.shynecore.client.state.CustomDeckManager.DeckPreset;
 import seashyne.shynecore.power.PowerState;
 import seashyne.shynecore.profile.PlayerProfile;
 import seashyne.shynecore.skill.SkillDefinition;
-import seashyne.shynecore.skill.SkillSlot;
 
 import java.util.*;
 
 /**
- * Screen for selecting and customizing player abilities independently from avatars and equipment.
+ * Fully dynamic Power Deck screen — players design their own action buttons,
+ * bind any key, and switch between saved presets (decks).
+ *
+ * <p>Left panel: a searchable list of every available action. Right panel:
+ * the player's own bindings. There are no required action categories or
+ * pre-filled slots; choose an action, add it, then press the key to use.</p>
  */
 public class PowerDeckScreen extends Screen {
+    private static final int BG_DARK = 0xC40B111E;
     private static final int CARD_BG = 0xD0101826;
     private static final int CARD_HOVER = 0xEE1A2B45;
     private static final int CARD_SELECTED = 0xFF1C3A5E;
     private static final int ACCENT_CYAN = 0xFF3DD9E8;
-    private static final int ACCENT_GOLD = 0xFFFFD24D;
     private static final int COLOR_BANNED = 0xFFFF5C5C;
+    private static final int COLOR_LOCKED = 0xFFFFD24D;
     private static final int TEXT_MUTED = 0xFF8FA0B5;
+    private static final int BTN_ADD = 0xFF1A7A44;
+    private static final int BTN_DEL = 0xFF7A2020;
+    private static final int KEY_BADGE_BG = 0xFF1E3050;
+    private static final int KEY_BADGE_LISTEN = 0xFFFFAA00;
 
     private final Screen parent;
     private EditBox searchBox;
-    private String activeCategory = "ALL";
-    private SkillSlot selectedSlot = SkillSlot.PRIMARY;
     private String selectedSkillId = "";
-    private int scrollOffset = 0;
+    private String selectedSlotId = "";
+    private String listeningSlotId = null;   // slot waiting for keybind input
+    private int catalogScroll = 0;
+    private int deckScroll = 0;
     private final List<SkillDefinition> displayedSkills = new ArrayList<>();
 
-    public PowerDeckScreen() {
-        this(null);
-    }
+    public PowerDeckScreen() { this(null); }
 
     public PowerDeckScreen(Screen parent) {
         super(Component.translatable("screen.shyne_core.power_deck.title"));
@@ -51,45 +64,42 @@ public class PowerDeckScreen extends Screen {
 
     @Override
     protected void init() {
+        CustomDeckManager.ensureLoaded();
         this.clearWidgets();
-        int leftWidth = Math.max(180, this.width / 2 - 20);
-        int searchWidth = leftWidth - 8;
-        this.searchBox = new EditBox(this.font, 14, 42, searchWidth, 18, Component.literal("Search"));
+        int leftW = Math.max(200, this.width / 2 - 30);
+        int searchW = leftW - 8;
+
+        // Search box
+        this.searchBox = new EditBox(this.font, 14, 42, searchW, 18, Component.literal("Search skills…"));
         this.searchBox.setResponder(s -> refreshCatalog());
         this.addRenderableWidget(this.searchBox);
 
-        // Filter category buttons
-        String[] cats = {"ALL", "PRIMARY", "UTILITY", "ULTIMATE", "PASSIVE"};
-        int btnW = Math.max(34, (searchWidth - (cats.length - 1) * 3) / cats.length);
-        for (int i = 0; i < cats.length; i++) {
-            String cat = cats[i];
-            int bx = 14 + i * (btnW + 3);
-            Button b = Button.builder(Component.literal(cat), btn -> {
-                this.activeCategory = cat;
-                playUiClick();
-                refreshCatalog();
-            }).bounds(bx, 64, btnW, 16).build();
-            this.addRenderableWidget(b);
-        }
-
-        // Action Buttons on Right
-        int rightX = leftWidth + 24;
-        int rightWidth = this.width - rightX - 16;
+        // The bottom controls follow the natural flow: choose an action, add it,
+        // press a key. Replacing or removing an existing binding stays secondary.
+        int rightX = leftW + 24;
+        int rightW = this.width - rightX - 16;
         int actionY = this.height - 30;
 
-        Button equipBtn = Button.builder(Component.literal("✦ Equip to " + selectedSlot.name()), btn -> {
-            if (!selectedSkillId.isBlank()) {
-                ShyneClientNetworking.sendEquipSkill(selectedSkillId, selectedSlot.name().toLowerCase(Locale.ROOT));
-                playUiClick();
-            }
-        }).bounds(rightX, actionY, Math.max(100, rightWidth / 2 - 4), 20).build();
-        this.addRenderableWidget(equipBtn);
+        boolean compactActions = rightW < 330;
+        int addW = compactActions ? Math.max(24, rightW - 56) : 120;
+        int replaceW = compactActions ? 24 : 106;
+        int removeW = compactActions ? 24 : 76;
 
-        Button unequipBtn = Button.builder(Component.literal("✕ Unequip Slot"), btn -> {
-            ShyneClientNetworking.sendEquipSkill("", selectedSlot.name().toLowerCase(Locale.ROOT));
-            playUiClick();
-        }).bounds(rightX + Math.max(100, rightWidth / 2 - 4) + 8, actionY, Math.max(80, rightWidth / 2 - 12), 20).build();
-        this.addRenderableWidget(unequipBtn);
+        this.addRenderableWidget(Button.builder(Component.literal(compactActions ? "+" : "+ Add action"), btn -> addSelectedAction())
+            .tooltip(Tooltip.create(Component.literal("Add the selected action, then choose its key")))
+            .bounds(rightX, actionY, addW, 20).build());
+
+        this.addRenderableWidget(Button.builder(Component.literal(compactActions ? "↺" : "Replace selected"), btn -> replaceSelectedAction())
+            .tooltip(Tooltip.create(Component.literal("Put the selected action on the highlighted binding")))
+            .bounds(rightX + addW + 4, actionY, replaceW, 20).build());
+
+        this.addRenderableWidget(Button.builder(Component.literal(compactActions ? "−" : "✕ Remove"), btn -> {
+            if (!selectedSlotId.isBlank()) {
+                CustomDeckManager.removeSlot(CustomDeckManager.activeDeckIndex(), selectedSlotId);
+                selectedSlotId = "";
+                playClick();
+            }
+        }).tooltip(Tooltip.create(Component.literal("Remove highlighted action"))).bounds(rightX + addW + replaceW + 8, actionY, removeW, 20).build());
 
         refreshCatalog();
     }
@@ -99,40 +109,36 @@ public class PowerDeckScreen extends Screen {
         String query = searchBox != null ? searchBox.getValue().trim().toLowerCase(Locale.ROOT) : "";
         for (SkillDefinition skill : ClientAnimationState.allSkills()) {
             if (!query.isEmpty() && !skill.displayName().toLowerCase(Locale.ROOT).contains(query)
-                && !skill.skillId().toLowerCase(Locale.ROOT).contains(query)) {
-                continue;
-            }
-            if (!activeCategory.equals("ALL")) {
-                String slot = skill.defaultSlot() != null ? skill.defaultSlot().name() : "";
-                if (!slot.equalsIgnoreCase(activeCategory) && !skill.hasTag(activeCategory)) continue;
-            }
+                && !skill.skillId().toLowerCase(Locale.ROOT).contains(query)) continue;
             displayedSkills.add(skill);
         }
         displayedSkills.sort(Comparator.comparing(SkillDefinition::displayName));
+        if ((selectedSkillId.isBlank() || displayedSkills.stream().noneMatch(skill -> skill.skillId().equals(selectedSkillId)))
+            && !displayedSkills.isEmpty()) {
+            selectedSkillId = displayedSkills.stream().filter(this::canAssign).map(SkillDefinition::skillId).findFirst().orElse("");
+        }
     }
 
-    @Override
-    public boolean isPauseScreen() {
-        return false;
-    }
+    @Override public boolean isPauseScreen() { return false; }
+
+    // ── Rendering ────────────────────────────────────────────────────────
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(0, 0, this.width, this.height, 0xC40B111E);
-
-        // Header Title & Mana Display
-        graphics.text(this.font, Component.literal("✦ POWER DECK & ABILITIES"), 14, 12, ACCENT_CYAN, true);
-        graphics.text(this.font, Component.literal("Decoupled powers — choose and equip freely"), 14, 25, TEXT_MUTED, false);
+        graphics.fill(0, 0, this.width, this.height, BG_DARK);
+        graphics.text(this.font, Component.literal("✦ ACTIONS & KEYS"), 14, 10, ACCENT_CYAN, true);
+        graphics.text(this.font, Component.literal("Choose an action, add it, then press the key you want"), 14, 23, TEXT_MUTED, false);
 
         renderManaBar(graphics);
 
-        int leftWidth = Math.max(180, this.width / 2 - 20);
-        int rightX = leftWidth + 24;
-        int contentY = 84;
+        int leftW = Math.max(200, this.width / 2 - 30);
+        int rightX = leftW + 24;
+        int contentY = 66;
         int contentBottom = this.height - 38;
 
-        renderCatalogList(graphics, 14, contentY, leftWidth - 8, contentBottom, mouseX, mouseY);
-        renderSlotPanel(graphics, rightX, 42, this.width - rightX - 16, contentBottom, mouseX, mouseY);
+        renderCatalog(graphics, 14, contentY, leftW - 8, contentBottom, mouseX, mouseY);
+        renderDeckTabs(graphics, rightX, 42, this.width - rightX - 16);
+        renderDeckSlots(graphics, rightX, 62, this.width - rightX - 16, contentBottom, mouseX, mouseY);
 
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
@@ -143,124 +149,254 @@ public class PowerDeckScreen extends Screen {
         PowerState state = ClientAnimationState.getPowerState(mc.player.getUUID());
         double mana = state != null ? state.mana() : 100.0;
         double maxMana = state != null ? state.maxMana() : 100.0;
-        int barWidth = 140;
-        int barHeight = 12;
-        int barX = this.width - barWidth - 16;
-        int barY = 14;
-
-        graphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFF141E30);
-        float fillRatio = maxMana > 0 ? (float) Math.min(1.0, mana / maxMana) : 1f;
-        graphics.fill(barX + 1, barY + 1, barX + (int) ((barWidth - 2) * fillRatio), barY + barHeight - 1, ACCENT_CYAN);
-        graphics.outline(barX, barY, barWidth, barHeight, 0xFF354E75);
-
-        String manaText = String.format(Locale.ROOT, "Mana: %.0f / %.0f", mana, maxMana);
-        graphics.text(this.font, Component.literal(manaText), barX + (barWidth - this.font.width(manaText)) / 2, barY + 2, 0xFFFFFFFF, true);
+        int barW = 140, barH = 12;
+        int barX = this.width - barW - 16, barY = 14;
+        graphics.fill(barX, barY, barX + barW, barY + barH, 0xFF141E30);
+        float ratio = maxMana > 0 ? (float) Math.min(1.0, mana / maxMana) : 1f;
+        graphics.fill(barX + 1, barY + 1, barX + (int) ((barW - 2) * ratio), barY + barH - 1, ACCENT_CYAN);
+        graphics.outline(barX, barY, barW, barH, 0xFF354E75);
+        String txt = String.format(Locale.ROOT, "Mana: %.0f / %.0f", mana, maxMana);
+        graphics.text(this.font, Component.literal(txt), barX + (barW - this.font.width(txt)) / 2, barY + 2, 0xFFFFFFFF, true);
     }
 
-    private void renderCatalogList(GuiGraphicsExtractor graphics, int x, int y, int w, int bottom, int mx, int my) {
-        graphics.fill(x, y, x + w, bottom, 0x880C1422);
-        graphics.outline(x, y, w, bottom - y, 0xFF243650);
-
-        int cardHeight = 36;
-        int visibleCount = (bottom - y) / (cardHeight + 4);
-        int start = Math.max(0, Math.min(scrollOffset, Math.max(0, displayedSkills.size() - visibleCount)));
-
-        for (int i = 0; i < visibleCount && (start + i) < displayedSkills.size(); i++) {
+    private void renderCatalog(GuiGraphicsExtractor g, int x, int y, int w, int bottom, int mx, int my) {
+        g.fill(x, y, x + w, bottom, 0x880C1422);
+        g.outline(x, y, w, bottom - y, 0xFF243650);
+        int cardH = 36, gap = 4;
+        int visible = (bottom - y) / (cardH + gap);
+        int start = Math.max(0, Math.min(catalogScroll, Math.max(0, displayedSkills.size() - visible)));
+        for (int i = 0; i < visible && (start + i) < displayedSkills.size(); i++) {
             SkillDefinition skill = displayedSkills.get(start + i);
-            int cy = y + 4 + i * (cardHeight + 4);
-            boolean isHovered = mx >= x + 2 && mx <= x + w - 2 && my >= cy && my <= cy + cardHeight;
-            boolean isSelected = skill.skillId().equals(selectedSkillId);
-            boolean isBanned = ClientPowerConfig.isBanned(skill.skillId());
-
-            int bg = isSelected ? CARD_SELECTED : (isHovered ? CARD_HOVER : CARD_BG);
-            graphics.fill(x + 2, cy, x + w - 2, cy + cardHeight, bg);
-            graphics.outline(x + 2, cy, w - 4, cardHeight, isBanned ? COLOR_BANNED : (isSelected ? ACCENT_CYAN : 0xFF2B3F5C));
-
-            int nameColor = isBanned ? COLOR_BANNED : (isSelected ? ACCENT_CYAN : 0xFFF0F5FF);
-            graphics.text(this.font, Component.literal(skill.displayName()), x + 8, cy + 4, nameColor, false);
-
-            String costText = String.format(Locale.ROOT, "Mana: %.0f | CD: %.1fs",
-                skill.manaCost() * ClientPowerConfig.getGlobalManaCostMultiplier(),
-                (skill.cooldownTicks() * ClientPowerConfig.getGlobalCooldownMultiplier()) / 20.0f);
-            graphics.text(this.font, Component.literal(costText), x + 8, cy + 18, TEXT_MUTED, false);
-
-            if (isBanned) {
-                graphics.text(this.font, Component.literal("⛔ BANNED"), x + w - 74, cy + 4, COLOR_BANNED, true);
+            int cy = y + 4 + i * (cardH + gap);
+            boolean hover = mx >= x + 2 && mx <= x + w - 2 && my >= cy && my <= cy + cardH;
+            boolean sel = skill.skillId().equals(selectedSkillId);
+            boolean banned = ClientPowerConfig.isBanned(skill.skillId());
+            boolean locked = !banned && !canAssign(skill);
+            int bg = sel ? CARD_SELECTED : (hover ? CARD_HOVER : CARD_BG);
+            g.fill(x + 2, cy, x + w - 2, cy + cardH, bg);
+            g.outline(x + 2, cy, w - 4, cardH, banned ? COLOR_BANNED : (locked ? COLOR_LOCKED : (sel ? ACCENT_CYAN : 0xFF2B3F5C)));
+            int iconX = x + 6, iconY = cy + 6, iconSize = 24;
+            g.fill(iconX, iconY, iconX + iconSize, iconY + iconSize, 0xFF0E1929);
+            g.outline(iconX, iconY, iconSize, iconSize, 0xFF2B4B6C);
+            if (!SkillIconTextures.drawSkillCentered(g, skill.skillId(), iconX + 2, iconY + 2, iconSize - 4, iconSize - 4)) {
+                String initial = skill.displayName().isEmpty() ? "?" : skill.displayName().substring(0, 1);
+                g.text(this.font, Component.literal(initial), iconX + (iconSize - this.font.width(initial)) / 2, iconY + 8, ACCENT_CYAN, false);
             }
+            int nameColor = banned ? COLOR_BANNED : (locked ? COLOR_LOCKED : (sel ? ACCENT_CYAN : 0xFFF0F5FF));
+            int textX = iconX + iconSize + 6;
+            String displayName = this.font.plainSubstrByWidth(skill.displayName(), Math.max(8, w - (textX - x) - 74));
+            g.text(this.font, Component.literal(displayName), textX, cy + 4, nameColor, false);
+            String detail = skill.description() == null || skill.description().isBlank() ? "Ready to add" : skill.description();
+            g.text(this.font, Component.literal(this.font.plainSubstrByWidth(detail, Math.max(8, w - (textX - x) - 8))), textX, cy + 18, TEXT_MUTED, false);
+            if (banned) g.text(this.font, Component.literal("⛔ BANNED"), x + w - 74, cy + 4, COLOR_BANNED, true);
+            else if (locked) g.text(this.font, Component.literal("LOCKED"), x + w - 47, cy + 4, COLOR_LOCKED, true);
         }
     }
 
-    private void renderSlotPanel(GuiGraphicsExtractor graphics, int x, int y, int w, int bottom, int mx, int my) {
-        graphics.text(this.font, Component.literal("EQUIPPED LOADOUT SLOTS"), x, y, ACCENT_GOLD, true);
+    /** Mirrors the server's selection gate before a skill can be placed in a local action deck. */
+    private boolean canAssign(SkillDefinition skill) {
+        if (skill == null || ClientPowerConfig.isBanned(skill.skillId())) return false;
+        if (ClientPowerConfig.isFreeSelection()) return true;
         Minecraft mc = Minecraft.getInstance();
-        PlayerProfile profile = mc.player != null ? ClientAnimationState.getProfile(mc.player.getUUID()) : null;
-        Map<String, String> equipped = profile != null ? profile.equippedSkills() : Map.of();
+        if (mc.player == null) return false;
+        PlayerProfile profile = ClientAnimationState.getProfile(mc.player.getUUID());
+        return profile != null && profile.unlockedSkills().contains(skill.skillId());
+    }
 
-        SkillSlot[] slots = SkillSlot.values();
-        int slotHeight = 32;
-        int listY = y + 14;
-
-        for (int i = 0; i < slots.length; i++) {
-            SkillSlot slot = slots[i];
-            int sy = listY + i * (slotHeight + 4);
-            if (sy + slotHeight > bottom) break;
-
-            boolean isHovered = mx >= x && mx <= x + w && my >= sy && my <= sy + slotHeight;
-            boolean isTarget = slot == selectedSlot;
-            String equippedSkillId = equipped.getOrDefault(slot.name().toLowerCase(Locale.ROOT), "");
-            SkillDefinition equippedDef = !equippedSkillId.isBlank() ? ClientAnimationState.getSkill(equippedSkillId) : null;
-
-            int bg = isTarget ? 0xFF193652 : (isHovered ? 0xFF15263C : 0xD00F1726);
-            graphics.fill(x, sy, x + w, sy + slotHeight, bg);
-            graphics.outline(x, sy, w, slotHeight, isTarget ? ACCENT_CYAN : 0xFF283B54);
-
-            graphics.text(this.font, Component.literal("[" + slot.name() + "]"), x + 8, sy + 5, isTarget ? ACCENT_CYAN : 0xFF9FB2CC, true);
-
-            String displayName = equippedDef != null ? equippedDef.displayName() : "— Empty —";
-            int nameColor = equippedDef != null ? 0xFFFFFFFF : 0xFF62748E;
-            graphics.text(this.font, Component.literal(displayName), x + 8, sy + 18, nameColor, false);
-
-            if (isTarget) {
-                graphics.text(this.font, Component.literal("▶ TARGET"), x + w - 64, sy + 11, ACCENT_CYAN, true);
-            }
+    private void renderDeckTabs(GuiGraphicsExtractor g, int x, int y, int w) {
+        List<DeckPreset> decks = CustomDeckManager.allDecks();
+        int tabW = deckTabWidth(w, decks.size());
+        for (int i = 0; i < decks.size(); i++) {
+            int tx = x + i * (tabW + 2);
+            boolean active = i == CustomDeckManager.activeDeckIndex();
+            g.fill(tx, y, tx + tabW, y + 16, active ? CARD_SELECTED : CARD_BG);
+            g.outline(tx, y, tabW, 16, active ? ACCENT_CYAN : 0xFF2B3F5C);
+            String name = decks.get(i).name();
+            if (name.length() > 8) name = name.substring(0, 7) + "…";
+            String clippedName = this.font.plainSubstrByWidth(name, Math.max(4, tabW - 8));
+            g.text(this.font, Component.literal(clippedName), tx + 4, y + 4, active ? ACCENT_CYAN : TEXT_MUTED, false);
+        }
+        // "+ New" tab
+        int newX = x + decks.size() * (tabW + 2);
+        g.fill(newX, y, newX + 24, y + 16, BTN_ADD);
+        g.text(this.font, Component.literal("+"), newX + 9, y + 4, 0xFFFFFFFF, true);
+        if (decks.size() > 1) {
+            int removeX = newX + 28;
+            g.fill(removeX, y, removeX + 24, y + 16, BTN_DEL);
+            g.text(this.font, Component.literal("−"), removeX + 8, y + 4, 0xFFFFFFFF, true);
         }
     }
+
+    private static int deckTabWidth(int availableWidth, int deckCount) {
+        int controlsWidth = 52; // add and remove buttons, including their gap
+        // The trailing two-pixel gap before the add control is part of the tab strip too.
+        int gaps = deckCount * 2;
+        int availableTabs = Math.max(0, availableWidth - controlsWidth - gaps);
+        return Math.min(80, Math.max(28, availableTabs / Math.max(1, deckCount)));
+    }
+
+    private void renderDeckSlots(GuiGraphicsExtractor g, int x, int y, int w, int bottom, int mx, int my) {
+        DeckPreset deck = CustomDeckManager.activeDeck();
+        List<ActionSlot> slots = deck.slots();
+        int slotH = 38, gap = 4;
+        int visible = (bottom - y) / (slotH + gap);
+        int start = Math.max(0, Math.min(deckScroll, Math.max(0, slots.size() - visible)));
+        for (int i = 0; i < visible && (start + i) < slots.size(); i++) {
+            ActionSlot slot = slots.get(start + i);
+            int sy = y + 4 + i * (slotH + gap);
+            boolean hover = mx >= x && mx <= x + w && my >= sy && my <= sy + slotH;
+            boolean sel = slot.id().equals(selectedSlotId);
+            boolean listening = slot.id().equals(listeningSlotId);
+            // Background
+            int bg = sel ? CARD_SELECTED : (hover ? CARD_HOVER : CARD_BG);
+            g.fill(x, sy, x + w, sy + slotH, bg);
+            g.outline(x, sy, w, slotH, sel ? ACCENT_CYAN : 0xFF283B54);
+            // Key badge (clickable area for rebind)
+            int badgeW = 32, badgeH = 20;
+            int badgeX = x + 6, badgeY = sy + 9;
+            g.fill(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH, listening ? KEY_BADGE_LISTEN : KEY_BADGE_BG);
+            g.outline(badgeX, badgeY, badgeW, badgeH, listening ? 0xFFFFFFFF : ACCENT_CYAN);
+            String keyLabel = listening ? "…" : (slot.keyName().isBlank() ? "?" : slot.keyName());
+            int labelW = this.font.width(keyLabel);
+            g.text(this.font, Component.literal(keyLabel), badgeX + (badgeW - labelW) / 2, badgeY + 6, listening ? 0xFF000000 : 0xFFFFFFFF, false);
+            // Slot label and assigned skill; a synced package PNG is shown on the right when available.
+            SkillDefinition def = !slot.skillId().isBlank() ? ClientAnimationState.getSkill(slot.skillId()) : null;
+            int iconSize = 20;
+            int iconX = x + w - iconSize - 6;
+            int iconY = sy + (slotH - iconSize) / 2;
+            int textWidth = Math.max(8, iconX - (x + 44) - 4);
+            String slotLabel = this.font.plainSubstrByWidth(slot.label(), textWidth);
+            g.text(this.font, Component.literal(slotLabel), x + 44, sy + 5, sel ? ACCENT_CYAN : 0xFFCCDDEE, true);
+            String skillName = def != null ? def.displayName() : (slot.skillId().isBlank() ? "— choose an action —" : slot.skillId());
+            String clippedSkillName = this.font.plainSubstrByWidth(skillName, textWidth);
+            g.text(this.font, Component.literal(clippedSkillName), x + 44, sy + 20, def != null ? 0xFFAABBDD : 0xFF62748E, false);
+            if (def != null) {
+                g.fill(iconX, iconY, iconX + iconSize, iconY + iconSize, 0xFF0E1929);
+                g.outline(iconX, iconY, iconSize, iconSize, sel ? ACCENT_CYAN : 0xFF2B4B6C);
+                if (!SkillIconTextures.drawSkillCentered(g, def.skillId(), iconX + 2, iconY + 2, iconSize - 4, iconSize - 4)) {
+                    String initial = def.displayName().isEmpty() ? "?" : def.displayName().substring(0, 1);
+                    g.text(this.font, Component.literal(initial), iconX + (iconSize - this.font.width(initial)) / 2, iconY + 6, ACCENT_CYAN, false);
+                }
+            }
+        }
+        if (slots.isEmpty()) {
+            g.text(this.font, Component.literal("Your action list is empty."), x + 8, y + 20, 0xFFF0F5FF, false);
+            g.text(this.font, Component.literal("Choose an action on the left, then click [+ Add action]."), x + 8, y + 33, TEXT_MUTED, false);
+        } else if (listeningSlotId != null) {
+            g.text(this.font, Component.literal("Press a key now  •  Backspace clears"), x + 8, bottom - 14, 0xFFFFD24D, false);
+        }
+    }
+
+    /** Adds the selected action and immediately starts the key-capture step. */
+    private void addSelectedAction() {
+        SkillDefinition selected = ClientAnimationState.getSkill(selectedSkillId);
+        if (selected == null || !canAssign(selected)) return;
+        ActionSlot slot = CustomDeckManager.addSlot(CustomDeckManager.activeDeckIndex());
+        if (slot == null) return;
+        CustomDeckManager.assignSkill(CustomDeckManager.activeDeckIndex(), slot.id(), selected.skillId());
+        CustomDeckManager.renameSlot(CustomDeckManager.activeDeckIndex(), slot.id(), selected.displayName());
+        selectedSlotId = slot.id();
+        listeningSlotId = slot.id();
+        playClick();
+    }
+
+    /** Replaces the action in a selected row without changing its existing key. */
+    private void replaceSelectedAction() {
+        SkillDefinition selected = ClientAnimationState.getSkill(selectedSkillId);
+        if (selectedSlotId.isBlank() || selected == null || !canAssign(selected)) return;
+        CustomDeckManager.assignSkill(CustomDeckManager.activeDeckIndex(), selectedSlotId, selected.skillId());
+        CustomDeckManager.renameSlot(CustomDeckManager.activeDeckIndex(), selectedSlotId, selected.displayName());
+        playClick();
+    }
+
+    // ── Input Handling ───────────────────────────────────────────────────
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        int mx = (int) event.x();
-        int my = (int) event.y();
-        int leftWidth = Math.max(180, this.width / 2 - 20);
-        int contentY = 84;
-        int contentBottom = this.height - 38;
+        int mx = (int) event.x(), my = (int) event.y();
+        int leftW = Math.max(200, this.width / 2 - 30);
+        int rightX = leftW + 24, rightW = this.width - rightX - 16;
+        int contentY = 66, contentBottom = this.height - 38;
 
-        // Check catalog clicks
-        if (mx >= 14 && mx <= leftWidth + 6 && my >= contentY && my <= contentBottom) {
-            int cardHeight = 36;
-            int visibleCount = (contentBottom - contentY) / (cardHeight + 4);
-            int start = Math.max(0, Math.min(scrollOffset, Math.max(0, displayedSkills.size() - visibleCount)));
-            int index = (my - contentY - 4) / (cardHeight + 4);
-            if (index >= 0 && (start + index) < displayedSkills.size()) {
-                SkillDefinition clicked = displayedSkills.get(start + index);
-                if (!ClientPowerConfig.isBanned(clicked.skillId())) {
+        // Catalog click
+        if (mx >= 14 && mx <= leftW + 6 && my >= contentY && my <= contentBottom) {
+            int cardH = 36, gap = 4;
+            int visible = (contentBottom - contentY) / (cardH + gap);
+            int start = Math.max(0, Math.min(catalogScroll, Math.max(0, displayedSkills.size() - visible)));
+            int localY = my - contentY - 4;
+            int idx = localY / (cardH + gap);
+            if (localY >= 0 && localY % (cardH + gap) < cardH && idx >= 0 && (start + idx) < displayedSkills.size()) {
+                SkillDefinition clicked = displayedSkills.get(start + idx);
+                if (canAssign(clicked)) {
                     selectedSkillId = clicked.skillId();
-                    playUiClick();
+                    if (doubleClick) addSelectedAction();
+                    playClick();
                     return true;
                 }
             }
         }
 
-        // Check slot clicks
-        int rightX = leftWidth + 24;
-        int rightWidth = this.width - rightX - 16;
-        int slotHeight = 32;
-        int listY = 42 + 14;
-        SkillSlot[] slots = SkillSlot.values();
-        for (int i = 0; i < slots.length; i++) {
-            int sy = listY + i * (slotHeight + 4);
-            if (mx >= rightX && mx <= rightX + rightWidth && my >= sy && my <= sy + slotHeight) {
-                selectedSlot = slots[i];
-                playUiClick();
+        // Deck tab clicks
+        if (my >= 42 && my <= 58) {
+            List<DeckPreset> decks = CustomDeckManager.allDecks();
+            int tabW = deckTabWidth(rightW, decks.size());
+            for (int i = 0; i < decks.size(); i++) {
+                int tx = rightX + i * (tabW + 2);
+                if (mx >= tx && mx <= tx + tabW) {
+                    CustomDeckManager.setActiveDeck(i);
+                    deckScroll = 0;
+                    selectedSlotId = "";
+                    listeningSlotId = null;
+                    playClick();
+                    return true;
+                }
+            }
+            // "+ New" tab
+            int newX = rightX + decks.size() * (tabW + 2);
+            if (mx >= newX && mx <= newX + 24) {
+                DeckPreset added = CustomDeckManager.addDeck(null);
+                if (added != null) {
+                    CustomDeckManager.setActiveDeck(CustomDeckManager.allDecks().size() - 1);
+                    deckScroll = 0;
+                    selectedSlotId = "";
+                    listeningSlotId = null;
+                    playClick();
+                }
+                return true;
+            }
+            int removeX = newX + 28;
+            if (decks.size() > 1 && mx >= removeX && mx <= removeX + 24) {
+                if (CustomDeckManager.removeDeck(CustomDeckManager.activeDeckIndex())) {
+                    deckScroll = 0;
+                    selectedSlotId = "";
+                    listeningSlotId = null;
+                    playClick();
+                }
+                return true;
+            }
+        }
+
+        // Deck slot clicks
+        if (mx >= rightX && mx <= rightX + rightW && my >= 62 && my <= contentBottom) {
+            List<ActionSlot> slots = CustomDeckManager.activeDeck().slots();
+            int slotH = 38, gap = 4;
+            int visible = (contentBottom - 62) / (slotH + gap);
+            int start = Math.max(0, Math.min(deckScroll, Math.max(0, slots.size() - visible)));
+            int localY = my - 62 - 4;
+            int idx = localY / (slotH + gap);
+            if (localY >= 0 && localY % (slotH + gap) < slotH && idx >= 0 && (start + idx) < slots.size()) {
+                ActionSlot slot = slots.get(start + idx);
+                int badgeX = rightX + 6, badgeY = 62 + 4 + idx * (slotH + gap) + 9;
+                // Key badge click → start listening
+                if (mx >= badgeX && mx <= badgeX + 32 && my >= badgeY && my <= badgeY + 20) {
+                    listeningSlotId = slot.id().equals(listeningSlotId) ? null : slot.id();
+                    playClick();
+                    return true;
+                }
+                // Rest of slot → select
+                selectedSlotId = slot.id();
+                listeningSlotId = null;
+                playClick();
                 return true;
             }
         }
@@ -269,28 +405,49 @@ public class PowerDeckScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (verticalAmount != 0) {
-            scrollOffset = Math.max(0, scrollOffset - (int) verticalAmount);
+    public boolean mouseScrolled(double mouseX, double mouseY, double hAmount, double vAmount) {
+        int leftW = Math.max(200, this.width / 2 - 30);
+        if (vAmount != 0) {
+            if (mouseX < leftW + 6) {
+                catalogScroll = Math.max(0, catalogScroll - (int) vAmount);
+            } else {
+                deckScroll = Math.max(0, deckScroll - (int) vAmount);
+            }
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        return super.mouseScrolled(mouseX, mouseY, hAmount, vAmount);
     }
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (event.key() == 256) { // ESC
-            if (this.parent != null && this.minecraft != null) {
-                this.minecraft.gui.setScreen(this.parent);
-            } else {
-                this.onClose();
+        int key = event.key();
+        // ESC always closes
+        if (key == InputConstants.KEY_ESCAPE) {
+            if (listeningSlotId != null) { listeningSlotId = null; return true; }
+            if (this.parent != null && this.minecraft != null) this.minecraft.gui.setScreen(this.parent);
+            else this.onClose();
+            return true;
+        }
+        // If listening for keybind, capture the key
+        if (listeningSlotId != null) {
+            if (key == InputConstants.KEY_BACKSPACE || key == InputConstants.KEY_DELETE) {
+                CustomDeckManager.bindKey(CustomDeckManager.activeDeckIndex(), listeningSlotId,
+                    InputConstants.UNKNOWN.getValue(), "");
+                listeningSlotId = null;
+                playClick();
+                return true;
             }
+            InputConstants.Key inputKey = InputConstants.Type.KEYBOARD.getOrCreate(key);
+            String keyName = inputKey.getDisplayName().getString();
+            CustomDeckManager.bindKey(CustomDeckManager.activeDeckIndex(), listeningSlotId, key, keyName);
+            listeningSlotId = null;
+            playClick();
             return true;
         }
         return super.keyPressed(event);
     }
 
-    private void playUiClick() {
+    private void playClick() {
         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
     }
 }

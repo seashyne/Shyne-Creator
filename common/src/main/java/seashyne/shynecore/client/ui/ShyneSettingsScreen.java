@@ -50,8 +50,8 @@ public class ShyneSettingsScreen extends Screen {
 
     @Override
     protected void init() {
-        panelWidth = Math.min(520, Math.max(280, this.width - 16));
-        panelHeight = Math.min(320, Math.max(224, this.height - 16));
+        panelWidth = Math.min(700, Math.max(300, this.width - 24));
+        panelHeight = Math.min(420, Math.max(248, this.height - 24));
         panelX = (this.width - panelWidth) / 2;
         panelY = (this.height - panelHeight) / 2;
         compact = panelWidth < 420;
@@ -68,7 +68,7 @@ public class ShyneSettingsScreen extends Screen {
             }
             rowY = panelY + 79;
         } else {
-            navWidth = Math.min(118, Math.max(92, panelWidth / 4));
+            navWidth = Math.min(146, Math.max(104, panelWidth / 4));
             contentX = panelX + navWidth + GAP;
             contentWidth = panelWidth - navWidth - GAP - 8;
             int navY = panelY + 57;
@@ -76,7 +76,7 @@ public class ShyneSettingsScreen extends Screen {
             for (int i = 0; i < categories.length; i++) {
                 addCategoryButton(categories[i], panelX + 8, navY + i * 24, navWidth - 16);
             }
-            rowY = panelY + 57;
+            rowY = panelY + 84;
         }
 
         List<Setting> settings = settingsFor(category);
@@ -144,7 +144,7 @@ public class ShyneSettingsScreen extends Screen {
             category = value;
             contentScroll = 0;
             rebuildWidgets();
-        }).bounds(x, y, width, 20).build();
+        }).tooltip(Tooltip.create(Component.translatable(value.descriptionKey))).bounds(x, y, width, 20).build();
         button.active = value != category;
         addRenderableWidget(button);
     }
@@ -187,7 +187,9 @@ public class ShyneSettingsScreen extends Screen {
         graphics.fill(panelX + 8, panelY + 46, panelX + panelWidth - 8, panelY + 47, 0x6632D8EA);
 
         if (!compact) {
-            graphics.text(this.font, Component.translatable(category.translationKey).withStyle(ChatFormatting.AQUA), contentX + 6, panelY + 48, 0xFFFFFFFF, false);
+            graphics.text(this.font, Component.translatable(category.translationKey).withStyle(ChatFormatting.AQUA), contentX + 6, panelY + 53, 0xFFFFFFFF, false);
+            String categoryDescription = this.font.plainSubstrByWidth(Component.translatable(category.descriptionKey).getString(), contentWidth - 12);
+            graphics.text(this.font, Component.literal(categoryDescription), contentX + 6, panelY + 66, 0xFF8195B4, false);
         }
         if (category == Category.CREATOR) {
             graphics.fill(contentX, rowY, contentX + contentWidth, rowY + 24, 0x2419BFD1);
@@ -231,13 +233,13 @@ public class ShyneSettingsScreen extends Screen {
             case INTERFACE -> List.of(
                 new Setting("setting.shyne_core.hints", "setting.shyne_core.hints.desc", () -> ShyneClientSettings.renderUiHints, v -> ShyneClientSettings.renderUiHints = v),
                 new Setting("setting.shyne_core.effects", "setting.shyne_core.effects.desc", () -> ShyneClientSettings.autoPlayVisuals, v -> ShyneClientSettings.autoPlayVisuals = v),
-                new Setting("setting.shyne_core.combat_hud", "setting.shyne_core.combat_hud.desc", () -> ShyneClientSettings.combatHudEnabled, v -> ShyneClientSettings.combatHudEnabled = v)
+                new Setting("setting.shyne_core.combat_hud", "setting.shyne_core.combat_hud.desc", () -> ShyneClientSettings.combatHudEnabled, v -> ShyneClientSettings.combatHudEnabled = v),
+                new Setting("setting.shyne_core.action_wheel_avatar", "setting.shyne_core.action_wheel_avatar.desc", () -> ShyneClientSettings.actionWheelCenterAvatar, v -> ShyneClientSettings.actionWheelCenterAvatar = v)
             );
             case AVATAR -> List.of(
                 new Setting("setting.shyne_core.avatar_models", "setting.shyne_core.avatar_models.desc", () -> ShyneClientSettings.renderAttachments, v -> ShyneClientSettings.renderAttachments = v),
                 new Setting("setting.shyne_core.avatar_powers", "setting.shyne_core.avatar_powers.desc", () -> ShyneClientSettings.avatarPowersEnabled, v -> ShyneClientSettings.avatarPowersEnabled = v),
                 new Setting("setting.shyne_core.item_actions", "setting.shyne_core.item_actions.desc", () -> ShyneClientSettings.itemActionsEnabled, v -> ShyneClientSettings.itemActionsEnabled = v),
-                new Setting("setting.shyne_core.action_wheel_avatar", "setting.shyne_core.action_wheel_avatar.desc", () -> ShyneClientSettings.actionWheelCenterAvatar, v -> ShyneClientSettings.actionWheelCenterAvatar = v),
                 new Setting("setting.shyne_core.signature_weapons", "setting.shyne_core.signature_weapons.desc", () -> ShyneClientSettings.signatureWeaponsEnabled, v -> ShyneClientSettings.signatureWeaponsEnabled = v),
                 new Setting("setting.shyne_core.audio_stream", "setting.shyne_core.audio_stream.desc", () -> ShyneClientSettings.audioStreamEnabled, v -> ShyneClientSettings.audioStreamEnabled = v)
             );
@@ -253,7 +255,10 @@ public class ShyneSettingsScreen extends Screen {
 
     private List<ScreenAction> actionsFor(Category value) {
         return switch (value) {
-            case INTERFACE -> List.of();
+            case INTERFACE -> List.of(
+                new ScreenAction("screen.shyne_core.inputs.title", "screen.shyne_core.inputs.tooltip", () -> openScreen(new AvatarInputSettingsScreen(this)), () -> true),
+                new ScreenAction("screen.shyne_core.power_deck.title", "screen.shyne_core.home.actions.tooltip", () -> openScreen(new PowerDeckScreen(this)), () -> true)
+            );
             case ADVANCED -> List.of(
                 new ScreenAction(
                     "setting.shyne_core.remote_budget",
@@ -272,6 +277,15 @@ public class ShyneSettingsScreen extends Screen {
                     actions.add(new ScreenAction("screen.shyne_core.avatars.outfit", "screen.shyne_core.avatars.outfit.tooltip", () -> openScreen(new AvatarOutfitScreen(this)), () -> true));
                 }
                 actions.add(new ScreenAction("screen.shyne_core.avatars.actions", "screen.shyne_core.avatars.actions.tooltip", () -> openScreen(new AvatarActionWheelScreen(this)), () -> true));
+                actions.add(new ScreenAction("screen.shyne_core.power_deck.title", "screen.shyne_core.home.actions.tooltip", () -> openScreen(new PowerDeckScreen(this)), () -> true));
+                actions.add(new ScreenAction("screen.shyne_core.items.title", "screen.shyne_core.home.content.tooltip", () -> openScreen(new ItemCatalogScreen(this)), () -> true));
+                actions.add(new ScreenAction(
+                    "setting.shyne_core.audio_volume",
+                    "setting.shyne_core.audio_volume.desc",
+                    this::cycleAudioVolume,
+                    () -> ShyneClientSettings.audioStreamEnabled,
+                    this::audioVolumeLabel
+                ));
                 actions.add(new ScreenAction("screen.shyne_core.avatars.folder", "screen.shyne_core.avatars.folder.tooltip", this::openAvatarFolder, () -> true));
                 yield actions;
             }
@@ -344,6 +358,18 @@ public class ShyneSettingsScreen extends Screen {
         return Component.translatable("setting.shyne_core.remote_budget")
             .append(Component.literal(": "))
             .append(Component.translatable("setting.shyne_core.remote_budget." + preset.id()));
+    }
+
+    private void cycleAudioVolume() {
+        float current = ShyneClientSettings.audioStreamVolume;
+        float next = current < 0.49f ? 0.5f : current < 0.74f ? 0.75f : current < 0.99f ? 1.0f : current < 1.49f ? 1.5f : 0.25f;
+        ShyneClientSettings.audioStreamVolume = next;
+        ShyneClientSettings.save();
+    }
+
+    private Component audioVolumeLabel() {
+        int percent = Math.round(ShyneClientSettings.audioStreamVolume * 100.0f);
+        return Component.translatable("setting.shyne_core.audio_volume").append(Component.literal(": " + percent + "%"));
     }
 
     private void openScreen(Screen screen) {

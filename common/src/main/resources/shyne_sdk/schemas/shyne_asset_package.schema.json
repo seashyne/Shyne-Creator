@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Shyne Creator asset package",
+  "type": "object",
+  "required": ["format", "format_version", "id", "assets"],
+  "properties": {
+    "format": {"const": "shyne_asset_package"},
+    "format_version": {"const": 1},
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"},
+    "name": {"type": "string", "minLength": 1, "maxLength": 96},
+    "version": {"type": "string", "minLength": 1, "maxLength": 64},
+    "assets": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "path"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"},
+          "type": {"const": "png_icon"},
+          "path": {"type": "string", "pattern": "^assets/icons/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\\.png$"},
+          "source_svg": {"type": "string", "pattern": "^sources/icons/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\\.svg$"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

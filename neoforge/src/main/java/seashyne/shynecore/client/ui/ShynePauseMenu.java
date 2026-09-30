@@ -20,35 +20,17 @@ public final class ShynePauseMenu {
 
             int width = screen.width;
             int height = screen.height;
-            int buttonWidth = 74;
-            int gap = 4;
-            int groupWidth = buttonWidth * 3 + gap * 2;
-            int x = Math.max(6, width - groupWidth - 6);
+            int buttonWidth = 106;
+            int x = Math.max(6, width - buttonWidth - 6);
             int y = Math.max(4, height - 26);
 
-            Button avatars = Button.builder(
-                Component.literal("✦ ").withStyle(ChatFormatting.AQUA)
-                    .append(Component.translatable("screen.shyne_core.pause_avatar_button").withStyle(ChatFormatting.WHITE)),
-                ignored -> minecraft.gui.setScreen(new AvatarManagerScreen(screen))
-            ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.pause_avatar_button.tooltip")))
-                .bounds(x, y, buttonWidth, 20).build();
-            event.addListener(avatars);
-
-            Button powers = Button.builder(
-                Component.literal("✦ ").withStyle(ChatFormatting.AQUA)
-                    .append(Component.translatable("screen.shyne_core.pause_powers_button").withStyle(ChatFormatting.WHITE)),
-                ignored -> minecraft.gui.setScreen(new PowerDeckScreen(screen))
-            ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.pause_powers_button.tooltip")))
-                .bounds(x + buttonWidth + gap, y, buttonWidth, 20).build();
-            event.addListener(powers);
-
-            Button settings = Button.builder(
+            Button shyne = Button.builder(
                 Component.literal("✦ ").withStyle(ChatFormatting.AQUA)
                     .append(Component.translatable("screen.shyne_core.pause_button").withStyle(ChatFormatting.WHITE)),
-                ignored -> minecraft.gui.setScreen(new ShyneSettingsScreen(screen))
+                ignored -> minecraft.gui.setScreen(new ShyneHomeScreen(screen))
             ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.pause_button.tooltip")))
-                .bounds(x + (buttonWidth + gap) * 2, y, buttonWidth, 20).build();
-            event.addListener(settings);
+                .bounds(x, y, buttonWidth, 20).build();
+            event.addListener(shyne);
         });
     }
 }

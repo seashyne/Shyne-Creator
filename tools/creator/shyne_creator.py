@@ -7,6 +7,7 @@ import argparse
 import json
 import math
 import re
+import struct
 import sys
 import uuid
 from pathlib import Path
@@ -20,6 +21,13 @@ TEXTURE_EXTENSIONS = {".png"}
 ALLOWED_PERMISSIONS = {"particle", "sound", "camera", "microphone", "command", "hud_render", "world_render"}
 LATEST_API = "2.0"
 SUPPORTED_APIS = {"auto", "latest", LATEST_API}
+POWER_PACKAGE_MANIFEST = "shyne-package.json"
+POWER_PACKAGE_FORMAT = "shyne_asset_package"
+POWER_PACKAGE_FORMAT_VERSION = 1
+MAX_POWER_ICON_BYTES = 128 * 1024
+MAX_POWER_ICON_DIMENSION = 256
+MAX_POWER_ICON_REGISTRY_BYTES = 4 * 1024 * 1024
+MAX_POWER_ICON_SYNC_BYTES = 512 * 1024
 
 
 def suggested_avatar_id(folder_name: str) -> str:
@@ -590,6 +598,179 @@ def validate(root: Path) -> dict:
     }
 
 
+def package_icon_path(root: Path, value: object) -> Path | None:
+    """Return a safe runtime icon path, or None when it violates the package contract."""
+    if not isinstance(value, str) or not value or "\\" in value:
+        return None
+    normalized = value.replace("\\", "/")
+    if (
+        not normalized.startswith("assets/icons/")
+        or not normalized.lower().endswith(".png")
+        or ":" in normalized
+        or "//" in normalized
+        or ".." in normalized.split("/")
+    ):
+        return None
+    try:
+        return safe_file(root, normalized)
+    except ValueError:
+        return None
+
+
+def read_power_png_dimensions(path: Path) -> tuple[int, int] | None:
+    try:
+        header = path.read_bytes()[:24]
+    except OSError:
+        return None
+    if len(header) < 24 or header[:8] != b"\x89PNG\r\n\x1a\n" or header[8:16] != b"\x00\x00\x00\rIHDR":
+        return None
+    width, height = struct.unpack(">II", header[16:24])
+    if width < 1 or height < 1 or width > MAX_POWER_ICON_DIMENSION or height > MAX_POWER_ICON_DIMENSION:
+        return None
+    return width, height
+
+
+def validate_power_package(root: Path) -> dict:
+    """Validate a native Power Deck package and its PNG-only runtime artwork."""
+    root = root.resolve()
+    errors: list[str] = []
+    warnings: list[str] = []
+    manifest_path = root / POWER_PACKAGE_MANIFEST
+    manifest: dict = {}
+    if not manifest_path.is_file():
+        errors.append(f"missing {POWER_PACKAGE_MANIFEST}")
+    else:
+        try:
+            manifest = load_json(manifest_path)
+            if not isinstance(manifest, dict):
+                errors.append(f"{POWER_PACKAGE_MANIFEST} must contain a JSON object")
+                manifest = {}
+        except Exception as exc:
+            errors.append(f"invalid {POWER_PACKAGE_MANIFEST}: {exc}")
+
+    package_id = str(manifest.get("id", root.name)).strip()
+    if manifest.get("format") != POWER_PACKAGE_FORMAT:
+        errors.append(f"format must be {POWER_PACKAGE_FORMAT!r}")
+    if manifest.get("format_version") != POWER_PACKAGE_FORMAT_VERSION:
+        errors.append(f"format_version must be {POWER_PACKAGE_FORMAT_VERSION}")
+    if not ID_PATTERN.fullmatch(package_id):
+        errors.append("id must use 1-64 lowercase letters, numbers, dot, dash, or underscore")
+
+    raw_assets = manifest.get("assets", [])
+    if not isinstance(raw_assets, list):
+        errors.append("assets must be an array")
+        raw_assets = []
+    if len(raw_assets) > 256:
+        errors.append("assets may contain at most 256 entries")
+
+    asset_ids: set[str] = set()
+    asset_paths: set[str] = set()
+    icon_count = 0
+    total_icon_bytes = 0
+    for index, asset in enumerate(raw_assets):
+        prefix = f"assets[{index}]"
+        if not isinstance(asset, dict):
+            errors.append(f"{prefix} must be an object")
+            continue
+        asset_id = asset.get("id")
+        if not isinstance(asset_id, str) or not ID_PATTERN.fullmatch(asset_id):
+            errors.append(f"{prefix}.id must use a valid asset id")
+            continue
+        if asset_id in asset_ids:
+            errors.append(f"duplicate asset id: {asset_id}")
+            continue
+        asset_ids.add(asset_id)
+        if asset.get("type") != "png_icon":
+            errors.append(f"{prefix}.type must be 'png_icon'")
+            continue
+        icon_path = package_icon_path(root, asset.get("path"))
+        if icon_path is None:
+            errors.append(f"{prefix}.path must be a package-local PNG under assets/icons/")
+            continue
+        relative = icon_path.relative_to(root).as_posix()
+        if relative.casefold() in asset_paths:
+            errors.append(f"duplicate icon path: {relative}")
+            continue
+        asset_paths.add(relative.casefold())
+        if not icon_path.is_file():
+            errors.append(f"missing PNG icon: {relative}")
+            continue
+        byte_size = icon_path.stat().st_size
+        if byte_size < 1 or byte_size > MAX_POWER_ICON_BYTES:
+            errors.append(f"{relative} must be between 1 byte and {MAX_POWER_ICON_BYTES // 1024} KiB")
+            continue
+        dimensions = read_power_png_dimensions(icon_path)
+        if dimensions is None:
+            errors.append(f"{relative} must be a valid PNG no larger than {MAX_POWER_ICON_DIMENSION}x{MAX_POWER_ICON_DIMENSION}")
+            continue
+        source_svg = asset.get("source_svg")
+        if source_svg is not None:
+            if (
+                not isinstance(source_svg, str)
+                or "\\" in source_svg
+                or not source_svg.startswith("sources/icons/")
+                or not source_svg.lower().endswith(".svg")
+                or ":" in source_svg
+                or "//" in source_svg
+                or ".." in source_svg.split("/")
+            ):
+                errors.append(f"{prefix}.source_svg must be an optional source SVG under sources/icons/")
+            else:
+                try:
+                    if not safe_file(root, source_svg).is_file():
+                        errors.append(f"missing SVG source: {source_svg}")
+                except ValueError:
+                    errors.append(f"{prefix}.source_svg escapes the package")
+        icon_count += 1
+        total_icon_bytes += byte_size
+
+    def validate_icon_references(folder: str, label: str) -> int:
+        directory = root / folder
+        count = 0
+        if not directory.is_dir():
+            return count
+        for definition_path in sorted(directory.rglob("*.json")):
+            count += 1
+            relative = definition_path.relative_to(root).as_posix()
+            try:
+                definition = load_json(definition_path)
+            except Exception as exc:
+                errors.append(f"invalid {label} JSON {relative}: {exc}")
+                continue
+            if not isinstance(definition, dict):
+                errors.append(f"{label} {relative} must contain a JSON object")
+                continue
+            icon_id = definition.get("icon", "")
+            if icon_id and (not isinstance(icon_id, str) or icon_id not in asset_ids):
+                errors.append(f"{label} {relative} references unknown icon asset: {icon_id}")
+        return count
+
+    skill_count = validate_icon_references("skills", "skill")
+    item_count = validate_icon_references("items", "item")
+    if skill_count == 0 and item_count == 0:
+        warnings.append("no skills/ or items/ directory found; this package only supplies reusable PNG assets")
+
+    if total_icon_bytes > MAX_POWER_ICON_SYNC_BYTES:
+        warnings.append(
+            f"PNG icons total {total_icon_bytes} bytes; multiplayer sync includes at most {MAX_POWER_ICON_SYNC_BYTES} bytes per skill snapshot"
+        )
+    if total_icon_bytes > MAX_POWER_ICON_REGISTRY_BYTES:
+        warnings.append(
+            f"PNG icons total {total_icon_bytes} bytes; the server retains at most {MAX_POWER_ICON_REGISTRY_BYTES} bytes of skill icon data"
+        )
+    return {
+        "valid": not errors,
+        "id": package_id,
+        "files": sum(1 for path in root.rglob("*") if path.is_file()),
+        "icons": icon_count,
+        "skills": skill_count,
+        "items": item_count,
+        "icon_bytes": total_icon_bytes,
+        "errors": errors,
+        "warnings": warnings,
+    }
+
+
 def create(root: Path, avatar_id: str | None, name: str | None, with_lua: bool = False) -> None:
     display_name = (name or re.sub(r"[_.-]+", " ", root.name).strip() or "My Avatar").strip()
     if not display_name or len(display_name) > 96:
@@ -666,6 +847,21 @@ def print_report(report: dict, as_json: bool) -> None:
         print("ERROR:", error)
 
 
+def print_power_package_report(report: dict, as_json: bool) -> None:
+    if as_json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return
+    print("VALID" if report["valid"] else "INVALID", report.get("id", ""))
+    print(
+        f"files={report['files']} skills={report['skills']} items={report['items']} icons={report['icons']} "
+        f"icon_bytes={report['icon_bytes']}"
+    )
+    for warning in report["warnings"]:
+        print("WARNING:", warning)
+    for error in report["errors"]:
+        print("ERROR:", error)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="shyne-creator", description="Create and validate Shyne-native Avatars")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -679,12 +875,21 @@ def main() -> None:
     check.add_argument("--json", action="store_true")
     inspect = commands.add_parser("inspect", help="print machine-readable Avatar stats")
     inspect.add_argument("folder", type=Path)
+    power_pack = commands.add_parser("validate-pack", help="validate a native Power Deck PNG asset package")
+    power_pack.add_argument("folder", type=Path)
+    power_pack.add_argument("--json", action="store_true")
 
     args = parser.parse_args()
     if args.command == "new":
         create(args.folder, args.id, args.name, args.lua)
         print("Created Avatar project")
         print_report(validate(args.folder), False)
+        return
+    if args.command == "validate-pack":
+        report = validate_power_package(args.folder)
+        print_power_package_report(report, args.json)
+        if not report["valid"]:
+            raise SystemExit(1)
         return
     report = validate(args.folder)
     print_report(report, args.command == "inspect" or args.json)

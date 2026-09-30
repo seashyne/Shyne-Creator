@@ -34,7 +34,7 @@ import java.nio.file.Path;
 
 public class ShyneCore implements ModInitializer {
     public static final String MOD_ID = "shyne_creator";
-    public static final String VERSION = "2.12.0";
+    public static final String VERSION = "2.12.2";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     public static ShyneCore INSTANCE;
 
@@ -79,7 +79,7 @@ public class ShyneCore implements ModInitializer {
         ShyneItemRuntime itemRuntime = new ShyneItemRuntime(skillExecutor, equipmentRuntime, modLoader, diagnostics);
         ShyneItems.bindRuntime(itemRuntime);
         ShyneNetwork.registerPayloads();
-        ShyneNetwork network = new ShyneNetwork(bbModelRegistry, animationRuntime, attachmentRuntime, powerStateMachine, skillExecutor, skillRegistry, profileRuntime, equipmentRuntime);
+        ShyneNetwork network = new ShyneNetwork(bbModelRegistry, animationRuntime, attachmentRuntime, powerStateMachine, skillExecutor, skillRegistry, profileRuntime, equipmentRuntime, itemRuntime);
         ActionDispatcher dispatcher = new ActionDispatcher(actionBus, bbModelRegistry, animationRuntime, attachmentRuntime, summonRuntime, targetingRuntime, projectileRuntime, powerStateMachine, teamRuntime, skillRegistry, skillExecutor, profileRuntime, equipmentRuntime, itemRuntime, modLoader);
 
         modLoader.discoverAndLoad();

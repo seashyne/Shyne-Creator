@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../common/src/main/resources/shyne_sdk/schemas/skill.schema.json",
+  "skill_id": "arcane.arc_bolt",
+  "display_name": "Arc Bolt",
+  "description": "A fast arcane projectile.",
+  "cast_type": "projectile",
+  "default_slot": "primary",
+  "mana_cost": 12,
+  "cooldown_ticks": 16,
+  "icon": "arc_bolt",
+  "tags": ["arcane", "primary"]
+}

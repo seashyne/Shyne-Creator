@@ -148,5 +148,73 @@ class SyncedSchemaValidationTest(unittest.TestCase):
         self.assertEqual([], warnings)
 
 
+class PowerPackageValidationTest(unittest.TestCase):
+    def temp_package_dir(self) -> tempfile.TemporaryDirectory[str]:
+        TMP_ROOT.mkdir(parents=True, exist_ok=True)
+        return tempfile.TemporaryDirectory(prefix="creator-power-package-", dir=TMP_ROOT)
+
+    @staticmethod
+    def png_header(width: int = 64, height: int = 64) -> bytes:
+        return (
+            b"\x89PNG\r\n\x1a\n"
+            + b"\x00\x00\x00\rIHDR"
+            + width.to_bytes(4, "big")
+            + height.to_bytes(4, "big")
+        )
+
+    def make_package(self, root: Path) -> None:
+        write_json(root / "shyne-package.json", {
+            "format": "shyne_asset_package",
+            "format_version": 1,
+            "id": "arcane_pack",
+            "assets": [{
+                "id": "arc_bolt",
+                "type": "png_icon",
+                "path": "assets/icons/arc_bolt.png",
+                "source_svg": "sources/icons/arc_bolt.svg",
+            }],
+        })
+        (root / "assets" / "icons").mkdir(parents=True)
+        (root / "assets" / "icons" / "arc_bolt.png").write_bytes(self.png_header())
+        (root / "sources" / "icons").mkdir(parents=True)
+        (root / "sources" / "icons" / "arc_bolt.svg").write_text("<svg/>", encoding="utf-8")
+        (root / "skills").mkdir()
+        write_json(root / "skills" / "arc_bolt.json", {"skill_id": "arcane.arc_bolt", "icon": "arc_bolt"})
+
+    def test_valid_power_package_is_accepted(self) -> None:
+        with self.temp_package_dir() as tmp:
+            root = Path(tmp)
+            self.make_package(root)
+
+            report = shyne_creator.validate_power_package(root)
+
+            self.assertTrue(report["valid"], report["errors"])
+            self.assertEqual(1, report["icons"])
+            self.assertEqual(1, report["skills"])
+
+    def test_power_package_rejects_unknown_skill_icon(self) -> None:
+        with self.temp_package_dir() as tmp:
+            root = Path(tmp)
+            self.make_package(root)
+            write_json(root / "skills" / "arc_bolt.json", {"skill_id": "arcane.arc_bolt", "icon": "missing"})
+
+            report = shyne_creator.validate_power_package(root)
+
+            self.assertFalse(report["valid"])
+            self.assertTrue(any("unknown icon asset" in error for error in report["errors"]), report["errors"])
+
+    def test_power_package_rejects_unknown_item_icon(self) -> None:
+        with self.temp_package_dir() as tmp:
+            root = Path(tmp)
+            self.make_package(root)
+            (root / "items").mkdir()
+            write_json(root / "items" / "focus.json", {"item_id": "arcane.focus", "icon": "missing"})
+
+            report = shyne_creator.validate_power_package(root)
+
+            self.assertFalse(report["valid"])
+            self.assertTrue(any("item " in error and "references unknown icon asset" in error for error in report["errors"]), report["errors"])
+
+
 if __name__ == "__main__":
     unittest.main()

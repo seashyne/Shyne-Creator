@@ -9,6 +9,7 @@ public record ShyneItemDefinition(
     String itemId,
     String displayName,
     List<String> description,
+    String icon,
     String modelId,
     Rarity rarity,
     int maxStack,

@@ -3,6 +3,7 @@ package seashyne.shynecore.client.state;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.item.Rarity;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.animation.AnimationPlayback;
 import seashyne.shynecore.attachment.AttachedModelState;
@@ -14,8 +15,10 @@ import seashyne.shynecore.client.avatar.RemoteAvatarResourceBudget;
 import seashyne.shynecore.client.avatar.VanillaVisibilityKeys;
 import seashyne.shynecore.client.config.ShyneClientSettings;
 import seashyne.shynecore.client.render.BbModelTextures;
+import seashyne.shynecore.client.render.SkillIconTextures;
 import seashyne.shynecore.equipment.EquipmentLoadout;
 import seashyne.shynecore.equipment.WeaponDefinition;
+import seashyne.shynecore.item.ShyneItemDefinition;
 import seashyne.shynecore.model.BbModelDefinition;
 import seashyne.shynecore.network.ShyneNetwork;
 import seashyne.shynecore.power.PowerState;
@@ -43,6 +46,7 @@ public final class ClientAnimationState {
     private static final Type ATTACHMENT_SYNC_TYPE = new TypeToken<ShyneNetwork.AttachmentSyncPayload>(){}.getType();
     private static final Type POWER_SYNC_TYPE = new TypeToken<ShyneNetwork.PowerSyncPayload>(){}.getType();
     private static final Type SKILL_SYNC_TYPE = new TypeToken<ShyneNetwork.SkillSyncPayload>(){}.getType();
+    private static final Type ITEM_SYNC_TYPE = new TypeToken<ShyneNetwork.ItemSyncPayload>(){}.getType();
     private static final Type PROFILE_SYNC_TYPE = new TypeToken<ShyneNetwork.ProfileSyncPayload>(){}.getType();
     private static final Type WEAPON_SYNC_TYPE = new TypeToken<ShyneNetwork.WeaponSyncPayload>(){}.getType();
     private static final Type LOADOUT_SYNC_TYPE = new TypeToken<ShyneNetwork.LoadoutSyncPayload>(){}.getType();
@@ -60,6 +64,7 @@ public final class ClientAnimationState {
     private static final Map<UUID, AttachedModelState> AVATAR_ATTACHMENTS = new ConcurrentHashMap<>();
     private static final Map<UUID, PowerState> POWER_STATES = new ConcurrentHashMap<>();
     private static final Map<String, SkillDefinition> SKILLS = new ConcurrentHashMap<>();
+    private static final Map<String, ShyneItemDefinition> ITEMS = new ConcurrentHashMap<>();
     private static final Map<UUID, PlayerProfile> PROFILES = new ConcurrentHashMap<>();
     private static final Map<String, WeaponDefinition> WEAPONS = new ConcurrentHashMap<>();
     private static final Map<UUID, EquipmentLoadout> LOADOUTS = new ConcurrentHashMap<>();
@@ -109,15 +114,44 @@ public final class ClientAnimationState {
     public static void handleSkillSync(String json) {
         ShyneNetwork.SkillSyncPayload payload = GSON.fromJson(json, SKILL_SYNC_TYPE);
         SKILLS.clear();
+        Set<String> installedIcons = new HashSet<>();
         if (payload != null && payload.skills() != null) {
             for (ShyneNetwork.NetSkillDefinition skill : payload.skills()) {
+                ShyneNetwork.NetPngIcon icon = skill.iconAsset();
+                if (icon != null && SkillIconTextures.installSkill(skill.skillId(), icon.contentHash(), icon.width(), icon.height(), icon.contentBase64())) {
+                    installedIcons.add(skill.skillId());
+                }
                 SKILLS.put(skill.skillId(), new SkillDefinition(
                     skill.skillId(), skill.displayName(), "", SkillCastType.fromString(skill.castType()), SkillSlot.fromString(skill.defaultSlot()),
-                    skill.manaCost(), skill.cooldownTicks(), 0, skill.modelId(), skill.animation(), "", new SkillRequirement(0, List.of(), ""),
+                    skill.manaCost(), skill.cooldownTicks(), 0, skill.modelId(), skill.animation(), skill.icon(), new SkillRequirement(0, List.of(), ""),
                     skill.tags() == null ? List.of() : skill.tags(), Map.of()
                 ));
             }
         }
+        SkillIconTextures.retainSkills(installedIcons);
+    }
+    public static void handleItemSync(String json) {
+        ShyneNetwork.ItemSyncPayload payload = GSON.fromJson(json, ITEM_SYNC_TYPE);
+        ITEMS.clear();
+        Set<String> installedIcons = new HashSet<>();
+        if (payload != null && payload.items() != null) {
+            for (ShyneNetwork.NetItemDefinition item : payload.items()) {
+                if (item == null || item.itemId() == null || item.itemId().isBlank()) continue;
+                ShyneNetwork.NetPngIcon icon = item.iconAsset();
+                if (icon != null && SkillIconTextures.installItem(item.itemId(), icon.contentHash(), icon.width(), icon.height(), icon.contentBase64())) {
+                    installedIcons.add(item.itemId());
+                }
+                ITEMS.put(item.itemId(), new ShyneItemDefinition(
+                    item.itemId(), item.displayName() == null ? item.itemId() : item.displayName(),
+                    item.description() == null ? List.of() : List.copyOf(item.description()),
+                    item.icon() == null ? "" : item.icon(), item.modelId() == null ? "" : item.modelId(),
+                    itemRarity(item.rarity()), Math.max(1, Math.min(64, item.maxStack())), item.glint(),
+                    item.useSkill() == null ? "" : item.useSkill(), item.weaponId() == null ? "" : item.weaponId(),
+                    Math.max(0, item.cooldownTicks()), item.consumeOnUse(), "", Map.of()
+                ));
+            }
+        }
+        SkillIconTextures.retainItems(installedIcons);
     }
     public static void handleProfileSync(String json) {
         ShyneNetwork.ProfileSyncPayload payload = GSON.fromJson(json, PROFILE_SYNC_TYPE);
@@ -548,6 +582,7 @@ public final class ClientAnimationState {
         AVATAR_ATTACHMENTS.clear();
         POWER_STATES.clear();
         SKILLS.clear();
+        ITEMS.clear();
         PROFILES.clear();
         WEAPONS.clear();
         LOADOUTS.clear();
@@ -562,10 +597,13 @@ public final class ClientAnimationState {
         VANILLA_TRANSFORMS.clear();
         LOCAL_SNAPSHOT_ACKS.clear();
         BbModelTextures.clearRemoteSyncedTextures();
+        SkillIconTextures.clear();
     }
     public static PowerState getPowerState(UUID entityId) { return POWER_STATES.get(entityId); }
     public static SkillDefinition getSkill(String skillId) { return SKILLS.get(skillId); }
     public static Collection<SkillDefinition> allSkills() { return List.copyOf(SKILLS.values()); }
+    public static ShyneItemDefinition getItem(String itemId) { return ITEMS.get(itemId); }
+    public static Collection<ShyneItemDefinition> allItems() { return List.copyOf(ITEMS.values()); }
     public static PlayerProfile getProfile(UUID playerId) { return PROFILES.get(playerId); }
     public static Collection<PlayerProfile> allProfiles() { return List.copyOf(PROFILES.values()); }
     public static WeaponDefinition getWeapon(String weaponId) { return WEAPONS.get(weaponId); }
@@ -640,6 +678,10 @@ public final class ClientAnimationState {
     private static AnimationPlayback toRuntime(ShyneNetwork.NetPlayback pb) {
         return new AnimationPlayback(UUID.fromString(pb.entityId()), pb.entityName(), pb.modelId(), pb.animationName(),
             AvatarAnimationClock.decodeAge(System.currentTimeMillis(), pb.startedAtMillis()), pb.lengthSeconds(), pb.looping());
+    }
+    private static Rarity itemRarity(String raw) {
+        try { return raw == null ? Rarity.COMMON : Rarity.valueOf(raw.toUpperCase(Locale.ROOT)); }
+        catch (IllegalArgumentException ignored) { return Rarity.COMMON; }
     }
     private static <K, V> void copyNonNullEntries(Map<K, V> source, Map<K, V> target) {
         if (source == null || target == null) return;

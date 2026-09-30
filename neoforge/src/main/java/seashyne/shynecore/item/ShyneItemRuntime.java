@@ -20,6 +20,7 @@ import seashyne.shynecore.diagnostics.ContentDiagnostics;
 import seashyne.shynecore.equipment.EquipmentRuntime;
 import seashyne.shynecore.loader.ShyneModLoader;
 import seashyne.shynecore.skill.SkillExecutor;
+import seashyne.shynecore.skill.SkillIconAsset;
 import seashyne.shynecore.skill.SkillSlot;
 
 import java.io.IOException;
@@ -27,18 +28,25 @@ import java.io.Reader;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
 
 public final class ShyneItemRuntime {
+    public interface Listener { void onItemRegistrySync(Collection<ShyneItemDefinition> items); }
+
     private static final Gson GSON = new GsonBuilder().create();
     private static final Pattern SAFE_ID = Pattern.compile("[a-z0-9][a-z0-9_.-]{0,63}");
     private static final String DATA_ID = "shyne_item_id";
+    private static final long MAX_ICON_REGISTRY_BYTES = 4L * 1024L * 1024L;
 
     private final Map<String, ShyneItemDefinition> definitions = new ConcurrentHashMap<>();
+    private final Map<String, SkillIconAsset> iconAssets = new ConcurrentHashMap<>();
+    private final List<Listener> listeners = new CopyOnWriteArrayList<>();
     private final SkillExecutor skillExecutor;
     private final EquipmentRuntime equipmentRuntime;
     private final ShyneModLoader modLoader;
     private final ContentDiagnostics diagnostics;
+    private long iconRegistryBytes;
 
     public ShyneItemRuntime(SkillExecutor skillExecutor, EquipmentRuntime equipmentRuntime,
                             ShyneModLoader modLoader, ContentDiagnostics diagnostics) {
@@ -52,14 +60,23 @@ public final class ShyneItemRuntime {
         return List.copyOf(definitions.values());
     }
 
+    public void addListener(Listener listener) { listeners.add(listener); }
+
+    /** Returns the verified package-local PNG icon associated with an item. */
+    public SkillIconAsset iconAsset(String itemId) { return iconAssets.get(itemId); }
+
     public ShyneItemDefinition get(String itemId) {
         return itemId == null ? null : definitions.get(itemId.toLowerCase(Locale.ROOT));
     }
 
     public void discover(Path shyneModsDir) {
         definitions.clear();
+        resetIcons();
         if (diagnostics != null) diagnostics.clearSource("item");
-        if (shyneModsDir == null || !Files.isDirectory(shyneModsDir)) return;
+        if (shyneModsDir == null || !Files.isDirectory(shyneModsDir)) {
+            notifyListeners();
+            return;
+        }
         try (var paths = Files.walk(shyneModsDir)) {
             paths.filter(Files::isRegularFile)
                 .filter(path -> path.getFileName().toString().endsWith(".json"))
@@ -71,6 +88,7 @@ public final class ShyneItemRuntime {
             if (diagnostics != null) diagnostics.error("item", "registry", shyneModsDir,
                 "Failed to discover item files: " + error.getMessage(), "Check that the shyne-mods folders are readable.");
         }
+        notifyListeners();
     }
 
     private void register(Path path, Path shyneModsDir) {
@@ -79,13 +97,20 @@ public final class ShyneItemRuntime {
             JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
             String itemId = string(root, "item_id", inferredId).toLowerCase(Locale.ROOT);
             if (!SAFE_ID.matcher(itemId).matches()) throw new IOException("item_id must match " + SAFE_ID.pattern());
+            String displayName = string(root, "display_name", itemId);
+            List<String> description = strings(root, "description");
+            if (displayName.length() > 128) throw new IOException("display_name may contain at most 128 characters");
+            if (description.size() > 16 || description.stream().anyMatch(line -> line.length() > 256)) {
+                throw new IOException("description may contain at most 16 lines of 256 characters");
+            }
             String modelId = string(root, "model", "shyne_creator:artifact");
             if (Identifier.tryParse(modelId) == null) throw new IOException("model must be a valid namespaced id");
             String sourcePack = sourcePack(path, shyneModsDir);
             ShyneItemDefinition definition = new ShyneItemDefinition(
                 itemId,
-                string(root, "display_name", itemId),
-                strings(root, "description"),
+                displayName,
+                description,
+                string(root, "icon", ""),
                 modelId,
                 rarity(string(root, "rarity", "common")),
                 clamp(integer(root, "max_stack", 1), 1, 64),
@@ -98,6 +123,20 @@ public final class ShyneItemRuntime {
                 root.has("payload") && root.get("payload").isJsonObject()
                     ? GSON.fromJson(root.getAsJsonObject("payload"), Map.class) : Map.of()
             );
+            SkillIconAsset.Resolution icon = SkillIconAsset.resolve(path, definition.icon());
+            if (icon.hasAsset()) {
+                if (!putIcon(itemId, icon.asset()) && diagnostics != null) {
+                    diagnostics.warn("item", itemId, path,
+                        "Item icon was ignored because the registry PNG budget is full.",
+                        "Keep total item icon PNG data under " + (MAX_ICON_REGISTRY_BYTES / (1024 * 1024)) + " MiB.");
+                }
+            } else {
+                removeIcon(itemId);
+                if (icon.hasError() && diagnostics != null) {
+                    diagnostics.warn("item", itemId, path, "Item icon was ignored: " + icon.error(),
+                        "Declare a png_icon in shyne-package.json and point icon to its asset id.");
+                }
+            }
             ShyneItemDefinition previous = definitions.put(itemId, definition);
             if (previous != null && diagnostics != null) diagnostics.warn("item", itemId, path,
                 "Duplicate item_id replaced an earlier definition.", "Use a unique item_id in every content pack.");
@@ -204,6 +243,37 @@ public final class ShyneItemRuntime {
         } catch (Exception ignored) {
             return "";
         }
+    }
+
+    private void notifyListeners() {
+        Collection<ShyneItemDefinition> snapshot = all();
+        for (Listener listener : listeners) listener.onItemRegistrySync(snapshot);
+    }
+
+    private synchronized void resetIcons() {
+        iconAssets.clear();
+        iconRegistryBytes = 0L;
+    }
+
+    private synchronized boolean putIcon(String itemId, SkillIconAsset next) {
+        if (itemId == null || next == null) return false;
+        SkillIconAsset previous = iconAssets.get(itemId);
+        long withoutPrevious = iconRegistryBytes - (previous == null ? 0L : previous.byteSize());
+        if (next.byteSize() > MAX_ICON_REGISTRY_BYTES - Math.max(0L, withoutPrevious)) {
+            if (previous != null) {
+                iconAssets.remove(itemId);
+                iconRegistryBytes = Math.max(0L, withoutPrevious);
+            }
+            return false;
+        }
+        iconAssets.put(itemId, next);
+        iconRegistryBytes = Math.max(0L, withoutPrevious) + next.byteSize();
+        return true;
+    }
+
+    private synchronized void removeIcon(String itemId) {
+        SkillIconAsset removed = iconAssets.remove(itemId);
+        if (removed != null) iconRegistryBytes = Math.max(0L, iconRegistryBytes - removed.byteSize());
     }
 
     private static String readable(SkillExecutor.Status status) {

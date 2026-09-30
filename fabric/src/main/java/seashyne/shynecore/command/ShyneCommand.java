@@ -393,13 +393,13 @@ public final class ShyneCommand {
         int profileFixes = profileRuntime.validateProfiles();
         modLoader.fireHook("on_reload", Map.of("mods", modLoader.getLoadedCount()));
         modLoader.fireHook("on_server_start", Map.of("version", source.getServer().getServerVersion()));
-        feedback(source, "Reloaded Lua content: mods=" + modLoader.getLoadedCount() + " skills=" + skillRegistry.all().size() + " weapons=" + equipmentRuntime.allWeapons().size() + " items=" + itemRuntime.all().size() + " profile_fixes=" + profileFixes);
+        feedback(source, "Reloaded content: packs=" + modLoader.getLoadedCount() + " skills=" + skillRegistry.all().size() + " weapons=" + equipmentRuntime.allWeapons().size() + " items=" + itemRuntime.all().size() + " profile_fixes=" + profileFixes);
         feedback(source, diagnostics.summary() + " | report=" + diagnostics.textReportPath());
         return Command.SINGLE_SUCCESS;
     }
 
     private static int listMods(CommandSourceStack source, ShyneModLoader modLoader) {
-        if (modLoader.getLoadedMods().isEmpty()) return fail(source, "No Lua content packs are currently loaded.");
+        if (modLoader.getLoadedMods().isEmpty()) return fail(source, "No content packs are currently loaded.");
         StringBuilder sb = new StringBuilder("[ShyneCreator] Loaded mods:");
         for (ShyneModLoader.ModInfo mod : modLoader.getLoadedMods()) {
             sb.append("\n- ").append(mod.id).append(" v").append(mod.version).append(" by ").append(mod.author).append(" @ ").append(mod.path);

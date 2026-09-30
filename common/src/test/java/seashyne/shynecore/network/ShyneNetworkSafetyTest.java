@@ -83,5 +83,19 @@ final class ShyneNetworkSafetyTest {
     void serverCapabilitiesIncludeCompression() {
         assertTrue(ShyneNetworkProtocol.SERVER_CAPABILITIES.contains(ShyneNetworkProtocol.CAP_PACKET_COMPRESSION));
     }
-}
 
+    @Test
+    void serverCapabilitiesIncludeDynamicActionDeck() {
+        assertTrue(ShyneNetworkProtocol.SERVER_CAPABILITIES.contains(ShyneNetworkProtocol.CAP_DYNAMIC_ACTION_DECK));
+    }
+
+    @Test
+    void serverCapabilitiesIncludeVerifiedSkillIconAssets() {
+        assertTrue(ShyneNetworkProtocol.SERVER_CAPABILITIES.contains(ShyneNetworkProtocol.CAP_SKILL_ICON_ASSETS));
+    }
+
+    @Test
+    void serverCapabilitiesIncludeItemCatalog() {
+        assertTrue(ShyneNetworkProtocol.SERVER_CAPABILITIES.contains(ShyneNetworkProtocol.CAP_ITEM_CATALOG));
+    }
+}

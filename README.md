@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.12.0`
+- Shyne Creator: `2.12.2`
 - Minecraft: `26.3`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -28,6 +28,12 @@ Shyne Creator เป็น runtime สำหรับใช้ Avatar และ 
 ปุ่ม `Z`, `X`, `C` และ `V` เป็นช่องความสามารถจาก Content Pack จึงอาจไม่ทำอะไรหากโลกหรือเซิร์ฟเวอร์ไม่ได้ติดตั้งแพ็กที่รองรับ ส่วน **Shyne Creator Kit ใช้สำหรับสร้าง Avatar และห้ามนำไปใส่ในโฟลเดอร์ `mods`**
 
 คู่มือสำหรับผู้เล่น: [เริ่มใช้ Shyne ใน 1 นาที](PLAYER_QUICKSTART_TH.md)
+
+## Native Power Deck, Item Catalog และ PNG Icon
+
+Power Deck เป็น native Minecraft UI ที่มีช่อง action แบบไม่จำกัด และ Item Catalog แสดงรายละเอียดไอเท็มจาก server ได้ ทั้งคู่รองรับไอคอน PNG จาก Creator package: server ตรวจไฟล์ก่อน sync, client วาดไอคอนด้วย texture native, และ fallback เป็นอักษรย่อเมื่อไอคอนไม่พร้อมใช้งาน
+
+ใช้ SVG เป็นไฟล์ต้นฉบับใน React/Figma/editor ได้ แต่ก่อนเข้าเกมต้อง export เป็น PNG; ไม่มี WebView หรือ SVG runtime ในม็อด อ่านรูปแบบแพ็กและคำสั่งตรวจได้ที่ [Creator Asset Package 1.0](POWER_ASSET_PACKAGE_TH.md)
 
 ## Shyne Avatar Standard 2.0 — Model-first
 
@@ -133,7 +139,7 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 - รองรับ Avatar แบบ Overlay สำหรับหู หาง ปีก และของเสริมด้วย `replace_vanilla: false`
 - เพิ่ม target/raycast detail สำหรับ block และ entity ใน Shyne Lua API
 - เพิ่ม `shyne_role` / `shyne_tags` และ API `model.role()` / `model.tag()` โดย path ของโมเดลยังเป็น API หลักสำหรับ rig ซับซ้อน
-- รุ่น 2.7.44 ใช้ network protocol `9`; รุ่นปัจจุบันใช้ protocol `14` และ client/server ต้องใช้รุ่นเดียวกัน
+- รุ่น 2.7.44 ใช้ network protocol `9`; รุ่นปัจจุบันใช้ protocol `17` และ client/server ต้องใช้รุ่นเดียวกัน
 
 Creator quick start, Render Task API และ Profiler: [CREATOR_QUICKSTART_TH.md](CREATOR_QUICKSTART_TH.md)
 
