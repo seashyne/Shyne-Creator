@@ -257,7 +257,7 @@ public class ShyneSettingsScreen extends Screen {
         return switch (value) {
             case INTERFACE -> List.of(
                 new ScreenAction("screen.shyne_core.inputs.title", "screen.shyne_core.inputs.tooltip", () -> openScreen(new AvatarInputSettingsScreen(this)), () -> true),
-                new ScreenAction("screen.shyne_core.power_deck.title", "screen.shyne_core.home.actions.tooltip", () -> openScreen(new PowerDeckScreen(this)), () -> true)
+                new ScreenAction("screen.shyne_core.power_deck.title", "screen.shyne_core.pause_powers_button.tooltip", () -> openScreen(new PowerDeckScreen(this)), () -> true)
             );
             case ADVANCED -> List.of(
                 new ScreenAction(
@@ -277,8 +277,8 @@ public class ShyneSettingsScreen extends Screen {
                     actions.add(new ScreenAction("screen.shyne_core.avatars.outfit", "screen.shyne_core.avatars.outfit.tooltip", () -> openScreen(new AvatarOutfitScreen(this)), () -> true));
                 }
                 actions.add(new ScreenAction("screen.shyne_core.avatars.actions", "screen.shyne_core.avatars.actions.tooltip", () -> openScreen(new AvatarActionWheelScreen(this)), () -> true));
-                actions.add(new ScreenAction("screen.shyne_core.power_deck.title", "screen.shyne_core.home.actions.tooltip", () -> openScreen(new PowerDeckScreen(this)), () -> true));
-                actions.add(new ScreenAction("screen.shyne_core.items.title", "screen.shyne_core.home.content.tooltip", () -> openScreen(new ItemCatalogScreen(this)), () -> true));
+                actions.add(new ScreenAction("screen.shyne_core.power_deck.title", "screen.shyne_core.pause_powers_button.tooltip", () -> openScreen(new PowerDeckScreen(this)), () -> true));
+                actions.add(new ScreenAction("screen.shyne_core.items.title", "screen.shyne_core.pause_items_button.tooltip", () -> openScreen(new ItemCatalogScreen(this)), () -> true));
                 actions.add(new ScreenAction(
                     "setting.shyne_core.audio_volume",
                     "setting.shyne_core.audio_volume.desc",
