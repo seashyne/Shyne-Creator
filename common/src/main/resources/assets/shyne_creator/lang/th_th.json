@@ -7,6 +7,7 @@
   "screen.shyne_core.home.title": "SHYNE CREATOR",
   "screen.shyne_core.home.subtitle": "สร้างได้อิสระ เลือกอวตาร แล้วเริ่มเล่น",
   "screen.shyne_core.home.current": "กำลังใช้: %s",
+  "screen.shyne_core.home.active_label": "อวตารที่ใช้อยู่",
   "screen.shyne_core.home.none": "ตัวละคร Minecraft ปกติ",
   "screen.shyne_core.home.count": "มีอวตารให้ใช้ %s รายการ",
   "screen.shyne_core.home.avatars": "อวตารของฉัน",
