@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 /** Stores and draws render tasks declared by active Avatar Lua runtimes. */
 public final class AvatarRenderTaskRegistry {
@@ -117,6 +118,27 @@ public final class AvatarRenderTaskRegistry {
     public static int lastScreenHeight() { return lastScreenHeight; }
 
     public static void extractHud(GuiGraphicsExtractor graphics) {
+        extract2d(graphics, snapshot -> {
+            TaskSpec task = snapshot.spec;
+            return !task.world && task.surface.isBlank();
+        }, "HUD", true);
+    }
+
+    /**
+     * Renders an Avatar-owned named canvas above its dedicated input screen.
+     * Canvas tasks never leak into the ordinary in-game HUD.
+     */
+    public static void extractSurface(GuiGraphicsExtractor graphics, String avatarId, String surface) {
+        String safeAvatar = safe(avatarId);
+        String safeSurface = safeSurface(surface);
+        if (safeAvatar.isBlank() || safeSurface.isBlank()) return;
+        extract2d(graphics, snapshot -> {
+            TaskSpec task = snapshot.spec;
+            return !task.world && snapshot.avatarId.equals(safeAvatar) && task.surface.equals(safeSurface);
+        }, "CANVAS", false);
+    }
+
+    private static void extract2d(GuiGraphicsExtractor graphics, Predicate<Snapshot> include, String pass, boolean hud) {
         long started = System.nanoTime();
         try {
             lastScreenWidth = graphics.guiWidth();
@@ -129,7 +151,7 @@ public final class AvatarRenderTaskRegistry {
             for (Snapshot snapshot : snapshots()) {
                 try {
                 TaskSpec task = snapshot.spec;
-                if (task.world) continue;
+                if (!include.test(snapshot)) continue;
                 if (!task.visible) continue;
                 if (rendered >= MAX_RENDERED_TASKS_PER_FRAME) {
                     culled++;
@@ -171,11 +193,13 @@ public final class AvatarRenderTaskRegistry {
                 rendered++;
                 } catch (RuntimeException error) {
                     culled++;
-                    warnInvalidTask(snapshot, "HUD", error);
+                    warnInvalidTask(snapshot, pass, error);
                 }
             }
-            lastHudRendered = rendered;
-            lastHudCulled = culled;
+            if (hud) {
+                lastHudRendered = rendered;
+                lastHudCulled = culled;
+            }
             updateFrameStats();
         } finally {
             AvatarProfiler.record(AvatarProfiler.Category.TASK_RENDER, System.nanoTime() - started);
@@ -558,7 +582,7 @@ public final class AvatarRenderTaskRegistry {
             value.attachmentEntityId, truncate(value.attachmentModelId, 256), truncate(value.attachmentPath, 512),
             clamp(value.localOffsetX, -4096, 4096), clamp(value.localOffsetY, -4096, 4096), clamp(value.localOffsetZ, -4096, 4096),
             clamp(value.localToX, -4096, 4096), clamp(value.localToY, -4096, 4096), clamp(value.localToZ, -4096, 4096),
-            value.localDestination, value.billboard, value.fullbright);
+            value.localDestination, value.billboard, value.fullbright, safeSurface(value.surface));
     }
 
     private static String normalType(String value) {
@@ -570,6 +594,7 @@ public final class AvatarRenderTaskRegistry {
     }
 
     private static String safe(String value) { return value == null ? "" : value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_.-]", "_"); }
+    private static String safeSurface(String value) { return truncate(safe(value), 96); }
     private static String truncate(String value, int max) { return value == null ? "" : value.substring(0, Math.min(max, value.length())); }
     private static double finite(double value) { return Double.isFinite(value) ? value : 0; }
     private static double coordinate(double value, boolean world) {
@@ -585,7 +610,7 @@ public final class AvatarRenderTaskRegistry {
                            UUID attachmentEntityId, String attachmentModelId, String attachmentPath,
                            double localOffsetX, double localOffsetY, double localOffsetZ,
                            double localToX, double localToY, double localToZ,
-                           boolean localDestination, boolean billboard, boolean fullbright) {
+                           boolean localDestination, boolean billboard, boolean fullbright, String surface) {
         /** Compatibility constructor for Java callers that do not bind a bone. */
         public TaskSpec(String type, boolean world, String content, String resource,
                         double x, double y, double z, double x2, double y2, double z2,
@@ -594,7 +619,7 @@ public final class AvatarRenderTaskRegistry {
                         int zIndex, double opacity) {
             this(type, world, content, resource, x, y, z, x2, y2, z2,
                 width, height, scale, color, shadow, visible, maxDistance, zIndex, opacity,
-                null, "", "", 0, 0, 0, 0, 0, 0, false, true, false);
+                null, "", "", 0, 0, 0, 0, 0, 0, false, true, false, "");
         }
     }
     public record Snapshot(String stableId, String avatarId, String id, TaskSpec spec) {}

@@ -1,8 +1,8 @@
 # 📖 Shyne Creator — API Reference ฉบับสมบูรณ์
 
-> ตรวจทานกับ Shyne Creator `2.12.3` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
+> ตรวจทานกับ Shyne Creator `2.12.4` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
 
-> **เวอร์ชัน:** `2.10.0-alpha-26.3` | **Standard:** `2.0` | **ภาษา:** ไทย  
+> **เวอร์ชัน:** `2.12.4` | **Standard:** `2.0` | **ภาษา:** ไทย
 > เอกสารนี้รวม **ทุก API** ของ Shyne Creator ไว้ในที่เดียว
 
 ---
@@ -19,7 +19,7 @@
 | 6 | [State & Network](#6-state--network) | ค่าชั่วคราว, ค่าซิงก์, schema |
 | 7 | [Events API](#7-events-api) | `events.on`, lifecycle, microphone |
 | 8 | [Vector & Matrix](#8-vector--matrix) | `vector.new`, `matrix4.*`, คณิตศาสตร์ |
-| 9 | [Custom Render API 1.3](#9-custom-render-api-13) | HUD, World task, Group, Bone binding |
+| 9 | [Custom Render API 1.4](#9-custom-render-api-14) | HUD, World task, Group, Bone binding, Script Canvas |
 | 10 | [Rig API 1.3](#10-rig-api-13) | Physics, Chain, IK, Animation Graph |
 | 11 | [Input API](#11-input-api) | ปุ่ม Dynamic, keyboard/mouse binding |
 | 12 | [Sound & Particle](#12-sound--particle) | เสียงและอนุภาค |
@@ -55,7 +55,8 @@ Shyne Avatar Standard 2.0 เป็นมาตรฐานแบบ **model-fir
   "main": "script.lua",
   "api": "2.0",
   "requires": {
-    "render": ">=1.3",
+    "render": ">=1.4",
+    "ui": ">=1.2",
     "scheduler": "^1.1",
     "rig": ">=1.3"
   }
@@ -66,7 +67,7 @@ Shyne Avatar Standard 2.0 เป็นมาตรฐานแบบ **model-fir
 
 ```lua
 print(shyne.api.version, shyne.api.automatic)
-if shyne.api.supports("render", ">=1.3") then
+if shyne.api.supports("render", ">=1.4") then
   render.rect("panel", { x = 8, y = 8, width = 80, height = 24 })
 end
 shyne.api.require("scheduler", ">=1.1")
@@ -87,10 +88,10 @@ shyne.api.require("scheduler", ">=1.1")
 | `modules` | 2.0 | module system |
 | `network` | 2.0 | state sync, remote read |
 | `permissions` | 2.0 | trust/permission check |
-| `render` | 1.3 | HUD + world task + bone binding |
+| `render` | 1.4 | HUD + world task + bone binding + Canvas surface |
 | `scheduler` | 1.1 | `task.after`, `task.every` |
 | `transform` | 1.0 | vanilla pose, world matrix |
-| `ui` | 2.0 | Palette actions |
+| `ui` | 1.2 | Palette actions + Script Canvas |
 | `vector` | 2.0 | vec math |
 | `rig` | 1.3 | physics, chain, IK, armor |
 
@@ -469,7 +470,7 @@ if not safe.ok then print(safe.error.code, safe.error.message) end
 
 ---
 
-## 9. Custom Render API 1.3
+## 9. Custom Render API 1.4
 
 ### Primitives
 
@@ -800,7 +801,7 @@ particle.spawn("minecraft:bubble", minecraft.player.position(), {
 
 ---
 
-## 13. UI (Palette) API
+## 13. UI API — Palette และ Script Canvas
 
 ### Action
 
@@ -830,6 +831,20 @@ ui.toggle({
   end
 })
 ```
+
+### Canvas (Creator UI แบบไม่มีหน้าตาสำเร็จรูป)
+
+```lua
+local menu = ui.canvas({ id = "my_menu", backdrop = 0x88000000 })
+menu:rect("panel", { x = 80, y = 60, width = 180, height = 90, color = 0xFF17233A })
+menu:text("heading", { x = 94, y = 76, text = "MY OWN UI", color = 0xFF55FFFF })
+menu:button({ id = "close", x = 180, y = 120, width = 64, height = 18,
+  on_click = function(event) menu:close() end
+})
+input.bind("menu", { title = "Open Menu", key = input.key.u, on_press = function() menu:open() end })
+```
+
+Canvas รับ input เต็มจอ แต่ไม่วาด UI ใดแทน Creator. `canvas:rect/text/sprite/item/block/line/outline` เป็น task เฉพาะ Canvas และ `canvas:button` เป็น hitbox โปร่งใสที่รับ `{ id, x, y, button, double_click }`. ต้องมี `hud_render`, `ui >=1.2` และ `render >=1.4`; ดูตัวอย่างเต็มที่ `tools/examples/script-canvas-ui-avatar`.
 
 ---
 
@@ -1192,4 +1207,4 @@ figura.compatibility_level -- "100%"
 ---
 
 > 📝 เอกสารนี้สร้างอัตโนมัติจาก `SHYNE_LUA_API_TH.md`, `CUSTOM_RENDER_API_TH.md`, `RIG_API_TH.md`, `SHYNE_GAMEPLAY_API_TH.md`, `CLOUD_API.md` และ `60_figura_compat.lua`  
-> อัปเดตล่าสุด: 2026-09-30 | Shyne Creator v2.12.3
+> อัปเดตล่าสุด: 2026-09-30 | Shyne Creator v2.12.4

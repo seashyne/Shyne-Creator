@@ -1,0 +1,16 @@
+{
+  "standard": "2.0",
+  "api": "2.0",
+  "requires": {
+    "input": ">=1.0",
+    "render": ">=1.3",
+    "ui": ">=1.2"
+  },
+  "id": "shyne.script_canvas_ui",
+  "name": "Script Canvas UI",
+  "version": "1.0.0",
+  "main": "script.lua",
+  "replace_vanilla": false,
+  "online_sync": false,
+  "permissions": ["hud_render"]
+}

@@ -1,6 +1,6 @@
 # Shyne Native Lua API — Standard 2.0
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.3` และ Lua contract `api: "2.0"` รายการคู่มือและ schema ที่เกี่ยวข้องอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.4` และ Lua contract `api: "2.0"` รายการคู่มือและ schema ที่เกี่ยวข้องอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
 
 Lua เป็นชั้นควบคุมหลักสำหรับงานอิสระและงานขั้นสูงของ Shyne Avatar Standard 2.0 ส่วน Avatar แบบ model-first ทั่วไปเริ่มได้โดยไม่ต้องมี `script.lua` หากต้องใช้ procedural rig, physics, UI หรือ logic เฉพาะ ให้ระบุ `main` และใช้ API ของ Shyne โดยตรง โดยไม่พึ่ง Figura:
 
@@ -11,7 +11,7 @@ Lua เป็นชั้นควบคุมหลักสำหรับง�
 | `avatar` | ตั้งค่ากล้อง texture vanilla model และการซิงก์ |
 | `state` | เก็บค่าชั่วคราวหรือค่าที่ซิงก์ |
 | `events` | รับเหตุการณ์ด้วย `events.on(...)` |
-| `ui` | เพิ่ม Action ใน Palette |
+| `ui` | สร้าง Action Wheel/Palette หรือ Script Canvas ที่วาดเองทั้งหมด |
 | `vector` | สร้างและคำนวณค่า x/y/z |
 | `render` | วาด HUD, item, block, sprite, line และ world task |
 | `input` | เพิ่มปุ่ม Dynamic ระหว่างเกม |
@@ -42,7 +42,8 @@ Lua เป็นชั้นควบคุมหลักสำหรับง�
   "main": "script.lua",
   "api": "2.0",
   "requires": {
-    "render": ">=1.3",
+    "render": ">=1.4",
+    "ui": ">=1.2",
     "scheduler": "^1.1"
   }
 }
@@ -52,13 +53,13 @@ Lua เป็นชั้นควบคุมหลักสำหรับง�
 
 ```lua
 print(shyne.api.version, shyne.api.automatic)
-if shyne.api.supports("render", ">=1.3") then
+if shyne.api.supports("render", ">=1.4") then
   render.rect("panel", { x = 8, y = 8, width = 80, height = 24 })
 end
 shyne.api.require("scheduler", ">=1.1")
 ```
 
-โมดูลใน Standard 2.0 ได้แก่ `core`, `animation`, `behavior`, `diagnostics`, `easy`, `events`, `input`, `minecraft`, `modules`, `network`, `permissions`, `render`, `scheduler`, `transform`, `ui`, `vector` และ `rig` โดยรอบนี้ `events` เป็น `2.0`, `render` เป็น `1.3` และ `transform` เป็น `1.0`
+โมดูลใน Standard 2.0 ได้แก่ `core`, `animation`, `behavior`, `diagnostics`, `easy`, `events`, `input`, `minecraft`, `modules`, `network`, `permissions`, `render`, `scheduler`, `transform`, `ui`, `vector` และ `rig` โดยรอบนี้ `events` เป็น `2.0`, `render` เป็น `1.4`, `ui` เป็น `1.2` และ `transform` เป็น `1.0`
 
 ## Easy API: เขียนสั้น แต่ไม่เสียความละเอียด
 
@@ -533,7 +534,7 @@ render.remove("icon")
 render.clear()
 ```
 
-รองรับ `text`, `item`, `block`, `sprite`, `line`, `rect`, `outline`, `polyline` และ world task 3D ทุกชนิด Custom Render API 1.3 เพิ่ม native bone binding ในเฟรมเดียวกัน, การสืบทอด rotation/scale ด้วย `billboard = false`, แสงโลก/`fullbright`, frustum culling และงบ glyph บนของเดิมจาก 1.2 ดูรายละเอียดและตัวอย่างเต็มใน `CUSTOM_RENDER_API_TH.md`
+รองรับ `text`, `item`, `block`, `sprite`, `line`, `rect`, `outline`, `polyline` และ world task 3D ทุกชนิด Custom Render API 1.4 เพิ่ม Script Canvas UI ที่ Creator วาดและวาง hitbox เอง, native bone binding ในเฟรมเดียวกัน, การสืบทอด rotation/scale ด้วย `billboard = false`, แสงโลก/`fullbright`, frustum culling และงบ glyph ดูรายละเอียดและตัวอย่างเต็มใน `CUSTOM_RENDER_API_TH.md`
 
 เรียก ID เดิมหรือ `render.update` เพื่ออัปเดต task เดิม เก็บได้ 256 tasks แต่เรนเดอร์ไม่เกิน 128 tasks ต่อ pass, 4096 จุดเส้น HUD และ 4096 glyph World task เป็น geometry แบบ depth-tested ใน world renderer ถูก cull นอก frustum หรือเกิน `max_distance` (เริ่มต้น 128 blocks) และรับแสงโลกจริงโดยปริยาย งานที่ผูก `attach`/`bone` resolve matrix ใน Java โดยไม่ต้องอัปเดตจาก Lua ทุกเฟรม การวาดไม่เขียนข้อมูลลง world และไม่ส่ง network ต้องประกาศ permission `hud_render` หรือ `world_render` ตามชนิดงาน
 

@@ -1,6 +1,6 @@
 # Shyne Creator API Contracts
 
-เอกสารนี้เป็นดัชนีสัญญา API ของ Shyne Creator `2.12.3` สำหรับ Creator, ผู้ทำ content pack และผู้พัฒนาม็อดเสริม ใช้ร่วมกับ schema ใน JAR เพื่อไม่ต้องเดาว่า field หรือ API ใดเป็นสัญญาสาธารณะ
+เอกสารนี้เป็นดัชนีสัญญา API ของ Shyne Creator `2.12.4` สำหรับ Creator, ผู้ทำ content pack และผู้พัฒนาม็อดเสริม ใช้ร่วมกับ schema ใน JAR เพื่อไม่ต้องเดาว่า field หรือ API ใดเป็นสัญญาสาธารณะ
 
 ## เลือกคู่มือให้ตรงงาน
 
@@ -8,7 +8,7 @@
 |---|---|---|
 | Avatar แบบไม่เขียน Lua | [Shyne Avatar Standard 2.0](SHYNE_STANDARD_2_TH.md) | `avatar.schema.json` |
 | Avatar Lua, event, input, state และ Figura compatibility | [Shyne Native Lua API](SHYNE_LUA_API_TH.md) | `api: "2.0"`, `requires` ใน `avatar.json` |
-| HUD, world task และ bone attachment | [Custom Render API 1.3](CUSTOM_RENDER_API_TH.md) | permission `hud_render` / `world_render` |
+| HUD, world task, bone attachment และ Script Canvas UI | [Custom Render API 1.4](CUSTOM_RENDER_API_TH.md) | permission `hud_render` / `world_render` |
 | Physics, IK, armor และ SquAPI | [Native Rig API 1.3](RIG_API_TH.md) | `requires.rig: ">=1.3"` |
 | Skill, Item, Weapon และคำสั่งฝั่ง server | [Gameplay API](SHYNE_GAMEPLAY_API_TH.md) | `skill.schema.json`, `item.schema.json`, `weapon.schema.json` |
 | ไอคอน PNG และ Creator Asset Package | [Power & Asset Package 1.0](POWER_ASSET_PACKAGE_TH.md) | `shyne_asset_package.schema.json` |

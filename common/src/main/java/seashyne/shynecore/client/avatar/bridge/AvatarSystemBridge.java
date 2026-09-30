@@ -259,7 +259,7 @@ public final class AvatarSystemBridge {
                 result.set("api_version", LuaValue.valueOf(AvatarLoader.AVATAR_API_VERSION));
                 result.set("api_standard", LuaValue.valueOf(state.apiStandard()));
                 result.set("api_automatic", LuaValue.valueOf(state.automaticApi()));
-                result.set("custom_render_api_version", LuaValue.valueOf("1.3"));
+                result.set("custom_render_api_version", LuaValue.valueOf("1.4"));
                 result.set("parts_controlled", LuaValue.valueOf(state.parts().size()));
                 result.set("animation_layers", LuaValue.valueOf(state.animationLayers().size()));
                 result.set("input_bindings", LuaValue.valueOf(inputBindingCountSupplier.getAsInt()));
@@ -283,7 +283,7 @@ public final class AvatarSystemBridge {
                     result.set("textures", LuaValue.valueOf(model.textures().size()));
                 }
                 LuaTable features = new LuaTable();
-                for (String feature : List.of("lua_api_1_1", "api_auto_latest", "api_requirements", "event_isolation", "event_delta", "scheduler", "vector_math", "permission_query", "multi_animation", "animation_fade", "animation_mask", "animation_transition", "animation_expression", "animation_parameter", "blockbench_5_1", "additive_animation", "shortest_rotation", "part_color", "part_opacity", "part_translucency", "part_emissive", "camera_transform", "nameplate", "sound", "particle", "input", "input_mouse", "input_modifiers", "input_repeat", "render_text", "render_item", "render_block", "render_sprite", "render_line", "render_world", "render_world_3d", "render_world_light", "render_bone_binding", "render_rect", "render_outline", "render_polyline", "render_groups", "render_task_update", "render_screen", "profiler", "online_sync")) {
+                for (String feature : List.of("lua_api_1_1", "api_auto_latest", "api_requirements", "event_isolation", "event_delta", "scheduler", "vector_math", "permission_query", "multi_animation", "animation_fade", "animation_mask", "animation_transition", "animation_expression", "animation_parameter", "blockbench_5_1", "additive_animation", "part_color", "part_opacity", "part_translucency", "part_emissive", "camera_transform", "nameplate", "sound", "particle", "input", "input_mouse", "input_modifiers", "input_repeat", "render_text", "render_item", "render_block", "render_sprite", "render_line", "render_world", "render_world_3d", "render_world_light", "render_bone_binding", "render_rect", "render_outline", "render_polyline", "render_groups", "render_task_update", "render_screen", "script_canvas_ui", "script_canvas_click", "profiler", "online_sync")) {
                     features.set(feature, LuaValue.TRUE);
                 }
                 result.set("features", features);

@@ -1,8 +1,8 @@
-# Shyne Custom Render API 1.3
+# Shyne Custom Render API 1.4
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.3` และ Render API `1.3` ดูขอบเขต permission และเอกสาร API อื่นได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.4` และ Render API `1.4` ดูขอบเขต permission และเอกสาร API อื่นได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
-Custom Render API 1.3 เป็นโมดูล render ภายใต้ Shyne Avatar Standard 2.0 Avatar ใหม่ใช้ผ่าน `api: "2.0"` หรือ `api: "latest"` และตรวจได้จาก `shyne.api.supports("render", ">=1.3")`, `render.api_version` หรือ `diagnostics.snapshot().custom_render_api_version`
+Custom Render API 1.4 เป็นโมดูล render ภายใต้ Shyne Avatar Standard 2.0 Avatar ใหม่ใช้ผ่าน `api: "2.0"` หรือ `api: "latest"` และตรวจได้จาก `shyne.api.supports("render", ">=1.4")`, `render.api_version` หรือ `diagnostics.snapshot().custom_render_api_version`
 
 ## Primitive
 
@@ -53,6 +53,41 @@ end)
 Group รองรับ `x`, `y`, `z`, `scale`, `scale_x`, `scale_y`, `scale_z`, `opacity`, `visible`, `z_index` และ group ซ้อนกันได้สูงสุด 16 ชั้น ระบบตัดวงจร group อัตโนมัติ ควรอัปเดต group เฉพาะเมื่อค่ามีการเปลี่ยนเพื่อลดงานต่อเฟรม
 
 `render.screen()` คืน `width`, `height`, `ready` ตามขนาด GUI ล่าสุด และ `render.stats()` คืน `tasks`, `rendered`, `culled`, `task_limit`, `frame_limit`, `line_point_limit`, `glyph_limit`
+
+## Script Canvas UI — Creator วาดเองทั้งหมด
+
+`ui.canvas` (UI API `1.2`) เปิดพื้นที่รับ input แบบเต็มจอ แต่ **ไม่วาดกรอบ ปุ่ม หัวข้อ หรือ theme ใดของ Shyne**. Creator วาดด้วย `canvas:rect`, `canvas:text`, `canvas:sprite` และกำหนด hitbox โปร่งใสด้วย `canvas:button` เอง จึงทำหน้าตาได้อิสระแบบ Figura HUD/Action UI โดยไม่ต้องแก้ Java หรือสร้าง schema UI.
+
+```lua
+local menu = ui.canvas({
+  id = "my_menu",
+  backdrop = 0x99000000,       -- ใส่ 0x00000000 หากไม่ต้องการ dim โลก
+  close_on_escape = true,
+  on_open = function() print("menu opened") end,
+  on_close = function() print("menu closed") end
+})
+
+local function draw_menu()
+  local screen = render.screen()
+  local x, y = (screen.width - 220) / 2, (screen.height - 120) / 2
+  menu:rect("card", { x = x, y = y, width = 220, height = 120, color = 0xFF17233A })
+  menu:text("title", { x = x + 14, y = y + 14, text = "MY MENU", color = 0xFF55FFFF })
+  menu:text("close_text", { x = x + 148, y = y + 88, text = "Close", color = 0xFFFFFFFF })
+  menu:button({ id = "close", x = x + 140, y = y + 82, width = 64, height = 20,
+    on_click = function(event) menu:close() end
+  })
+end
+
+input.bind("open_menu", { title = "Open My Menu", key = input.key.u,
+  on_press = function() draw_menu(); menu:open() end
+})
+```
+
+- `canvas:button` เป็น hitbox เท่านั้น; callback ได้ `{ id, x, y, button, double_click }`
+- Task ที่สร้างจาก `canvas:*` วาดเฉพาะเมื่อ Canvas นั้นเปิด และไม่รั่วไปยัง HUD ปกติ
+- `canvas:update`, `canvas:remove` และ `canvas:clear` จัดการ task ของ Canvas โดยไม่กระทบ Avatar/HUD อื่น
+- ต้องประกาศ `"ui": ">=1.2"`, `"render": ">=1.4"` และ permission `hud_render`; Public Avatar ยังต้องได้รับอนุมัติ permission จากผู้ใช้
+- ไม่ใช้ WebView, React, HTML หรือ JavaScript runtime — ใช้ Lua และ native renderer โดยตรง
 
 ## World task
 
@@ -110,3 +145,4 @@ Task ที่มี `attach` หรือ `bone` เก็บ native binding �
 - `tools/examples/advanced-render-avatar`
 - `tools/examples/responsive-hud-avatar`
 - `tools/examples/render-profiler-avatar`
+- `tools/examples/script-canvas-ui-avatar`

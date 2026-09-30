@@ -27,6 +27,7 @@ import advancedExample from '../../tools/examples/advanced-render-avatar/README_
 import hudExample from '../../tools/examples/responsive-hud-avatar/README_TH.md?raw'
 import profilerExample from '../../tools/examples/render-profiler-avatar/README_TH.md?raw'
 import actionWheelExample from '../../tools/examples/action-wheel-showcase-avatar/README.md?raw'
+import scriptCanvasExample from '../../tools/examples/script-canvas-ui-avatar/README_TH.md?raw'
 
 export type DocIcon = 'book' | 'download' | 'sparkles' | 'box' | 'play' | 'layers' | 'braces' | 'palette' | 'gamepad' | 'cloud' | 'shield' | 'users' | 'wrench' | 'workflow'
 export type DocItem = {
@@ -40,7 +41,7 @@ export type DocItem = {
   api?: boolean
 }
 
-export const version = '2.12.3'
+export const version = '2.12.4'
 export const minecraftVersion = '26.3'
 
 const installation = `# ติดตั้ง Shyne Creator
@@ -57,8 +58,8 @@ Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}*
 
 | คุณต้องการทำอะไร | ไฟล์ที่ต้องใช้ |
 | --- | --- |
-| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-2.12.3.jar\` พร้อม Fabric API |
-| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-2.12.3.jar\` |
+| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-2.12.4.jar\` พร้อม Fabric API |
+| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-2.12.4.jar\` |
 | สร้าง Avatar ด้วย Blockbench | Shyne Creator Kit — **ห้ามนำไปใส่ในโฟลเดอร์ mods** |
 
 ## ความต้องการของระบบ
@@ -74,13 +75,13 @@ Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}*
 ## ติดตั้งบน Fabric
 
 1. ติดตั้ง Fabric Loader สำหรับ Minecraft ${minecraftVersion}
-2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.12.3.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
+2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.12.4.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมแล้วตรวจว่ามีโลโก้ Shyne ในหน้าเมนูหลัก หรือเมนู \`Esc → อวตาร\`
 
 ## ติดตั้งบน NeoForge
 
 1. ติดตั้ง NeoForge สำหรับ Minecraft ${minecraftVersion}
-2. ใส่ไฟล์ \`shyne-creator-neoforge-2.12.3.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
+2. ใส่ไฟล์ \`shyne-creator-neoforge-2.12.4.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมด้วยโปรไฟล์ NeoForge แล้วตรวจว่ามีเมนู \`Esc → อวตาร\`
 
 ## ติดตั้งเสร็จแล้วทำอะไรต่อ
@@ -119,7 +120,7 @@ export const docs: DocItem[] = [
   { slug: 'blockbench-animation', title: 'Blockbench Animation Standard', shortTitle: 'Animation Standard', description: 'รูปแบบแอนิเมชัน Expression และค่าที่ runtime รองรับ', category: 'Blockbench', icon: 'play', content: blockbench },
   { slug: 'rig-api', title: 'Native Rig API 1.3', shortTitle: 'Rig & Physics', description: 'Spring, chain, collision, IK, cosmetic armor และ Custom Avatar', category: 'สร้าง Avatar', icon: 'workflow', content: rig, api: true },
   { slug: 'lua-api', title: 'Shyne Native Lua API — Standard 2.0', shortTitle: 'Lua API 2.0', description: 'API หลักสำหรับโมเดล state, network, event, sound และ input', category: 'API และระบบ', icon: 'braces', content: lua, api: true },
-  { slug: 'render-api', title: 'Custom Render API 1.3', shortTitle: 'Render API 1.3', description: 'Primitive, HUD, world task, native bone binding และ performance budget', category: 'API และระบบ', icon: 'palette', content: render, api: true },
+  { slug: 'render-api', title: 'Custom Render API 1.4', shortTitle: 'Render API 1.4', description: 'Primitive, HUD, world task, Script Canvas และ native bone binding', category: 'API และระบบ', icon: 'palette', content: render, api: true },
   { slug: 'gameplay-api', title: 'Shyne Gameplay API', shortTitle: 'Gameplay API', description: 'สร้าง item, skill, power และ combat system ฝั่งเซิร์ฟเวอร์', category: 'API และระบบ', icon: 'gamepad', content: gameplay, api: true },
   { slug: 'asset-package', title: 'Power & Asset Package 1.0', shortTitle: 'Asset Package', description: 'แพ็ก skill/item และ PNG icon สำหรับ native UI โดยไม่มี WebView', category: 'API และระบบ', icon: 'box', content: powerAssets, api: true },
   { slug: 'api-reference', title: 'API Reference ฉบับสมบูรณ์', shortTitle: 'API Reference', description: 'รวม Native Lua, Render, Rig, Gameplay, Cloud และ Figura compatibility', category: 'API และระบบ', icon: 'braces', content: completeApi, api: true },
@@ -141,6 +142,7 @@ export const exampleDocs = [
   { title: 'Advanced Custom Render', description: 'Rect, outline, polyline, render group, responsive HUD และ world-anchored task', permission: 'hud_render + world_render', content: advancedExample, image: 'integration-avatar.png' },
   { title: 'Responsive HUD', description: 'HUD ที่จัดตำแหน่งตามความกว้างหน้าจอและ GUI scale', permission: 'hud_render', content: hudExample },
   { title: 'Render Profiler', description: 'ตัวอย่างตรวจงบ render และวิเคราะห์ task ของ Avatar', permission: 'profiler', content: profilerExample },
+  { title: 'Script Canvas UI', description: 'หน้า UI เต็มจอที่วาดและกำหนดปุ่มคลิกเองทั้งหมดด้วย Lua', permission: 'hud_render', content: scriptCanvasExample },
 ]
 
 export const fileToSlug: Record<string, string> = {

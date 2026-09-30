@@ -4,7 +4,7 @@
 -- ==============================================================================
 
 render = {
-  api_version = "1.3",
+  api_version = "1.4",
   _tasks = {},
   _groups = {},
   _collections = {}
@@ -113,7 +113,8 @@ local function render_push(id, kind, options)
       resolved.max_distance or 128, resolved.z_index or 0, resolved.opacity or 1,
       attachment_path, local_offset.x, local_offset.y, local_offset.z,
       local_to.x, local_to.y, local_to.z, has_local_to, billboard,
-      resolved.fullbright == true or resolved.light == "fullbright")
+      resolved.fullbright == true or resolved.light == "fullbright",
+      resolved.surface or resolved.canvas or "")
   end
 
   if ok then return id end

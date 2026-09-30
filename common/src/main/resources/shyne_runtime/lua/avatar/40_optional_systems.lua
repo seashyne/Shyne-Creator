@@ -62,6 +62,101 @@ function ui.page(id)
 end
 
 -- ------------------------------------------------------------------------------
+-- SCRIPT CANVAS
+-- ------------------------------------------------------------------------------
+-- A canvas is intentionally blank: Lua draws every pixel through render.* and
+-- supplies the invisible hit areas that should receive mouse input. This keeps
+-- Creator UI independent from Shyne's built-in menus.
+local function canvas_copy(value)
+  local result = {}
+  for key, item in pairs(value or {}) do result[key] = item end
+  return result
+end
+
+--- Creates a full-screen interactive canvas owned and styled entirely by this Avatar.
+--- @param options table { id, pause, backdrop, close_on_escape, on_open, on_close }
+--- @return table Canvas handle
+function ui.canvas(options)
+  options = options or {}
+  local id = tostring(options.id or ("canvas_" .. tostring(math.random(1000000)))):lower():gsub("[^%w_.-]", "_"):sub(1, 64)
+  local surface = "canvas." .. id
+  local ok = _shyne_ui_canvas_define and _shyne_ui_canvas_define(
+    id, bool(options.pause), options.backdrop or 0x00000000,
+    options.close_on_escape ~= false, options.on_open, options.on_close
+  )
+  if not ok then return nil end
+
+  local canvas = { id = id, surface = surface, _tasks = {} }
+
+  function canvas:open()
+    return _shyne_ui_canvas_open and _shyne_ui_canvas_open(self.id) or false
+  end
+
+  function canvas:close()
+    return _shyne_ui_canvas_close and _shyne_ui_canvas_close(self.id) or false
+  end
+
+  --- Adds or replaces a clickable rectangle. Drawing its visual is still the Creator's job.
+  function canvas:button(button)
+    button = button or {}
+    local button_id = tostring(button.id or ("button_" .. tostring(math.random(1000000))))
+    return _shyne_ui_canvas_button and _shyne_ui_canvas_button(
+      self.id, button_id, tonumber(button.x) or 0, tonumber(button.y) or 0,
+      tonumber(button.width or button.w) or 1, tonumber(button.height or button.h) or 1,
+      button.on_click or button.on_use
+    ) or false
+  end
+
+  function canvas:clear_buttons()
+    return _shyne_ui_canvas_clear_buttons and _shyne_ui_canvas_clear_buttons(self.id) or false
+  end
+
+  --- Draws a task onto this canvas only; it never appears in the normal HUD.
+  function canvas:draw(kind, task_id, draw_options)
+    local draw = render and render[kind]
+    if type(draw) ~= "function" then return false end
+    local local_id = tostring(task_id or kind)
+    local options_copy = canvas_copy(draw_options)
+    options_copy.surface = self.surface
+    local qualified_id = "canvas." .. self.id .. "." .. local_id
+    local result = draw(qualified_id, options_copy)
+    if result then self._tasks[local_id] = qualified_id end
+    return result
+  end
+
+  function canvas:text(task_id, draw_options) return self:draw("text", task_id, draw_options) end
+  function canvas:rect(task_id, draw_options) return self:draw("rect", task_id, draw_options) end
+  function canvas:outline(task_id, draw_options) return self:draw("outline", task_id, draw_options) end
+  function canvas:sprite(task_id, draw_options) return self:draw("sprite", task_id, draw_options) end
+  function canvas:item(task_id, draw_options) return self:draw("item", task_id, draw_options) end
+  function canvas:block(task_id, draw_options) return self:draw("block", task_id, draw_options) end
+  function canvas:line(task_id, draw_options) return self:draw("line", task_id, draw_options) end
+
+  function canvas:update(task_id, patch)
+    local qualified_id = self._tasks[tostring(task_id)]
+    if qualified_id == nil or render == nil then return false end
+    patch = canvas_copy(patch)
+    patch.surface = self.surface
+    return render.update(qualified_id, patch)
+  end
+
+  function canvas:remove(task_id)
+    local local_id = tostring(task_id)
+    local qualified_id = self._tasks[local_id]
+    if qualified_id == nil or render == nil then return false end
+    self._tasks[local_id] = nil
+    return render.remove(qualified_id)
+  end
+
+  function canvas:clear()
+    for _, qualified_id in pairs(self._tasks) do render.remove(qualified_id) end
+    self._tasks = {}
+  end
+
+  return canvas
+end
+
+-- ------------------------------------------------------------------------------
 -- EMOTES
 -- ------------------------------------------------------------------------------
 emote = {}

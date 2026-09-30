@@ -51,7 +51,8 @@ public final class AvatarRenderTaskBridge {
                     attachmentPath.isBlank() ? null : state.boundEntityId(), state.modelId(), attachmentPath,
                     args.arg(22).optdouble(0), args.arg(23).optdouble(0), args.arg(24).optdouble(0),
                     args.arg(25).optdouble(0), args.arg(26).optdouble(0), args.arg(27).optdouble(0),
-                    args.arg(28).optboolean(false), args.arg(29).optboolean(true), args.arg(30).optboolean(false)
+                    args.arg(28).optboolean(false), args.arg(29).optboolean(true), args.arg(30).optboolean(false),
+                    args.arg(31).optjstring("")
                 );
                 boolean added = AvatarRenderTaskRegistry.upsert(renderTaskOwner, state.avatarId(), id, spec);
                 if (added) renderTaskIds.add(id);

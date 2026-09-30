@@ -1,3 +1,12 @@
+## Shyne Creator v2.12.4
+
+### Creator-Owned Script Canvas UI
+
+- Added `ui.canvas` (UI API 1.2): a blank, native full-screen input surface for Avatar Lua with no forced Shyne frame, controls, theme or schema.
+- Creator scripts can draw Canvas-only text, rectangles, outlines, sprites, items, blocks and lines, then define their own transparent button hitboxes and click callbacks.
+- Added Canvas lifecycle (`open`, `close`, Escape behavior, pause option, `on_open`, `on_close`) and isolated canvas render surfaces so a custom screen never leaks into the normal HUD.
+- Extended Custom Render API to 1.4 and added the complete `script-canvas-ui-avatar` example and documentation.
+
 ## Shyne Creator v2.12.3
 
 ### API Documentation, Contracts & Power UI

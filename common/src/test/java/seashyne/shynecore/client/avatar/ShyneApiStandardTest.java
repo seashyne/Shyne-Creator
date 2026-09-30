@@ -26,6 +26,8 @@ final class ShyneApiStandardTest {
         assertTrue(ShyneApiStandard.supports("2.0", "render", ">=1.1"));
         assertTrue(ShyneApiStandard.supports("2.0", "render", ">=1.2"));
         assertTrue(ShyneApiStandard.supports("2.0", "render", ">=1.3"));
+        assertTrue(ShyneApiStandard.supports("2.0", "render", ">=1.4"));
+        assertTrue(ShyneApiStandard.supports("2.0", "ui", ">=1.2"));
         assertTrue(ShyneApiStandard.supports("2.0", "events", ">=2.0"));
         assertTrue(ShyneApiStandard.supports("2.0", "transform", "^1.0"));
         assertTrue(ShyneApiStandard.supports("2.0", "behavior", ">=2.0"));

@@ -166,7 +166,7 @@ final class LuaBootstrapSyntaxTest {
                   and math.abs(restored.x - 1) < 0.0001 and math.abs(restored.y - 1) < 0.0001 and math.abs(restored.z - 1) < 0.0001
                   and render_calls == 1 and math.abs(attached_x) < 0.0001
                   and attached_path == "model.Head" and math.abs(attached_local_x - 16) < 0.0001
-                  and events.api_version == "2.0" and render.api_version == "1.3"
+                  and events.api_version == "2.0" and render.api_version == "1.4"
                 """, "transform-attachment-test").call();
             assertTrue(transformAndAttachment.toboolean());
 
