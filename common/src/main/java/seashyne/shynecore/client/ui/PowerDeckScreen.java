@@ -48,6 +48,9 @@ public class PowerDeckScreen extends Screen {
 
     private final Screen parent;
     private EditBox searchBox;
+    private Button addActionButton;
+    private Button replaceActionButton;
+    private Button removeActionButton;
     private String selectedSkillId = "";
     private String selectedSlotId = "";
     private String listeningSlotId = null;   // slot waiting for keybind input
@@ -67,15 +70,19 @@ public class PowerDeckScreen extends Screen {
         CustomDeckManager.ensureLoaded();
         this.clearWidgets();
         int leftW = Math.max(200, this.width / 2 - 30);
-        int searchW = leftW - 8;
+        int clearWidth = 44;
+        int searchW = Math.max(72, leftW - 12 - clearWidth);
 
-        // Search box
-        this.searchBox = new EditBox(this.font, 14, 42, searchW, 18, Component.literal("Search skills…"));
+        this.searchBox = new EditBox(this.font, 14, 48, searchW, 18, Component.translatable("screen.shyne_core.power_deck.search"));
+        this.searchBox.setHint(Component.translatable("screen.shyne_core.power_deck.search"));
         this.searchBox.setResponder(s -> refreshCatalog());
         this.addRenderableWidget(this.searchBox);
+        this.addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.ui.clear"), ignored -> clearSearch())
+            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.ui.clear.tooltip")))
+            .bounds(18 + searchW, 48, clearWidth, 18).build());
 
-        // The bottom controls follow the natural flow: choose an action, add it,
-        // press a key. Replacing or removing an existing binding stays secondary.
+        refreshCatalog();
+
         int rightX = leftW + 24;
         int rightW = this.width - rightX - 16;
         int actionY = this.height - 30;
@@ -85,27 +92,35 @@ public class PowerDeckScreen extends Screen {
         int replaceW = compactActions ? 24 : 106;
         int removeW = compactActions ? 24 : 76;
 
-        this.addRenderableWidget(Button.builder(Component.literal(compactActions ? "+" : "+ Add action"), btn -> addSelectedAction())
-            .tooltip(Tooltip.create(Component.literal("Add the selected action, then choose its key")))
-            .bounds(rightX, actionY, addW, 20).build());
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.back"), btn -> closeToParent())
+            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.ui.back.tooltip")))
+            .bounds(14, actionY, 80, 20).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal(compactActions ? "↺" : "Replace selected"), btn -> replaceSelectedAction())
-            .tooltip(Tooltip.create(Component.literal("Put the selected action on the highlighted binding")))
-            .bounds(rightX + addW + 4, actionY, replaceW, 20).build());
+        addActionButton = Button.builder(Component.translatable(compactActions ? "screen.shyne_core.power_deck.add.short" : "screen.shyne_core.power_deck.add"), btn -> addSelectedAction())
+            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.power_deck.add.tooltip")))
+            .bounds(rightX, actionY, addW, 20).build();
+        this.addRenderableWidget(addActionButton);
 
-        this.addRenderableWidget(Button.builder(Component.literal(compactActions ? "−" : "✕ Remove"), btn -> {
+        replaceActionButton = Button.builder(Component.translatable(compactActions ? "screen.shyne_core.power_deck.replace.short" : "screen.shyne_core.power_deck.replace"), btn -> replaceSelectedAction())
+            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.power_deck.replace.tooltip")))
+            .bounds(rightX + addW + 4, actionY, replaceW, 20).build();
+        this.addRenderableWidget(replaceActionButton);
+
+        removeActionButton = Button.builder(Component.translatable(compactActions ? "screen.shyne_core.power_deck.remove.short" : "screen.shyne_core.power_deck.remove"), btn -> {
             if (!selectedSlotId.isBlank()) {
                 CustomDeckManager.removeSlot(CustomDeckManager.activeDeckIndex(), selectedSlotId);
                 selectedSlotId = "";
+                updateActionButtons();
                 playClick();
             }
-        }).tooltip(Tooltip.create(Component.literal("Remove highlighted action"))).bounds(rightX + addW + replaceW + 8, actionY, removeW, 20).build());
-
-        refreshCatalog();
+        }).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.power_deck.remove.tooltip"))).bounds(rightX + addW + replaceW + 8, actionY, removeW, 20).build();
+        this.addRenderableWidget(removeActionButton);
+        updateActionButtons();
     }
 
     private void refreshCatalog() {
         displayedSkills.clear();
+        catalogScroll = 0;
         String query = searchBox != null ? searchBox.getValue().trim().toLowerCase(Locale.ROOT) : "";
         for (SkillDefinition skill : ClientAnimationState.allSkills()) {
             if (!query.isEmpty() && !skill.displayName().toLowerCase(Locale.ROOT).contains(query)
@@ -117,6 +132,21 @@ public class PowerDeckScreen extends Screen {
             && !displayedSkills.isEmpty()) {
             selectedSkillId = displayedSkills.stream().filter(this::canAssign).map(SkillDefinition::skillId).findFirst().orElse("");
         }
+        updateActionButtons();
+    }
+
+    private void clearSearch() {
+        if (searchBox == null || searchBox.getValue().isEmpty()) return;
+        searchBox.setValue("");
+        refreshCatalog();
+    }
+
+    private void updateActionButtons() {
+        SkillDefinition selected = ClientAnimationState.getSkill(selectedSkillId);
+        boolean skillReady = canAssign(selected);
+        if (addActionButton != null) addActionButton.active = skillReady;
+        if (replaceActionButton != null) replaceActionButton.active = skillReady && !selectedSlotId.isBlank();
+        if (removeActionButton != null) removeActionButton.active = !selectedSlotId.isBlank();
     }
 
     @Override public boolean isPauseScreen() { return false; }
@@ -126,19 +156,23 @@ public class PowerDeckScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fill(0, 0, this.width, this.height, BG_DARK);
-        graphics.text(this.font, Component.literal("✦ ACTIONS & KEYS"), 14, 10, ACCENT_CYAN, true);
-        graphics.text(this.font, Component.literal("Choose an action, add it, then press the key you want"), 14, 23, TEXT_MUTED, false);
+        graphics.text(this.font, Component.literal("✦ ").append(Component.translatable("screen.shyne_core.power_deck.title")), 14, 10, ACCENT_CYAN, true);
+        graphics.text(this.font, Component.translatable("screen.shyne_core.power_deck.subtitle"), 14, 23, TEXT_MUTED, false);
 
         renderManaBar(graphics);
 
         int leftW = Math.max(200, this.width / 2 - 30);
         int rightX = leftW + 24;
-        int contentY = 66;
+        int contentY = 76;
         int contentBottom = this.height - 38;
+        graphics.text(this.font, Component.translatable("screen.shyne_core.power_deck.available"), 14, 39, 0xFFF0F5FF, true);
+        Component availableCount = Component.translatable("screen.shyne_core.power_deck.count", displayedSkills.size());
+        graphics.text(this.font, availableCount, leftW + 6 - this.font.width(availableCount), 39, TEXT_MUTED, false);
+        graphics.text(this.font, Component.translatable("screen.shyne_core.power_deck.deck"), rightX, 39, 0xFFF0F5FF, true);
 
         renderCatalog(graphics, 14, contentY, leftW - 8, contentBottom, mouseX, mouseY);
-        renderDeckTabs(graphics, rightX, 42, this.width - rightX - 16);
-        renderDeckSlots(graphics, rightX, 62, this.width - rightX - 16, contentBottom, mouseX, mouseY);
+        renderDeckTabs(graphics, rightX, 50, this.width - rightX - 16);
+        renderDeckSlots(graphics, rightX, 72, this.width - rightX - 16, contentBottom, mouseX, mouseY);
 
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
@@ -297,6 +331,7 @@ public class PowerDeckScreen extends Screen {
         CustomDeckManager.renameSlot(CustomDeckManager.activeDeckIndex(), slot.id(), selected.displayName());
         selectedSlotId = slot.id();
         listeningSlotId = slot.id();
+        updateActionButtons();
         playClick();
     }
 
@@ -306,6 +341,7 @@ public class PowerDeckScreen extends Screen {
         if (selectedSlotId.isBlank() || selected == null || !canAssign(selected)) return;
         CustomDeckManager.assignSkill(CustomDeckManager.activeDeckIndex(), selectedSlotId, selected.skillId());
         CustomDeckManager.renameSlot(CustomDeckManager.activeDeckIndex(), selectedSlotId, selected.displayName());
+        updateActionButtons();
         playClick();
     }
 
@@ -316,7 +352,7 @@ public class PowerDeckScreen extends Screen {
         int mx = (int) event.x(), my = (int) event.y();
         int leftW = Math.max(200, this.width / 2 - 30);
         int rightX = leftW + 24, rightW = this.width - rightX - 16;
-        int contentY = 66, contentBottom = this.height - 38;
+        int contentY = 76, contentBottom = this.height - 38;
 
         // Catalog click
         if (mx >= 14 && mx <= leftW + 6 && my >= contentY && my <= contentBottom) {
@@ -329,6 +365,7 @@ public class PowerDeckScreen extends Screen {
                 SkillDefinition clicked = displayedSkills.get(start + idx);
                 if (canAssign(clicked)) {
                     selectedSkillId = clicked.skillId();
+                    updateActionButtons();
                     if (doubleClick) addSelectedAction();
                     playClick();
                     return true;
@@ -337,7 +374,7 @@ public class PowerDeckScreen extends Screen {
         }
 
         // Deck tab clicks
-        if (my >= 42 && my <= 58) {
+        if (my >= 50 && my <= 66) {
             List<DeckPreset> decks = CustomDeckManager.allDecks();
             int tabW = deckTabWidth(rightW, decks.size());
             for (int i = 0; i < decks.size(); i++) {
@@ -347,6 +384,7 @@ public class PowerDeckScreen extends Screen {
                     deckScroll = 0;
                     selectedSlotId = "";
                     listeningSlotId = null;
+                    updateActionButtons();
                     playClick();
                     return true;
                 }
@@ -360,6 +398,7 @@ public class PowerDeckScreen extends Screen {
                     deckScroll = 0;
                     selectedSlotId = "";
                     listeningSlotId = null;
+                    updateActionButtons();
                     playClick();
                 }
                 return true;
@@ -370,6 +409,7 @@ public class PowerDeckScreen extends Screen {
                     deckScroll = 0;
                     selectedSlotId = "";
                     listeningSlotId = null;
+                    updateActionButtons();
                     playClick();
                 }
                 return true;
@@ -377,16 +417,16 @@ public class PowerDeckScreen extends Screen {
         }
 
         // Deck slot clicks
-        if (mx >= rightX && mx <= rightX + rightW && my >= 62 && my <= contentBottom) {
+        if (mx >= rightX && mx <= rightX + rightW && my >= 72 && my <= contentBottom) {
             List<ActionSlot> slots = CustomDeckManager.activeDeck().slots();
             int slotH = 38, gap = 4;
-            int visible = (contentBottom - 62) / (slotH + gap);
+            int visible = (contentBottom - 72) / (slotH + gap);
             int start = Math.max(0, Math.min(deckScroll, Math.max(0, slots.size() - visible)));
-            int localY = my - 62 - 4;
+            int localY = my - 72 - 4;
             int idx = localY / (slotH + gap);
             if (localY >= 0 && localY % (slotH + gap) < slotH && idx >= 0 && (start + idx) < slots.size()) {
                 ActionSlot slot = slots.get(start + idx);
-                int badgeX = rightX + 6, badgeY = 62 + 4 + idx * (slotH + gap) + 9;
+                int badgeX = rightX + 6, badgeY = 72 + 4 + idx * (slotH + gap) + 9;
                 // Key badge click → start listening
                 if (mx >= badgeX && mx <= badgeX + 32 && my >= badgeY && my <= badgeY + 20) {
                     listeningSlotId = slot.id().equals(listeningSlotId) ? null : slot.id();
@@ -396,6 +436,7 @@ public class PowerDeckScreen extends Screen {
                 // Rest of slot → select
                 selectedSlotId = slot.id();
                 listeningSlotId = null;
+                updateActionButtons();
                 playClick();
                 return true;
             }
@@ -424,8 +465,7 @@ public class PowerDeckScreen extends Screen {
         // ESC always closes
         if (key == InputConstants.KEY_ESCAPE) {
             if (listeningSlotId != null) { listeningSlotId = null; return true; }
-            if (this.parent != null && this.minecraft != null) this.minecraft.gui.setScreen(this.parent);
-            else this.onClose();
+            closeToParent();
             return true;
         }
         // If listening for keybind, capture the key
@@ -445,6 +485,16 @@ public class PowerDeckScreen extends Screen {
             return true;
         }
         return super.keyPressed(event);
+    }
+
+    @Override
+    public void onClose() {
+        closeToParent();
+    }
+
+    private void closeToParent() {
+        if (this.parent != null && this.minecraft != null) this.minecraft.gui.setScreen(this.parent);
+        else super.onClose();
     }
 
     private void playClick() {

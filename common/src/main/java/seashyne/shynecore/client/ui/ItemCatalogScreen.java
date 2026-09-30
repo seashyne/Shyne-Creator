@@ -43,16 +43,25 @@ public final class ItemCatalogScreen extends Screen {
     protected void init() {
         clearWidgets();
         int leftW = Math.max(190, width / 2 - 34);
-        int searchW = leftW - 8;
-        searchBox = new EditBox(font, 14, 42, searchW, 18, Component.translatable("screen.shyne_core.items.search"));
+        int clearWidth = 44;
+        int searchW = Math.max(72, leftW - 12 - clearWidth);
+        searchBox = new EditBox(font, 14, 50, searchW, 18, Component.translatable("screen.shyne_core.items.search"));
+        searchBox.setHint(Component.translatable("screen.shyne_core.items.search"));
         searchBox.setResponder(ignored -> refreshItems());
         addRenderableWidget(searchBox);
+        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.ui.clear"), ignored -> clearSearch())
+            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.ui.clear.tooltip")))
+            .bounds(18 + searchW, 50, clearWidth, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.back"), ignored -> closeToParent())
+            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.ui.back.tooltip")))
+            .bounds(14, height - 30, 80, 20).build());
 
         refreshItems();
     }
 
     private void refreshItems() {
         displayedItems.clear();
+        catalogScroll = 0;
         String query = searchBox == null ? "" : searchBox.getValue().trim().toLowerCase(Locale.ROOT);
         for (ShyneItemDefinition item : ClientAnimationState.allItems()) {
             if (!query.isEmpty() && !item.displayName().toLowerCase(Locale.ROOT).contains(query)
@@ -65,6 +74,12 @@ public final class ItemCatalogScreen extends Screen {
             selectedItemId = "";
         }
         if (selectedItemId.isBlank() && !displayedItems.isEmpty()) selectedItemId = displayedItems.getFirst().itemId();
+    }
+
+    private void clearSearch() {
+        if (searchBox == null || searchBox.getValue().isEmpty()) return;
+        searchBox.setValue("");
+        refreshItems();
     }
 
     @Override
@@ -80,10 +95,14 @@ public final class ItemCatalogScreen extends Screen {
 
         int leftW = Math.max(190, width / 2 - 34);
         int detailX = leftW + 26;
-        int contentY = 68;
-        int contentBottom = height - 14;
+        int contentY = 76;
+        int contentBottom = height - 38;
+        graphics.text(font, Component.translatable("screen.shyne_core.items.collection"), 14, 40, 0xFFF0F5FF, true);
+        Component count = Component.translatable("screen.shyne_core.items.count", displayedItems.size());
+        graphics.text(font, count, leftW + 6 - font.width(count), 40, MUTED, false);
+        graphics.text(font, Component.translatable("screen.shyne_core.items.details"), detailX, 40, 0xFFF0F5FF, true);
         renderCatalog(graphics, 14, contentY, leftW - 8, contentBottom, mouseX, mouseY);
-        renderDetail(graphics, detailX, 42, Math.max(120, width - detailX - 14), contentBottom);
+        renderDetail(graphics, detailX, 50, Math.max(120, width - detailX - 14), contentBottom);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
@@ -176,8 +195,8 @@ public final class ItemCatalogScreen extends Screen {
         int mouseX = (int) event.x();
         int mouseY = (int) event.y();
         int leftW = Math.max(190, width / 2 - 34);
-        int contentY = 68;
-        int contentBottom = height - 14;
+        int contentY = 76;
+        int contentBottom = height - 38;
         if (mouseX >= 14 && mouseX <= leftW + 6 && mouseY >= contentY && mouseY <= contentBottom) {
             int cardHeight = 40;
             int gap = 4;
@@ -205,11 +224,20 @@ public final class ItemCatalogScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (event.key() == InputConstants.KEY_ESCAPE) {
-            if (parent != null && minecraft != null) minecraft.gui.setScreen(parent);
-            else onClose();
+            closeToParent();
             return true;
         }
         return super.keyPressed(event);
+    }
+
+    @Override
+    public void onClose() {
+        closeToParent();
+    }
+
+    private void closeToParent() {
+        if (parent != null && minecraft != null) minecraft.gui.setScreen(parent);
+        else super.onClose();
     }
 
     private List<String> wrap(String value, int maxWidth) {

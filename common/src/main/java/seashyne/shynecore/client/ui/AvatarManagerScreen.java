@@ -1,12 +1,14 @@
 package seashyne.shynecore.client.ui;
 
-import net.minecraft.ChatFormatting;
 import com.mojang.blaze3d.Blaze3D;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -132,12 +134,13 @@ public class AvatarManagerScreen extends Screen {
     }
 
     private void addSearchControls() {
-        int searchButtonWidth = 22;
+        int searchButtonWidth = 40;
+        int clearButtonWidth = 40;
         searchBox = new EditBox(
             this.font,
             listX,
             panelY + 43,
-            Math.max(48, listWidth - searchButtonWidth - 4),
+            Math.max(48, listWidth - searchButtonWidth - clearButtonWidth - 8),
             20,
             Component.translatable("screen.shyne_core.avatars.search")
         );
@@ -145,7 +148,13 @@ public class AvatarManagerScreen extends Screen {
         searchBox.setValue(searchText);
         addRenderableWidget(searchBox);
 
-        addRenderableWidget(Button.builder(Component.literal("⌕"), ignored -> applySearch())
+        int clearX = listX + listWidth - searchButtonWidth - clearButtonWidth - 4;
+        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.ui.clear"), ignored -> clearSearch())
+            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.ui.clear.tooltip")))
+            .bounds(clearX, panelY + 43, clearButtonWidth, 20)
+            .build());
+
+        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.avatars.search.apply"), ignored -> applySearch())
             .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.search.tooltip")))
             .bounds(listX + listWidth - searchButtonWidth, panelY + 43, searchButtonWidth, 20)
             .build());
@@ -544,6 +553,12 @@ public class AvatarManagerScreen extends Screen {
         rebuildWidgets();
     }
 
+    private void clearSearch() {
+        if (searchBox == null || searchBox.getValue().isEmpty()) return;
+        searchBox.setValue("");
+        applySearch();
+    }
+
     private List<AvatarCatalogEntry> filterCatalog(List<AvatarCatalogEntry> source, String query) {
         if (query == null || query.isBlank()) return source;
         String needle = query.toLowerCase(Locale.ROOT);
@@ -570,6 +585,15 @@ public class AvatarManagerScreen extends Screen {
         if (this.minecraft != null) {
             this.minecraft.gui.setScreen(new AvatarManagerScreen(parent, newPage, searchText, moreOpen));
         }
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == InputConstants.KEY_RETURN && searchBox != null && searchBox.isFocused()) {
+            applySearch();
+            return true;
+        }
+        return super.keyPressed(event);
     }
 
     @Override

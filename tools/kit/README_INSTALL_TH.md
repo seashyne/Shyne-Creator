@@ -1,4 +1,4 @@
-# Shyne Creator Kit 2.12.1
+# Shyne Creator Kit 2.12.2
 
 ชุดนี้ใช้สำหรับ **ผู้สร้าง Avatar** บน Shyne Avatar Standard 2.0 ไม่ใช่ตัวม็อดสำหรับใส่ในโฟลเดอร์ `mods`
 
@@ -73,7 +73,7 @@
 
 ## เผยแพร่ผ่าน Avatar Cloud
 
-Shyne Creator 2.12.1 ส่ง Public Avatar เป็น ZIP มาตรฐานที่ Backend ตรวจโครงสร้างและ SHA-256 ไม่ใช้ `.sc v1`, `.sc v2` หรือ lease ผู้สร้างควรใส่เฉพาะไฟล์ที่ตนมีสิทธิ์แจก เพราะผู้รับจะดาวน์โหลด ZIP ได้จริง
+Shyne Creator 2.12.2 ส่ง Public Avatar เป็น ZIP มาตรฐานที่ Backend ตรวจโครงสร้างและ SHA-256 ไม่ใช้ `.sc v1`, `.sc v2` หรือ lease ผู้สร้างควรใส่เฉพาะไฟล์ที่ตนมีสิทธิ์แจก เพราะผู้รับจะดาวน์โหลด ZIP ได้จริง
 
 1. ตรวจโปรเจกต์ด้วย Plugin หรือ Creator CLI
 2. Export เป็น Shyne Avatar Package (`.zip`)
