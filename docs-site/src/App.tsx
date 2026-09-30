@@ -18,54 +18,43 @@ const ModelViewer = lazy(() => import('./ModelViewer'))
 
 const siteAsset = (path: string) => `${import.meta.env.BASE_URL}${path}`
 
-type ShowcaseModel = {
+type ShowcaseAvatar = {
   id: string
   label: string
   title: string
   description: string
+  avatar: string
   model: string
-  avatar?: string
   tags: string[]
-  guide: string
 }
 
-const showcaseModels: ShowcaseModel[] = [
-  {
-    id: 'deep-shynecore',
-    label: 'FEATURED MODEL',
-    title: 'Deep Shynecore',
-    description: 'โมเดลที่ใช้สาธิตหน้าแรกของ Shyne Creator — เปิดใน Blockbench เพื่อดูโครงสร้างและแต่งต่อได้ทันที',
-    model: 'deep-shynecore-model.bbmodel',
-    tags: ['Blockbench', '3D preview', 'Starter'],
-    guide: '/docs/blockbench-plugin',
-  },
-  {
-    id: 'zero-lua',
-    label: 'NO-CODE STARTER',
-    title: 'Zero-Lua Avatar',
-    description: 'จุดเริ่มต้นแบบไม่ต้องเขียน Lua สำหรับทดลอง parent type, role และการ Export Avatar ของ Shyne',
-    model: 'model-showcase/zero-lua-avatar.bbmodel',
-    tags: ['No Lua', 'Accessory', 'Beginner'],
-    guide: '/docs/first-avatar',
-  },
+const showcaseAvatars: ShowcaseAvatar[] = [
   {
     id: 'action-wheel',
-    label: 'ANIMATION EXAMPLE',
-    title: 'Action Wheel Avatar',
-    description: 'ตัวอย่าง Avatar ที่มี idle, walk, wave, dance และ roar เพื่อใช้เป็นฐานสำหรับต่อท่าทางและคำสั่ง',
+    label: 'READY-TO-PLAY AVATAR',
+    title: 'Action Wheel Showcase',
+    description: 'Avatar ตัวอย่างพร้อมท่าทาง, เสียง, ฟิสิกส์หูและหาง รวมถึง Action Wheel สำหรับทดลองคำสั่งในเกม',
+    avatar: 'model-showcase/action-wheel-showcase-avatar.zip',
     model: 'model-showcase/action-wheel-showcase.bbmodel',
-    tags: ['Animation', 'Action Wheel', 'Intermediate'],
-    guide: '/docs/lua-api',
+    tags: ['Animation', 'Sound', 'Action Wheel'],
+  },
+  {
+    id: 'custom-skill-hud',
+    label: 'READY-TO-PLAY AVATAR',
+    title: 'Custom Skill & Mana HUD',
+    description: 'Avatar ตัวอย่างสำหรับทดลองสกิล, แป้นลัด, แถบ Mana บนหน้าจอ และเอฟเฟกต์โล่เวทมนตร์',
+    avatar: 'model-showcase/custom-skill-hud-avatar.zip',
+    model: 'model-showcase/custom-skill-hud-avatar.bbmodel',
+    tags: ['Custom Skill', 'HUD', 'Keybind'],
   },
   {
     id: 'signature-weapon',
-    label: 'FULL AVATAR PACK',
+    label: 'READY-TO-PLAY AVATAR',
     title: 'Signature Weapon',
-    description: 'ตัวอย่างอาวุธและท่าต่อสู้ที่ดาวน์โหลดได้ทั้งไฟล์ Blockbench และ Avatar ZIP สำหรับติดตั้งทดลองในเกม',
-    model: 'model-showcase/signature-weapon.bbmodel',
+    description: 'Avatar ตัวอย่างอาวุธประจำตัว, ท่าต่อสู้, การบิน และระบบแยกโมดูลพร้อมติดตั้งทดลองได้ทันที',
     avatar: 'model-showcase/signature-weapon-avatar.zip',
-    tags: ['Weapon', 'Avatar ZIP', 'Animation'],
-    guide: '/docs/first-avatar',
+    model: 'model-showcase/signature-weapon.bbmodel',
+    tags: ['Weapon', 'Flight', 'Animation'],
   },
 ]
 
@@ -276,32 +265,34 @@ function ShowcasePage() {
   return <section className="listing-page showcase-page">
     <section className="showcase-hero">
       <div className="showcase-hero-copy">
-        <p className="overline">MODEL SHOWCASE <i></i></p>
-        <h1>หยิบโมเดลไป<br/><span>สร้างต่อได้เลย.</span></h1>
-        <p>ดาวน์โหลดไฟล์ Blockbench จากตัวอย่างจริงของ Shyne Creator ได้ทันที บางรายการมี Avatar ZIP พร้อมทดลองใน Minecraft</p>
+        <p className="overline">AVATAR SHOWCASE <i></i></p>
+        <h1>โหลดแล้ว<br/><span>ใช้ในเกมได้เลย.</span></h1>
+        <p>Avatar ZIP ทุกแพ็กด้านล่างมี <code>avatar.json</code>, โมเดล และไฟล์ที่จำเป็นครบสำหรับ Shyne Creator — ดาวน์โหลดแล้ววางในโฟลเดอร์ Avatar ได้ทันที</p>
         <div className="showcase-hero-actions">
-          <a className="showcase-primary-action" href="#models"><Download size={18}/> เลือกโมเดล</a>
+          <a className="showcase-primary-action" href="#avatars"><Download size={18}/> ดาวน์โหลด Avatar ZIP</a>
           <a className="showcase-discord-action" href={DISCORD_URL} target="_blank" rel="noreferrer"><MessageCircle size={18}/> เข้า Discord</a>
         </div>
-        <p className="showcase-hero-note"><Check size={16}/> ไฟล์ .bbmodel เปิดด้วย Blockbench ได้ และรายการที่มี ZIP สามารถนำไปทดลองกับ Shyne Creator ได้ทันที</p>
+        <p className="showcase-hero-note"><Check size={16}/> วางไฟล์ ZIP ไว้ที่ <code>.minecraft/shyne-mods/avatars/</code> แล้วเปิดคลัง Avatar เพื่อสแกนและเลือกใช้</p>
       </div>
       <div className="showcase-hero-visual" aria-label="ตัวอย่างโมเดล Deep Shynecore แบบสามมิติ">
         <Suspense fallback={<div className="model-viewer model-fallback"><img src="shyne-icon.png" alt=""/><span>กำลังเตรียมตัวอย่าง 3D</span></div>}><ModelViewer /></Suspense>
       </div>
     </section>
 
-    <section className="showcase-catalog" id="models" aria-labelledby="models-heading">
-      <div className="showcase-section-head"><div><p>DOWNLOADABLE ASSETS</p><h2 id="models-heading">เริ่มจากตัวอย่างที่ใช่</h2><span>ไฟล์เหล่านี้เป็นต้นแบบสำหรับเรียนรู้ ปรับแต่ง และนำไปสร้าง Avatar ของคุณเอง</span></div><b>{showcaseModels.length} MODELS</b></div>
-      <div className="model-showcase-grid">{showcaseModels.map((model, index) => <article className="model-showcase-card" key={model.id}>
-        <div className="model-card-art"><span>0{index + 1}</span><FileCode2 size={32}/><i></i></div>
-        <div className="model-card-copy"><p>{model.label}</p><h3>{model.title}</h3><span>{model.description}</span></div>
-        <div className="model-tags">{model.tags.map((tag) => <small key={tag}>{tag}</small>)}</div>
+    <section className="showcase-catalog" id="avatars" aria-labelledby="avatars-heading">
+      <div className="showcase-section-head"><div><p>VERIFIED AVATAR PACKS</p><h2 id="avatars-heading">Avatar ที่ติดตั้งได้จริง</h2><span>ทุกแพ็กผ่านตัวตรวจสอบ Avatar ของ Shyne Creator แล้ว ปุ่มหลักเป็น ZIP ที่นำไปวางในเกมได้โดยตรง ส่วน <code>.bbmodel</code> มีไว้สำหรับเปิดแก้ไขใน Blockbench</span></div><b>{showcaseAvatars.length} AVATARS</b></div>
+      <div className="model-showcase-grid">{showcaseAvatars.map((avatar, index) => <article className="model-showcase-card" key={avatar.id}>
+        <div className="model-card-art"><span>0{index + 1}</span><Box size={32}/><i></i></div>
+        <div className="model-card-copy"><p>{avatar.label}</p><h3>{avatar.title}</h3><span>{avatar.description}</span></div>
+        <div className="model-tags">{avatar.tags.map((tag) => <small key={tag}>{tag}</small>)}</div>
         <div className="model-downloads">
-          <a className="model-download primary-download" href={siteAsset(model.model)} download><Download size={16}/> ดาวน์โหลด .bbmodel</a>
-          {model.avatar ? <a className="model-download package-download" href={siteAsset(model.avatar)} download><Box size={16}/> Avatar ZIP</a> : <Link className="model-guide-link" to={model.guide}>ดูวิธีใช้งาน <ArrowRight size={15}/></Link>}
+          <a className="model-download primary-download" href={siteAsset(avatar.avatar)} download><Download size={16}/> ดาวน์โหลด Avatar ZIP</a>
+          <a className="model-download source-download" href={siteAsset(avatar.model)} download><FileCode2 size={16}/> ไฟล์ .bbmodel</a>
         </div>
       </article>)}</div>
     </section>
+
+    <section className="showcase-install" aria-labelledby="install-heading"><div><p>INSTALL IN THREE STEPS</p><h2 id="install-heading">ดาวน์โหลดแล้ว<br/><span>ติดตั้งตามนี้</span></h2></div><ol><li><b>01</b><span><strong>ดาวน์โหลด ZIP</strong><small>เลือก Avatar ที่ต้องการจากด้านบน</small></span></li><li><b>02</b><span><strong>วางในโฟลเดอร์ Avatar</strong><small><code>.minecraft/shyne-mods/avatars/</code></small></span></li><li><b>03</b><span><strong>สแกนแล้วเลือกใช้</strong><small>เปิดคลัง Avatar ในเกม แล้วกดสแกนไฟล์</small></span></li></ol><Link to="/docs/player-quickstart">ดูวิธีติดตั้งละเอียด <ArrowRight size={16}/></Link></section>
 
     <section className="showcase-community" aria-labelledby="community-heading"><div><p>SHYNE CREATOR COMMUNITY</p><h2 id="community-heading">ติดขัดตรงไหน<br/><span>คุยกับเราได้ใน Discord</span></h2><p>ถามเรื่องโมเดล, Avatar, Blockbench หรือแบ่งปันผลงานที่กำลังสร้างอยู่กับชุมชน Shyne Creator</p></div><a href={DISCORD_URL} target="_blank" rel="noreferrer"><MessageCircle size={20}/> เข้าร่วม Discord <ExternalLink size={15}/></a></section>
     <Footer/>

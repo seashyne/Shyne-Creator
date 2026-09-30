@@ -568,6 +568,7 @@ footer p,footer a { font-size:11px; }
 .showcase-hero-copy h1 { max-width:700px; margin:15px 0 18px; color:#f5f8fc; font:700 clamp(47px,5.5vw,76px)/1.08 'Noto Sans Thai',sans-serif; letter-spacing:-.045em; }
 .showcase-hero-copy h1 span { color:#79e3fa; }
 .showcase-hero-copy>p:not(.overline):not(.showcase-hero-note) { margin:0; color:#c1ccda; font-size:17px; line-height:1.9; }
+.showcase-hero-copy code,.showcase-section-head code,.showcase-install code { padding:2px 5px; color:#c8f1f9; background:#172231; border:1px solid #3b4b61; font:600 .88em 'Chakra Petch',monospace; }
 .showcase-hero-actions { display:flex; flex-wrap:wrap; gap:12px; margin:30px 0 19px; }
 .showcase-hero-actions a { min-height:50px; padding:0 19px; display:inline-flex; align-items:center; justify-content:center; gap:9px; font-size:14px; font-weight:700; transition:.18s; }
 .showcase-primary-action { color:#071018; background:#67dcf5; border:1px solid #a1eefe; box-shadow:5px 5px 0 #214b5c; }
@@ -603,10 +604,16 @@ footer p,footer a { font-size:11px; }
 .model-download { min-height:40px; padding:0 12px; display:inline-flex; align-items:center; justify-content:center; gap:7px; font-size:12px; font-weight:700; transition:.18s; }
 .primary-download { color:#081018; background:#86eaf9; border:1px solid #b0f2fd; }
 .primary-download:hover { color:#071018; background:#b0f4fd; box-shadow:3px 3px 0 #255365; transform:translate(-1px,-1px); }
-.package-download { color:#e6e3ff; background:#24213e; border:1px solid #625b95; }
-.package-download:hover { color:#fff; background:#37305c; border-color:#968cdb; }
-.model-guide-link { display:inline-flex; align-items:center; gap:6px; padding:9px 2px; color:#c8d8e7; font-size:12px; font-weight:700; }
-.model-guide-link:hover { color:#85e6f9; }
+.source-download { color:#e6e3ff; background:#24213e; border:1px solid #625b95; }
+.source-download:hover { color:#fff; background:#37305c; border-color:#968cdb; }
+.showcase-install { margin:0 7vw 82px; padding:35px 39px; display:grid; grid-template-columns:minmax(190px,.72fr) minmax(0,1.55fr); gap:31px 42px; align-items:center; border:1px solid #36586a; background:linear-gradient(120deg,#111e2e,#0e1725); box-shadow:9px 10px 0 rgba(3,8,13,.6); }
+.showcase-install p { margin:0 0 8px; color:#75e2fa; font:700 10px 'Chakra Petch'; letter-spacing:.15em; }
+.showcase-install h2 { margin:0; color:#f4f7fc; font:700 30px/1.28 'Noto Sans Thai',sans-serif; letter-spacing:-.025em; }.showcase-install h2 span { color:#8feaff; }
+.showcase-install ol { margin:0; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; list-style:none; }
+.showcase-install li { min-height:112px; padding:15px; display:flex; flex-direction:column; justify-content:space-between; background:#121d2b; border:1px solid #34465c; }
+.showcase-install li>b { color:#74e2fa; font:700 11px 'Chakra Petch'; letter-spacing:.1em; }.showcase-install li strong,.showcase-install li small { display:block; }.showcase-install li strong { margin-bottom:4px; color:#eef4fa; font-size:13px; }.showcase-install li small { color:#9eafc1; font-size:11px; line-height:1.55; }
+.showcase-install>a { width:max-content; min-height:38px; padding:0 11px; display:inline-flex; align-items:center; gap:7px; color:#caeefa; font-size:12px; font-weight:700; border-bottom:1px solid #67dcf5; }
+.showcase-install>a:hover { color:#fff; background:rgba(103,220,245,.08); }
 .showcase-community { margin:0 7vw 82px; padding:39px 43px; display:flex; align-items:center; justify-content:space-between; gap:36px; border:1px solid #4a4d77; background:radial-gradient(circle at 86% 10%,rgba(167,139,250,.24),transparent 36%),linear-gradient(120deg,#16213a,#11192a); box-shadow:10px 11px 0 rgba(3,7,12,.65); }
 .showcase-community h2 { margin:0 0 10px; color:#f3f6fb; font:700 34px/1.27 'Noto Sans Thai',sans-serif; letter-spacing:-.025em; }.showcase-community h2 span{color:#baa9ff}
 .showcase-community>div>p:last-child { max-width:600px; margin:0; color:#c0cad8; font-size:14px; line-height:1.8; }
@@ -625,5 +632,6 @@ footer p,footer a { font-size:11px; }
   .showcase-hero-visual .model-viewer { width:100%; height:350px; }
   .showcase-catalog { padding:47px 20px 58px; }.showcase-section-head { align-items:flex-start; flex-direction:column; gap:14px; margin-bottom:23px; }.showcase-section-head h2 { font-size:28px; }.showcase-section-head span { font-size:13px; }
   .model-showcase-grid { grid-template-columns:1fr; }.model-showcase-card { min-height:0; padding:17px; }.model-card-copy h3 { font-size:21px; }
+  .showcase-install { margin:0 20px 55px; padding:27px 22px; grid-template-columns:1fr; gap:23px; }.showcase-install h2 { font-size:26px; }.showcase-install ol { grid-template-columns:1fr; }.showcase-install li { min-height:0; gap:16px; }
   .showcase-community { margin:0 20px 55px; padding:28px 22px; gap:24px; }.showcase-community h2 { font-size:27px; }.showcase-community>a { width:100%; justify-content:center; }
 }
