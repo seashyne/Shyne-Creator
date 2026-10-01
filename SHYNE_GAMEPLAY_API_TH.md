@@ -1,6 +1,6 @@
 # Shyne Gameplay API
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.3` Gameplay API ทำงานฝั่ง server และ server เป็น authority ของ mana, cooldown, requirement, damage, projectile, summon และการใช้ไอเท็ม ดูคู่มือและ schema ที่เกี่ยวข้องทั้งหมดได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.5` Gameplay API ทำงานฝั่ง server และ server เป็น authority ของ mana, cooldown, requirement, damage, projectile, summon และการใช้ไอเท็ม ดูคู่มือและ schema ที่เกี่ยวข้องทั้งหมดได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 ## ขอบเขตและโครงสร้างแพ็ก
 
@@ -148,6 +148,8 @@ Hook ไม่ใช่ client Avatar Lua และไม่ควรใช้�
 ```
 
 `/shyne reload` โหลด pack, skill, weapon และ item ใหม่ แล้ว sync registry ไปยัง client ผู้เล่น จึงเป็นวิธีทดสอบปกติโดยไม่ต้อง restart server
+
+เริ่มจากแพ็กที่ใช้ได้จริงได้ที่ [`tools/examples/aether-showcase-pack`](tools/examples/aether-showcase-pack): มี skill ที่ใช้ mana, item ที่มี `use_skill`, PNG icon และ `on_skill_key` Lua effect อยู่ครบในโฟลเดอร์เดียว
 
 ## Asset icon และ UI
 

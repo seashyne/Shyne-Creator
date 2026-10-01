@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../../common/src/main/resources/shyne_sdk/schemas/item.schema.json",
+  "item_id": "aether.wardstone",
+  "display_name": "Aether Wardstone",
+  "description": [
+    "A polished stone holding a calm blue resonance.",
+    "Right-click to cast Aether Ward (24 mana)."
+  ],
+  "icon": "aether_ward",
+  "model": "shyne_creator:artifact",
+  "rarity": "uncommon",
+  "max_stack": 1,
+  "glint": false,
+  "use_skill": "aether.aether_ward",
+  "cooldown_ticks": 80,
+  "consume_on_use": false,
+  "payload": {
+    "showcase_action": "ward"
+  }
+}

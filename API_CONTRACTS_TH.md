@@ -1,6 +1,6 @@
 # Shyne Creator API Contracts
 
-เอกสารนี้เป็นดัชนีสัญญา API ของ Shyne Creator `2.12.4` สำหรับ Creator, ผู้ทำ content pack และผู้พัฒนาม็อดเสริม ใช้ร่วมกับ schema ใน JAR เพื่อไม่ต้องเดาว่า field หรือ API ใดเป็นสัญญาสาธารณะ
+เอกสารนี้เป็นดัชนีสัญญา API ของ Shyne Creator `2.12.5` สำหรับ Creator, ผู้ทำ content pack และผู้พัฒนาม็อดเสริม ใช้ร่วมกับ schema ใน JAR เพื่อไม่ต้องเดาว่า field หรือ API ใดเป็นสัญญาสาธารณะ
 
 ## เลือกคู่มือให้ตรงงาน
 

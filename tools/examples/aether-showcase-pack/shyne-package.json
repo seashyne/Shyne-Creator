@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../common/src/main/resources/shyne_sdk/schemas/shyne_asset_package.schema.json",
+  "format": "shyne_asset_package",
+  "format_version": 1,
+  "id": "aether_showcase_pack",
+  "name": "Aether Power & Item Showcase",
+  "version": "1.0.0",
+  "assets": [
+    {
+      "id": "aether_bolt",
+      "type": "png_icon",
+      "path": "assets/icons/aether_bolt.png",
+      "source_svg": "sources/icons/aether_bolt.svg"
+    },
+    {
+      "id": "aether_ward",
+      "type": "png_icon",
+      "path": "assets/icons/aether_ward.png",
+      "source_svg": "sources/icons/aether_ward.svg"
+    },
+    {
+      "id": "aether_starfall",
+      "type": "png_icon",
+      "path": "assets/icons/aether_starfall.png",
+      "source_svg": "sources/icons/aether_starfall.svg"
+    }
+  ]
+}

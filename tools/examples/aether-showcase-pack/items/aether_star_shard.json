@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../../common/src/main/resources/shyne_sdk/schemas/item.schema.json",
+  "item_id": "aether.star_shard",
+  "display_name": "Aether Star Shard",
+  "description": [
+    "A fragment that hums with a contained meteor shower.",
+    "Right-click to cast Aether Starfall (50 mana)."
+  ],
+  "icon": "aether_starfall",
+  "model": "shyne_creator:artifact",
+  "rarity": "epic",
+  "max_stack": 1,
+  "glint": true,
+  "use_skill": "aether.aether_starfall",
+  "cooldown_ticks": 180,
+  "consume_on_use": false,
+  "payload": {
+    "showcase_action": "starfall"
+  }
+}

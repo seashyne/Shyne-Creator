@@ -1,6 +1,6 @@
 # Shyne Native Lua API — Standard 2.0
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.4` และ Lua contract `api: "2.0"` รายการคู่มือและ schema ที่เกี่ยวข้องอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.5` และ Lua contract `api: "2.0"` รายการคู่มือและ schema ที่เกี่ยวข้องอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
 
 Lua เป็นชั้นควบคุมหลักสำหรับงานอิสระและงานขั้นสูงของ Shyne Avatar Standard 2.0 ส่วน Avatar แบบ model-first ทั่วไปเริ่มได้โดยไม่ต้องมี `script.lua` หากต้องใช้ procedural rig, physics, UI หรือ logic เฉพาะ ให้ระบุ `main` และใช้ API ของ Shyne โดยตรง โดยไม่พึ่ง Figura:
 

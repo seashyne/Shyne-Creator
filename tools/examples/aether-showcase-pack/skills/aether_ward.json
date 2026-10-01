@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../common/src/main/resources/shyne_sdk/schemas/skill.schema.json",
+  "skill_id": "aether.aether_ward",
+  "display_name": "Aether Ward",
+  "description": "Raise a resonant ward around yourself.",
+  "cast_type": "aura",
+  "default_slot": "utility",
+  "mana_cost": 24,
+  "cooldown_ticks": 80,
+  "icon": "aether_ward",
+  "tags": ["aether", "showcase", "aura"],
+  "payload": {
+    "effect": "ward",
+    "duration_ticks": 120
+  }
+}

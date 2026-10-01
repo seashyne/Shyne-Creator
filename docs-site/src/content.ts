@@ -28,6 +28,7 @@ import hudExample from '../../tools/examples/responsive-hud-avatar/README_TH.md?
 import profilerExample from '../../tools/examples/render-profiler-avatar/README_TH.md?raw'
 import actionWheelExample from '../../tools/examples/action-wheel-showcase-avatar/README.md?raw'
 import scriptCanvasExample from '../../tools/examples/script-canvas-ui-avatar/README_TH.md?raw'
+import aetherShowcaseExample from '../../tools/examples/aether-showcase-pack/README_TH.md?raw'
 
 export type DocIcon = 'book' | 'download' | 'sparkles' | 'box' | 'play' | 'layers' | 'braces' | 'palette' | 'gamepad' | 'cloud' | 'shield' | 'users' | 'wrench' | 'workflow'
 export type DocItem = {
@@ -41,7 +42,7 @@ export type DocItem = {
   api?: boolean
 }
 
-export const version = '2.12.4'
+export const version = '2.12.5'
 export const minecraftVersion = '26.3'
 
 const installation = `# ติดตั้ง Shyne Creator
@@ -58,8 +59,8 @@ Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}*
 
 | คุณต้องการทำอะไร | ไฟล์ที่ต้องใช้ |
 | --- | --- |
-| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-2.12.4.jar\` พร้อม Fabric API |
-| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-2.12.4.jar\` |
+| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-2.12.5.jar\` พร้อม Fabric API |
+| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-2.12.5.jar\` |
 | สร้าง Avatar ด้วย Blockbench | Shyne Creator Kit — **ห้ามนำไปใส่ในโฟลเดอร์ mods** |
 
 ## ความต้องการของระบบ
@@ -75,13 +76,13 @@ Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}*
 ## ติดตั้งบน Fabric
 
 1. ติดตั้ง Fabric Loader สำหรับ Minecraft ${minecraftVersion}
-2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.12.4.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
+2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.12.5.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมแล้วตรวจว่ามีโลโก้ Shyne ในหน้าเมนูหลัก หรือเมนู \`Esc → อวตาร\`
 
 ## ติดตั้งบน NeoForge
 
 1. ติดตั้ง NeoForge สำหรับ Minecraft ${minecraftVersion}
-2. ใส่ไฟล์ \`shyne-creator-neoforge-2.12.4.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
+2. ใส่ไฟล์ \`shyne-creator-neoforge-2.12.5.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมด้วยโปรไฟล์ NeoForge แล้วตรวจว่ามีเมนู \`Esc → อวตาร\`
 
 ## ติดตั้งเสร็จแล้วทำอะไรต่อ
@@ -143,6 +144,7 @@ export const exampleDocs = [
   { title: 'Responsive HUD', description: 'HUD ที่จัดตำแหน่งตามความกว้างหน้าจอและ GUI scale', permission: 'hud_render', content: hudExample },
   { title: 'Render Profiler', description: 'ตัวอย่างตรวจงบ render และวิเคราะห์ task ของ Avatar', permission: 'profiler', content: profilerExample },
   { title: 'Script Canvas UI', description: 'หน้า UI เต็มจอที่วาดและกำหนดปุ่มคลิกเองทั้งหมดด้วย Lua', permission: 'hud_render', content: scriptCanvasExample },
+  { title: 'Aether Power & Item Showcase', description: 'พลังที่ใช้ mana, ไอเท็มคลิกขวา, PNG icon และ Lua effect ฝั่ง server', permission: 'server gameplay pack', content: aetherShowcaseExample },
 ]
 
 export const fileToSlug: Record<string, string> = {

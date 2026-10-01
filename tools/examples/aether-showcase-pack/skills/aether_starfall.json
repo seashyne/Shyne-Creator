@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../common/src/main/resources/shyne_sdk/schemas/skill.schema.json",
+  "skill_id": "aether.aether_starfall",
+  "display_name": "Aether Starfall",
+  "description": "Call down a three-bolt aether burst.",
+  "cast_type": "projectile",
+  "default_slot": "ultimate",
+  "mana_cost": 50,
+  "cooldown_ticks": 180,
+  "icon": "aether_starfall",
+  "tags": ["aether", "showcase", "ultimate"],
+  "payload": {
+    "effect": "starfall",
+    "bolts": 3,
+    "damage_per_bolt": 4
+  }
+}

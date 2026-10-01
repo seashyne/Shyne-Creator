@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../../common/src/main/resources/shyne_sdk/schemas/item.schema.json",
+  "item_id": "aether.focus",
+  "display_name": "Aether Focus",
+  "description": [
+    "A crystal conduit tuned for fast casting.",
+    "Right-click to cast Aether Bolt (12 mana)."
+  ],
+  "icon": "aether_bolt",
+  "model": "shyne_creator:artifact",
+  "rarity": "rare",
+  "max_stack": 1,
+  "glint": true,
+  "use_skill": "aether.aether_bolt",
+  "cooldown_ticks": 16,
+  "consume_on_use": false,
+  "payload": {
+    "showcase_action": "bolt"
+  }
+}

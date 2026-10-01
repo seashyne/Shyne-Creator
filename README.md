@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.12.4`
+- Shyne Creator: `2.12.5`
 - Minecraft: `26.3`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -32,6 +32,8 @@ Shyne Creator เป็น runtime สำหรับใช้ Avatar และ 
 ## Native Power Deck, Item Catalog และ PNG Icon
 
 Power Deck เป็น native Minecraft UI ที่มีช่อง action แบบไม่จำกัด และ Item Catalog แสดงรายละเอียดไอเท็มจาก server ได้ ทั้งคู่รองรับไอคอน PNG จาก Creator package: server ตรวจไฟล์ก่อน sync, client วาดไอคอนด้วย texture native, และ fallback เป็นอักษรย่อเมื่อไอคอนไม่พร้อมใช้งาน
+
+มีแพ็กทดลองพร้อมใช้ [Aether Power & Item Showcase](tools/examples/aether-showcase-pack/README_TH.md) ที่มีพลังใช้มานา, ไอเท็มกดใช้, PNG icon และ Lua effect ฝั่ง server เพื่อทดสอบ flow นี้ทันที
 
 ใช้ SVG เป็นไฟล์ต้นฉบับใน React/Figma/editor ได้ แต่ก่อนเข้าเกมต้อง export เป็น PNG; ไม่มี WebView หรือ SVG runtime ในม็อด อ่านรูปแบบแพ็กและคำสั่งตรวจได้ที่ [Creator Asset Package 1.0](POWER_ASSET_PACKAGE_TH.md)
 

@@ -1,3 +1,11 @@
+## Shyne Creator v2.12.5
+
+### Aether Power & Item Showcase
+
+- Added `aether-showcase-pack`: an installable gameplay example with three mana-powered skills, three right-click creator items, and matching native PNG icons.
+- The pack includes server-side Lua effects for a projectile, ward feedback, and three-bolt Starfall, so it exercises the full Power Deck → SkillExecutor → gameplay pack flow.
+- Added the showcase to the README, Gameplay API, Asset Package guide, and Docs site examples.
+
 ## Shyne Creator v2.12.4
 
 ### Creator-Owned Script Canvas UI

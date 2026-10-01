@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../common/src/main/resources/shyne_sdk/schemas/skill.schema.json",
+  "skill_id": "aether.aether_bolt",
+  "display_name": "Aether Bolt",
+  "description": "Launch a focused aether projectile.",
+  "cast_type": "projectile",
+  "default_slot": "primary",
+  "mana_cost": 12,
+  "cooldown_ticks": 16,
+  "combo_window_ticks": 20,
+  "icon": "aether_bolt",
+  "tags": ["aether", "showcase", "projectile"],
+  "payload": {
+    "effect": "bolt",
+    "damage": 5
+  }
+}

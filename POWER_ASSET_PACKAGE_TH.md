@@ -1,6 +1,6 @@
 # Shyne Creator Asset Package 1.0
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.3` และ `shyne_asset_package.schema.json` คือ contract ที่ตรวจ manifest จริง ดู API อื่นที่เกี่ยวข้องได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.5` และ `shyne_asset_package.schema.json` คือ contract ที่ตรวจ manifest จริง ดู API อื่นที่เกี่ยวข้องได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 Creator Asset Package คือแพ็กคอนเทนต์สำหรับสกิล, ไอเท็ม และไอคอน native UI
 มันไม่ใช้ WebView, React หรือ SVG runtime ภายใน Minecraft: UI ในเกมเป็น native Java และรับเฉพาะ PNG ที่ผ่านการตรวจแล้ว
@@ -121,4 +121,4 @@ python .\tools\creator\shyne_creator.py validate-pack .\tools\examples\shyne_pow
 .\tools\creator\shyne-creator.ps1 validate-pack .\tools\examples\shyne_power_pack
 ```
 
-ตัวอย่างที่ใช้งานได้อยู่ใน [`tools/examples/shyne_power_pack`](tools/examples/shyne_power_pack). เก็บ SVG เป็นต้นฉบับเพื่อให้ React/Figma/Illustrator แก้ต่อได้ แล้ว export PNG ลง `assets/icons/` ก่อนส่งแพ็กเข้าเกม.
+ตัวอย่างแบบเล็กอยู่ใน [`tools/examples/shyne_power_pack`](tools/examples/shyne_power_pack). หากต้องการตัวอย่างที่กดใช้ได้ครบทั้ง Power Deck, Item Catalog และ Lua effect ให้ใช้ [`tools/examples/aether-showcase-pack`](tools/examples/aether-showcase-pack). เก็บ SVG เป็นต้นฉบับเพื่อให้ React/Figma/Illustrator แก้ต่อได้ แล้ว export PNG ลง `assets/icons/` ก่อนส่งแพ็กเข้าเกม.
