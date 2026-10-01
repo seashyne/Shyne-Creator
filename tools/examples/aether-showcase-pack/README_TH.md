@@ -1,6 +1,6 @@
 # Aether Power & Item Showcase
 
-แพ็กตัวอย่างที่ใช้ทดสอบ **Power Deck**, **Item Catalog**, PNG icon และ gameplay script ฝั่ง server ในชุดเดียว มีพลัง 3 แบบและไอเท็มกดใช้ 3 ชิ้น:
+แพ็กตัวอย่างที่ใช้ทดสอบ **Power Deck**, **Item Catalog**, PNG icon, Blockbench 3D item presentation และ gameplay script ฝั่ง server ในชุดเดียว มีพลัง 3 แบบและไอเท็มกดใช้ 3 ชิ้น:
 
 | พลัง | มานา / คูลดาวน์ | ไอเท็มที่กดใช้ |
 | --- | --- | --- |
@@ -37,6 +37,8 @@
 4. เปิด `Esc → Powers → Actions & Keys` แล้วเลือก Aether Bolt, Aether Ward หรือ Aether Starfall จากรายการซ้าย กด **Add & bind** และกดปุ่มที่ผูกไว้เพื่อทดสอบ Power Deck
 5. เปิด `Esc → Items` เพื่อดูไอคอน PNG, คำอธิบาย, rarity, mana action และ cooldown ของทั้งสามไอเท็ม แล้วลองคลิกขวาไอเท็มในมือ
 
+`Aether Focus` มี `presentation` ที่ชี้ไปยัง `bbmodels/aether_focus.bbmodel` จึงแสดงโมเดล 3D เดียวกันในมือ, GUI/inventory, บนพื้น และ item frame. `assets/icons/aether_bolt.png` ยังเป็น icon ของ Deck/Catalog แยกจาก texture ของโมเดล.
+
 > Mana HUD จะปรากฏก็ต่อเมื่อผู้เล่นเปิดใช้ Avatar และมี action ที่ใช้ mana อยู่ใน deck แล้วเท่านั้น นี่เป็นพฤติกรรมตั้งใจของ UI เพื่อไม่ให้แสดง `100 / 100` หลอกในโลกที่ยังไม่มี Power
 
 ## สิ่งที่อ่านต่อได้จากแพ็กนี้
@@ -44,6 +46,7 @@
 - `shyne-package.json` ประกาศ PNG ที่เกมใช้จริง โดย SVG ใน `sources/icons/` เป็น source สำหรับแก้ใน Figma/Illustrator/React เท่านั้น
 - `skills/*.json` เป็น data contract ของ action; ไม่ต้องเขียน Java หรือกำหนด rarity เพื่อให้ creator สร้างพลังได้
 - `items/*.json` ใช้ `use_skill` เพื่อให้คลิกขวาไอเท็มเรียก skill เดียวกับ Power Deck
+- `items/aether_focus.json` เป็นตัวอย่าง `presentation.model_id`; โฟลเดอร์ `bbmodels/` เก็บ Blockbench file และ PNG texture ที่ runtime sync ให้ client
 - `main.lua` รับ `on_skill_key(ctx)` หลัง server อนุมัติการใช้พลัง แล้วจึงส่ง effect ที่ผู้สร้างออกแบบเอง
 
 ตรวจแพ็กก่อนนำไปใช้จริง:

@@ -19,6 +19,7 @@ import seashyne.shynecore.client.render.SkillIconTextures;
 import seashyne.shynecore.equipment.EquipmentLoadout;
 import seashyne.shynecore.equipment.WeaponDefinition;
 import seashyne.shynecore.item.ShyneItemDefinition;
+import seashyne.shynecore.item.ItemPresentation;
 import seashyne.shynecore.model.BbModelDefinition;
 import seashyne.shynecore.network.ShyneNetwork;
 import seashyne.shynecore.power.PowerState;
@@ -145,6 +146,7 @@ public final class ClientAnimationState {
                     item.itemId(), item.displayName() == null ? item.itemId() : item.displayName(),
                     item.description() == null ? List.of() : List.copyOf(item.description()),
                     item.icon() == null ? "" : item.icon(), item.modelId() == null ? "" : item.modelId(),
+                    item.presentation() == null ? ItemPresentation.NONE : item.presentation(),
                     itemRarity(item.rarity()), Math.max(1, Math.min(64, item.maxStack())), item.glint(),
                     item.useSkill() == null ? "" : item.useSkill(), item.weaponId() == null ? "" : item.weaponId(),
                     Math.max(0, item.cooldownTicks()), item.consumeOnUse(), "", Map.of()

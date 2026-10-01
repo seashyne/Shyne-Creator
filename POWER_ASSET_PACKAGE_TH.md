@@ -1,6 +1,6 @@
 # Shyne Creator Asset Package 1.0
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.5` และ `shyne_asset_package.schema.json` คือ contract ที่ตรวจ manifest จริง ดู API อื่นที่เกี่ยวข้องได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.6` และ `shyne_asset_package.schema.json` คือ contract ที่ตรวจ manifest จริง ดู API อื่นที่เกี่ยวข้องได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 Creator Asset Package คือแพ็กคอนเทนต์สำหรับสกิล, ไอเท็ม และไอคอน native UI
 มันไม่ใช้ WebView, React หรือ SVG runtime ภายใน Minecraft: UI ในเกมเป็น native Java และรับเฉพาะ PNG ที่ผ่านการตรวจแล้ว
@@ -18,8 +18,11 @@ my_power_pack/
 │     └─ arc_bolt.svg       # optional: source สำหรับ Figma/React/editor เท่านั้น
 ├─ skills/
 │  └─ arc_bolt.json
-└─ items/
-   └─ arcane_focus.json
+├─ items/
+│  └─ arcane_focus.json
+└─ bbmodels/
+│  ├─ arcane_focus.bbmodel
+│  └─ arcane_focus.png
 ```
 
 วางโฟลเดอร์แพ็กไว้ที่:
@@ -51,6 +54,29 @@ my_power_pack/
   ]
 }
 ```
+
+## Blockbench 3D Item Presentation
+
+เมื่อไอเท็มต้องมีทรง 3D ในมือและ inventory ให้ใส่ไฟล์ `.bbmodel` ไว้ใต้ `bbmodels/` (พร้อม PNG texture ของมัน) แล้วระบุ `presentation` ใน item JSON:
+
+```json
+{
+  "item_id": "arcane.focus",
+  "display_name": "Arcane Focus",
+  "icon": "arc_bolt",
+  "presentation": {
+    "model_id": "my_power_pack:arcane_focus",
+    "scale": 0.72,
+    "offset_y": 0.05,
+    "rotation_y": 18,
+    "replace_vanilla": true
+  }
+}
+```
+
+`model_id` มาจากชื่อโฟลเดอร์แพ็กและชื่อไฟล์: `my_power_pack/bbmodels/arcane_focus.bbmodel` คือ `my_power_pack:arcane_focus`. runtime ใช้ renderer native เดียวกันใน first-person, third-person, GUI/inventory, ground และ fixed display. ไม่ต้องเพิ่ม resource pack, model JSON ของ Minecraft หรือ Lua. PNG icon ยังคงเป็นภาพที่ใช้ใน Catalog/Deck โดยแยกจาก texture ของโมเดล 3D.
+
+ถ้า client ยังไม่ได้ model หรือ texture ขณะ sync, item จะกลับไปใช้ Minecraft item model ปกติแทนจนกว่าจะพร้อม; item ไม่หายและ gameplay ไม่เปลี่ยน.
 
 `id` ของ asset เป็นชื่อคงที่ที่สกิลอ้างถึง ไม่ใช่ path และไม่ใช่ URL. `source_svg` มีไว้เชื่อมกับต้นฉบับจาก editor เท่านั้น; Minecraft จะไม่อ่านหรือ rasterize SVG.
 

@@ -11,6 +11,7 @@ public record ShyneItemDefinition(
     List<String> description,
     String icon,
     String modelId,
+    ItemPresentation presentation,
     Rarity rarity,
     int maxStack,
     boolean glint,

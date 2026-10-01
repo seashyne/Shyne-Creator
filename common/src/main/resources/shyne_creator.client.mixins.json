@@ -10,6 +10,7 @@
         "AvatarNameplateMixin",
         "CustomHeadLayerMaskMixin",
         "FirstPersonArmMixin",
+        "ItemModelResolverMixin",
         "PlayerHeldItemLayerMaskMixin",
         "PlayerModelPartMaskMixin",
         "PlayerModelMaskMixin",

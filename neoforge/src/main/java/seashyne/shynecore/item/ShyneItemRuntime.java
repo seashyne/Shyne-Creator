@@ -105,6 +105,10 @@ public final class ShyneItemRuntime {
             }
             String modelId = string(root, "model", "shyne_creator:artifact");
             if (Identifier.tryParse(modelId) == null) throw new IOException("model must be a valid namespaced id");
+            ItemPresentation presentation = presentation(root);
+            if (presentation.enabled() && Identifier.tryParse(presentation.modelId()) == null) {
+                throw new IOException("presentation.model_id must be a valid namespaced Blockbench model id");
+            }
             String sourcePack = sourcePack(path, shyneModsDir);
             ShyneItemDefinition definition = new ShyneItemDefinition(
                 itemId,
@@ -112,6 +116,7 @@ public final class ShyneItemRuntime {
                 description,
                 string(root, "icon", ""),
                 modelId,
+                presentation,
                 rarity(string(root, "rarity", "common")),
                 clamp(integer(root, "max_stack", 1), 1, 64),
                 bool(root, "glint", false),
@@ -297,6 +302,22 @@ public final class ShyneItemRuntime {
     private static boolean bool(JsonObject root, String key, boolean fallback) {
         try { return root.has(key) ? root.get(key).getAsBoolean() : fallback; }
         catch (Exception ignored) { return fallback; }
+    }
+
+    private static float decimal(JsonObject root, String key, float fallback) {
+        try { return root.has(key) ? root.get(key).getAsFloat() : fallback; }
+        catch (Exception ignored) { return fallback; }
+    }
+
+    private static ItemPresentation presentation(JsonObject root) {
+        if (!root.has("presentation") || !root.get("presentation").isJsonObject()) return ItemPresentation.NONE;
+        JsonObject value = root.getAsJsonObject("presentation");
+        return new ItemPresentation(
+            string(value, "model_id", ""), decimal(value, "scale", 1.0f),
+            decimal(value, "offset_x", 0.0f), decimal(value, "offset_y", 0.0f), decimal(value, "offset_z", 0.0f),
+            decimal(value, "rotation_x", 0.0f), decimal(value, "rotation_y", 0.0f), decimal(value, "rotation_z", 0.0f),
+            bool(value, "replace_vanilla", true)
+        );
     }
 
     private static List<String> strings(JsonObject root, String key) {

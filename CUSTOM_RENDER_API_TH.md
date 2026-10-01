@@ -1,6 +1,6 @@
 # Shyne Custom Render API 1.4
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.5` และ Render API `1.4` ดูขอบเขต permission และเอกสาร API อื่นได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.6` และ Render API `1.4` ดูขอบเขต permission และเอกสาร API อื่นได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 Custom Render API 1.4 เป็นโมดูล render ภายใต้ Shyne Avatar Standard 2.0 Avatar ใหม่ใช้ผ่าน `api: "2.0"` หรือ `api: "latest"` และตรวจได้จาก `shyne.api.supports("render", ">=1.4")`, `render.api_version` หรือ `diagnostics.snapshot().custom_render_api_version`
 

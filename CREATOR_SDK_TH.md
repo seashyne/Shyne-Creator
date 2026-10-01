@@ -1,6 +1,6 @@
 # Shyne Creator SDK
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.5` schema ใน `shyne_sdk/schemas/` คือ contract สำหรับ JSON ของ Creator ดูภาพรวมได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.6` schema ใน `shyne_sdk/schemas/` คือ contract สำหรับ JSON ของ Creator ดูภาพรวมได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 เอกสารนี้เป็นจุดเริ่มต้นสำหรับมอดเสริมที่สร้าง Power, Skill และ Avatar โดยไม่ฝัง content ตัวอย่างไว้ใน Shyne Creator
 
@@ -100,6 +100,21 @@ Schema อยู่ที่ `src/main/resources/shyne_sdk/schemas` และค
 
 เกมอ่าน PNG package-local เท่านั้น ไม่โหลด SVG, React, JavaScript, URL หรือ path ภายนอกแพ็ก ข้อกำหนดขนาดและตัวอย่างเต็มอยู่ที่ [POWER_ASSET_PACKAGE_TH.md](POWER_ASSET_PACKAGE_TH.md)
 
+## Blockbench 3D item presentation
+
+ไอเท็ม Creator ไม่ต้องมี resource pack เพื่อเป็น 3D: วาง `bbmodels/arcane_focus.bbmodel` และ texture PNG ไว้ในแพ็ก แล้วเพิ่ม `presentation` ใน `items/arcane_focus.json`:
+
+```json
+"presentation": {
+  "model_id": "my_power_pack:arcane_focus",
+  "scale": 0.72,
+  "rotation_y": 18,
+  "replace_vanilla": true
+}
+```
+
+โมเดลจะแสดงในมือ, GUI/inventory, ground และ fixed display; `icon` PNG ยังใช้กับหน้า Deck/Catalog. ละ `presentation` หรือให้ `replace_vanilla` เป็น `false` เพื่อคงโมเดล Minecraft ปกติไว้. ดู field ครบและตัวอย่างได้ที่ [Gameplay API](SHYNE_GAMEPLAY_API_TH.md) และ [Asset Package](POWER_ASSET_PACKAGE_TH.md)
+
 ## โครง Avatar
 
 ```text
@@ -130,7 +145,7 @@ shyne-mods/avatars/<avatar-id>/
 
 ### Avatar แบบ Overlay
 
-สำหรับหู หาง ปีก หรือ armor cosmetic ที่ยังต้องการให้เห็น skin/armor ของ Minecraft ให้ใช้ `"profile": "accessory"` และกำหนด `parent_type` ของ bone ใน Blockbench เป็น `Head`, `Body`, `LeftArm`, `RightArm`, `LeftLeg` หรือ `RightLeg` Shyne Creator 2.12.5 จะผูก bone ตามส่วนผู้เล่นอัตโนมัติ แม้ไม่มี Lua script โดย pose ของ vanilla part จะซ้อนกับ animation ของ bone อย่างเป็น parent transform
+สำหรับหู หาง ปีก หรือ armor cosmetic ที่ยังต้องการให้เห็น skin/armor ของ Minecraft ให้ใช้ `"profile": "accessory"` และกำหนด `parent_type` ของ bone ใน Blockbench เป็น `Head`, `Body`, `LeftArm`, `RightArm`, `LeftLeg` หรือ `RightLeg` Shyne Creator 2.12.6 จะผูก bone ตามส่วนผู้เล่นอัตโนมัติ แม้ไม่มี Lua script โดย pose ของ vanilla part จะซ้อนกับ animation ของ bone อย่างเป็น parent transform
 
 หาก asset จำเป็นต้องสลับ attachment ระหว่างเล่น จึงค่อยระบุ `main` และใช้ Shyne-native Lua:
 

@@ -1,6 +1,6 @@
 # Shyne Avatar Standard 2.0
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.5` และ `avatar.schema.json` คือ contract ที่ตรวจรูปแบบ `avatar.json` จริง ดู API ที่เกี่ยวข้องได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.6` และ `avatar.schema.json` คือ contract ที่ตรวจรูปแบบ `avatar.json` จริง ดู API ที่เกี่ยวข้องได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 Shyne Avatar Standard 2.0 เป็นมาตรฐานแบบ **model-first**: งานทั่วไปควรสร้างให้เสร็จจาก Blockbench และ `avatar.json` โดยไม่ต้องมี `script.lua` เป้าหมายคือให้ผู้สร้างเริ่มจากโมเดล, hierarchy, `parent_type` และ animation ที่ตั้งชื่อชัดเจน แล้วให้ Shyne จัดการพฤติกรรมพื้นฐานให้
 

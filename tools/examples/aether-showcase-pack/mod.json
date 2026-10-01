@@ -1,7 +1,7 @@
 {
   "id": "aether_showcase_pack",
   "name": "Aether Power & Item Showcase",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Shyne Creator",
   "description": "Three mana-powered actions and three usable creator items for testing the native deck and catalog.",
   "script_engine": "lua",

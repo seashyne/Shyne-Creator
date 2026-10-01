@@ -30,6 +30,7 @@ import seashyne.shynecore.equipment.EquipmentLoadout;
 import seashyne.shynecore.equipment.EquipmentRuntime;
 import seashyne.shynecore.equipment.WeaponDefinition;
 import seashyne.shynecore.item.ShyneItemDefinition;
+import seashyne.shynecore.item.ItemPresentation;
 import seashyne.shynecore.item.ShyneItemRuntime;
 import seashyne.shynecore.model.*;
 import seashyne.shynecore.power.PowerState;
@@ -54,11 +55,12 @@ import static seashyne.shynecore.network.ShyneNetworkValidator.*;
 public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.Listener, AttachmentRuntime.Listener,
     PowerStateMachine.Listener, SkillRegistry.Listener, PlayerProfileRuntime.Listener, EquipmentRuntime.Listener, ShyneItemRuntime.Listener {
 
-    public static final int PROTOCOL_VERSION = 17;
+    public static final int PROTOCOL_VERSION = 18;
     public static final String CAP_SERVER_AUTHORITATIVE_GAMEPLAY = "gameplay.server_authoritative";
     public static final String CAP_DYNAMIC_ACTION_DECK = "gameplay.dynamic_action_deck_v1";
     public static final String CAP_SKILL_ICON_ASSETS = "content.skill_icon_assets_v1";
     public static final String CAP_ITEM_CATALOG = "content.item_catalog_v1";
+    public static final String CAP_ITEM_BB_PRESENTATION = "content.item_bb_presentation_v1";
     /** Sentinel carried in {@link SkillKeyPayload} for a client-configured action-deck cast. */
     public static final int DYNAMIC_ACTION_DECK_SLOT = -1;
     public static final String CAP_CONTENT_REGISTRY_SYNC = "content.registry_sync";
@@ -73,6 +75,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         CAP_DYNAMIC_ACTION_DECK,
         CAP_SKILL_ICON_ASSETS,
         CAP_ITEM_CATALOG,
+        CAP_ITEM_BB_PRESENTATION,
         CAP_CONTENT_REGISTRY_SYNC,
         CAP_AVATAR_PEER_SNAPSHOT,
         CAP_PLAYER_TAB_STATUS,
@@ -897,11 +900,11 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
             return new NetSkillDefinition(def.skillId(), def.displayName(), def.castType().name(), def.defaultSlot().name(), def.manaCost(), def.cooldownTicks(), def.modelId(), def.animation(), def.icon(), NetPngIcon.from(asset), def.tags());
         }
     }
-    public record NetItemDefinition(String itemId, String displayName, List<String> description, String icon, String modelId,
+    public record NetItemDefinition(String itemId, String displayName, List<String> description, String icon, String modelId, ItemPresentation presentation,
                                     String rarity, int maxStack, boolean glint, String useSkill, String weaponId,
                                     int cooldownTicks, boolean consumeOnUse, NetPngIcon iconAsset) {
         public static NetItemDefinition from(ShyneItemDefinition def, SkillIconAsset asset) {
-            return new NetItemDefinition(def.itemId(), def.displayName(), def.description(), def.icon(), def.modelId(),
+            return new NetItemDefinition(def.itemId(), def.displayName(), def.description(), def.icon(), def.modelId(), def.presentation(),
                 def.rarity().name(), def.maxStack(), def.glint(), def.useSkill(), def.weaponId(), def.cooldownTicks(),
                 def.consumeOnUse(), NetPngIcon.from(asset));
         }

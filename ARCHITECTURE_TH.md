@@ -13,6 +13,9 @@
 | `shyne_runtime/lua/avatar/*.lua` | core API แยกเป็น vector/model-animation/avatar-world/render/easy API | host ต้องต่อทุกไฟล์แล้ว compile เป็น Lua chunk เดียวเพื่อรักษา scope ของ `local` |
 | `AvatarPhysicsController` | physics preset จาก Blockbench และ additive layer `shyne.physics` | ห้ามเขียนทับ rotation หลักหรือ Lua layer |
 | `AvatarRenderTaskRegistry` | snapshot ของ HUD/world task, budget, culling, lighting และ native bone binding | world task ต้องไม่ย้อนกลับไป project ลง HUD |
+| `BbModelEntityRenderer` | avatar rig, attachment layer, vanilla-part masking และ first-person arm | ไม่รับ responsibility ของ item presentation |
+| `BbModelItemRenderer` | แปลง `item.presentation` เป็น native item render ในทุก display context | ใช้ vertex path เดียวกับ avatar แต่ไม่มี player rig หรือ avatar state |
+| `ShyneItemPresentationRenderer` | bridge จาก synced `ShyneItemDefinition` สู่ `SpecialModelRenderer` ของ Minecraft | fallback เป็น item model ปกติหาก model ยัง sync ไม่ครบ |
 | `AvatarMatrixDecomposition` | แปลง renderer matrix เป็น world rotation/scale สำหรับ Lua ให้ Fabric/NeoForge ใช้กฎเดียวกัน | ต้องลบ Blockbench Y reflection ก่อนคืน rotation |
 | `shyne_rig.lua` | optional Native Rig: spring, chain, armor และ attachment | physics ต้องใช้ `rot_add()` เท่านั้น |
 
@@ -21,6 +24,12 @@
 `vanilla parent transform → Blockbench animation/local bone → direct Lua rotation → additive layers (Lua + native physics + constraints) → child bone`
 
 ลำดับนี้ทำให้ `parent_type: "Head"` ตามหัวจริง และหูที่กำลังกระดิกยังหมุนตามหัวได้. `part:rot()` ควบคุม rotation หลักและแทน animation channel; `part:rot_add()` เป็นเพียง offset ที่บวกท้ายสุด
+
+## โมดูลการ render ของ item
+
+`ItemModelResolverMixin → ShyneItemPresentationRenderer → BbModelItemRenderer → shared Blockbench vertex path`
+
+Mixin จะเข้าแทนเฉพาะ item ที่มี `presentation.replace_vanilla: true` และ model ถูก sync/parse สำเร็จแล้วเท่านั้น. `BbModelItemRenderer` จึงกำหนด transform ของ GUI, ground, fixed, first-person และ third-person ไว้ศูนย์กลางเดียว ขณะที่ `BbModelEntityRenderer` ไม่ต้องรู้เรื่อง item definition. การแยกนี้ทำให้เพิ่มรูปแบบ item ใหม่ได้โดยไม่เสี่ยงกระทบ avatar rig.
 
 ## Render lifecycle และ bone attachment
 

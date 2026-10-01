@@ -1,6 +1,6 @@
 # Shyne Gameplay API
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.5` Gameplay API ทำงานฝั่ง server และ server เป็น authority ของ mana, cooldown, requirement, damage, projectile, summon และการใช้ไอเท็ม ดูคู่มือและ schema ที่เกี่ยวข้องทั้งหมดได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.6` Gameplay API ทำงานฝั่ง server และ server เป็น authority ของ mana, cooldown, requirement, damage, projectile, summon และการใช้ไอเท็ม ดูคู่มือและ schema ที่เกี่ยวข้องทั้งหมดได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 ## ขอบเขตและโครงสร้างแพ็ก
 
@@ -70,6 +70,12 @@ Schema: [`item.schema.json`](common/src/main/resources/shyne_sdk/schemas/item.sc
   "description": ["Right-click to cast Arc Bolt."],
   "icon": "arc_bolt",
   "model": "shyne_creator:artifact",
+  "presentation": {
+    "model_id": "arcane_pack:arcane_focus",
+    "scale": 0.72,
+    "rotation_y": 18,
+    "replace_vanilla": true
+  },
   "rarity": "rare",
   "max_stack": 1,
   "glint": true,
@@ -84,6 +90,8 @@ Schema: [`item.schema.json`](common/src/main/resources/shyne_sdk/schemas/item.sc
 - `item_id` และ `display_name` เป็น required; item ID ใช้อักษรพิมพ์เล็ก ตัวเลข `.`, `_` หรือ `-` ได้สูงสุด 64 ตัว
 - `description` รับ string หรือรายการข้อความสูงสุด 16 บรรทัด
 - `rarity` เป็น styling ของ Minecraft เท่านั้น ไม่ใช่สิทธิ์หรือเงื่อนไขการใช้
+- `presentation` เป็น optional: `model_id` คือ `<ชื่อโฟลเดอร์แพ็ก>:<ชื่อไฟล์ .bbmodel>` เช่น `arcane_pack:arcane_focus`; Minecraft วาด model นี้ในมือ, GUI/inventory, ground และ item frame. `scale`, `offset_x/y/z`, `rotation_x/y/z` ปรับ presentation เฉพาะ item ได้
+- `presentation` ไม่ต้องใช้ resource pack และไม่ใช่ Lua API. หาก model ยังไม่ sync, parse ไม่ผ่าน หรือไม่ระบุ `presentation` ระบบจะวาด item model ปกติแทน
 - `use_skill` ให้ server เรียก SkillExecutor; mana, requirement และ cooldown ของ skill ยังคงตรวจฝั่ง server
 - `weapon_id` equip weapon ที่อ้างก่อนเรียก skill; หาก weapon ไม่พบ การใช้ไอเท็มจะไม่สำเร็จ
 - หลังใช้สำเร็จ runtime เรียก Lua hook `on_item_use(ctx)` ใน pack เจ้าของ item และส่ง `player`, `uuid`, `item_id`, `skill_id`, `weapon_id`, `hand`, `payload`
@@ -149,7 +157,7 @@ Hook ไม่ใช่ client Avatar Lua และไม่ควรใช้�
 
 `/shyne reload` โหลด pack, skill, weapon และ item ใหม่ แล้ว sync registry ไปยัง client ผู้เล่น จึงเป็นวิธีทดสอบปกติโดยไม่ต้อง restart server
 
-เริ่มจากแพ็กที่ใช้ได้จริงได้ที่ [`tools/examples/aether-showcase-pack`](tools/examples/aether-showcase-pack): มี skill ที่ใช้ mana, item ที่มี `use_skill`, PNG icon และ `on_skill_key` Lua effect อยู่ครบในโฟลเดอร์เดียว
+เริ่มจากแพ็กที่ใช้ได้จริงได้ที่ [`tools/examples/aether-showcase-pack`](tools/examples/aether-showcase-pack): มี skill ที่ใช้ mana, item ที่มี `use_skill`, PNG icon, Blockbench 3D item presentation และ `on_skill_key` Lua effect อยู่ครบในโฟลเดอร์เดียว
 
 ## Asset icon และ UI
 

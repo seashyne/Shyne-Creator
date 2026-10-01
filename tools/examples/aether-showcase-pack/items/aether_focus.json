@@ -8,6 +8,12 @@
   ],
   "icon": "aether_bolt",
   "model": "shyne_creator:artifact",
+  "presentation": {
+    "model_id": "aether-showcase-pack:aether_focus",
+    "scale": 0.72,
+    "rotation_y": 18,
+    "replace_vanilla": true
+  },
   "rarity": "rare",
   "max_stack": 1,
   "glint": true,

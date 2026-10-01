@@ -19,6 +19,23 @@
       "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
     },
     "model": { "type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$", "default": "shyne_creator:artifact" },
+    "presentation": {
+      "type": "object",
+      "description": "Optional synced Blockbench presentation. The model_id is the pack folder plus .bbmodel filename, for example my_pack:crystal_staff.",
+      "properties": {
+        "model_id": { "type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_.-]+$" },
+        "scale": { "type": "number", "minimum": 0.02, "maximum": 8, "default": 1 },
+        "offset_x": { "type": "number", "default": 0 },
+        "offset_y": { "type": "number", "default": 0 },
+        "offset_z": { "type": "number", "default": 0 },
+        "rotation_x": { "type": "number", "default": 0 },
+        "rotation_y": { "type": "number", "default": 0 },
+        "rotation_z": { "type": "number", "default": 0 },
+        "replace_vanilla": { "type": "boolean", "default": true }
+      },
+      "required": ["model_id"],
+      "additionalProperties": false
+    },
     "rarity": {
       "type": "string",
       "enum": ["common", "uncommon", "rare", "epic"],

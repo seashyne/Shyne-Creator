@@ -42,7 +42,7 @@ export type DocItem = {
   api?: boolean
 }
 
-export const version = '2.12.5'
+export const version = '2.12.6'
 export const minecraftVersion = '26.3'
 
 const installation = `# ติดตั้ง Shyne Creator
@@ -59,8 +59,8 @@ Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}*
 
 | คุณต้องการทำอะไร | ไฟล์ที่ต้องใช้ |
 | --- | --- |
-| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-2.12.5.jar\` พร้อม Fabric API |
-| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-2.12.5.jar\` |
+| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-2.12.6.jar\` พร้อม Fabric API |
+| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-2.12.6.jar\` |
 | สร้าง Avatar ด้วย Blockbench | Shyne Creator Kit — **ห้ามนำไปใส่ในโฟลเดอร์ mods** |
 
 ## ความต้องการของระบบ
@@ -76,13 +76,13 @@ Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}*
 ## ติดตั้งบน Fabric
 
 1. ติดตั้ง Fabric Loader สำหรับ Minecraft ${minecraftVersion}
-2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.12.5.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
+2. ใส่ Fabric API และไฟล์ \`shyne-creator-fabric-2.12.6.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมแล้วตรวจว่ามีโลโก้ Shyne ในหน้าเมนูหลัก หรือเมนู \`Esc → อวตาร\`
 
 ## ติดตั้งบน NeoForge
 
 1. ติดตั้ง NeoForge สำหรับ Minecraft ${minecraftVersion}
-2. ใส่ไฟล์ \`shyne-creator-neoforge-2.12.5.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
+2. ใส่ไฟล์ \`shyne-creator-neoforge-2.12.6.jar\` ลงในโฟลเดอร์ \`.minecraft/mods/\`
 3. เปิดเกมด้วยโปรไฟล์ NeoForge แล้วตรวจว่ามีเมนู \`Esc → อวตาร\`
 
 ## ติดตั้งเสร็จแล้วทำอะไรต่อ

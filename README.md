@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.12.5`
+- Shyne Creator: `2.12.6`
 - Minecraft: `26.3`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -29,11 +29,13 @@ Shyne Creator เป็น runtime สำหรับใช้ Avatar และ 
 
 คู่มือสำหรับผู้เล่น: [เริ่มใช้ Shyne ใน 1 นาที](PLAYER_QUICKSTART_TH.md)
 
-## Native Power Deck, Item Catalog และ PNG Icon
+## Native Power Deck, Item Catalog, PNG Icon และ 3D Item Presentation
 
 Power Deck เป็น native Minecraft UI ที่มีช่อง action แบบไม่จำกัด และ Item Catalog แสดงรายละเอียดไอเท็มจาก server ได้ ทั้งคู่รองรับไอคอน PNG จาก Creator package: server ตรวจไฟล์ก่อน sync, client วาดไอคอนด้วย texture native, และ fallback เป็นอักษรย่อเมื่อไอคอนไม่พร้อมใช้งาน
 
 มีแพ็กทดลองพร้อมใช้ [Aether Power & Item Showcase](tools/examples/aether-showcase-pack/README_TH.md) ที่มีพลังใช้มานา, ไอเท็มกดใช้, PNG icon และ Lua effect ฝั่ง server เพื่อทดสอบ flow นี้ทันที
+
+ไอเท็ม Creator สามารถประกาศ `presentation.model_id` เพื่อใช้โมเดล Blockbench เดียวกันในมือ, third-person, inventory/GUI, item frame และบนพื้นได้แล้ว โดยยังใช้ PNG `icon` แยกสำหรับ Catalog และ Power Deck. ระบบจะ fallback เป็นโมเดล Minecraft ปกติหาก client ยังไม่ได้รับโมเดลของแพ็ก จึงไม่ทำให้ item หายระหว่าง sync.
 
 ใช้ SVG เป็นไฟล์ต้นฉบับใน React/Figma/editor ได้ แต่ก่อนเข้าเกมต้อง export เป็น PNG; ไม่มี WebView หรือ SVG runtime ในม็อด อ่านรูปแบบแพ็กและคำสั่งตรวจได้ที่ [Creator Asset Package 1.0](POWER_ASSET_PACKAGE_TH.md)
 
@@ -141,7 +143,7 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 - รองรับ Avatar แบบ Overlay สำหรับหู หาง ปีก และของเสริมด้วย `replace_vanilla: false`
 - เพิ่ม target/raycast detail สำหรับ block และ entity ใน Shyne Lua API
 - เพิ่ม `shyne_role` / `shyne_tags` และ API `model.role()` / `model.tag()` โดย path ของโมเดลยังเป็น API หลักสำหรับ rig ซับซ้อน
-- รุ่น 2.7.44 ใช้ network protocol `9`; รุ่นปัจจุบันใช้ protocol `17` และ client/server ต้องใช้รุ่นเดียวกัน
+- รุ่น 2.7.44 ใช้ network protocol `9`; รุ่นปัจจุบันใช้ protocol `18` และ client/server ต้องใช้รุ่นเดียวกัน
 
 Creator quick start, Render Task API และ Profiler: [CREATOR_QUICKSTART_TH.md](CREATOR_QUICKSTART_TH.md)
 

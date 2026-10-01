@@ -129,7 +129,7 @@ public final class BbModelEntityRenderer {
         }
     }
 
-    private static boolean isEmissiveTexture(String name) {
+    static boolean isEmissiveTexture(String name) {
         if (name == null) return false;
         String value = name.toLowerCase(java.util.Locale.ROOT);
         int dot = value.lastIndexOf('.');
@@ -388,7 +388,7 @@ public final class BbModelEntityRenderer {
         return result;
     }
 
-    private static void renderModel(
+    static void renderModel(
         PoseStack.Pose pose,
         VertexConsumer vertices,
         BbModelDefinition model,
@@ -538,7 +538,7 @@ public final class BbModelEntityRenderer {
         AvatarBoneTransformRegistry.publish(entityId, model.modelId(), context, transforms);
     }
 
-    private static Map<String, BonePose> prepareBonePoses(BbModelDefinition model, UUID entityId, VanillaPose vanillaPose) {
+    static Map<String, BonePose> prepareBonePoses(BbModelDefinition model, UUID entityId, VanillaPose vanillaPose) {
         Map<String, BonePose> bonePoses = new HashMap<>(Math.max(16, model.bones().size() * 2));
         var playback = ClientAnimationState.getPlayback(entityId);
         List<AvatarAnimationLayer> layers = AvatarRuntime.animationLayers(entityId);
@@ -1113,7 +1113,7 @@ public final class BbModelEntityRenderer {
         return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
-    private record BonePose(Matrix4f matrix, boolean visible, int colorArgb, boolean emissive) {
+    record BonePose(Matrix4f matrix, boolean visible, int colorArgb, boolean emissive) {
         private static final BonePose IDENTITY = new BonePose(new Matrix4f(), true, 0xFFFFFFFF, false);
     }
 
@@ -1121,8 +1121,8 @@ public final class BbModelEntityRenderer {
         private static final PartTransform ZERO = new PartTransform(0f, 0f, 0f, 0f, 0f, 0f);
     }
 
-    private record VanillaPose(Map<String, PartTransform> parts) {
-        private static final VanillaPose EMPTY = new VanillaPose(Map.of());
+    record VanillaPose(Map<String, PartTransform> parts) {
+        static final VanillaPose EMPTY = new VanillaPose(Map.of());
 
         private static VanillaPose capture(AvatarRenderState state, PlayerModel playerModel) {
             if (state == null) return EMPTY;

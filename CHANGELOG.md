@@ -1,3 +1,12 @@
+## Shyne Creator v2.12.6
+
+### Creator 3D Item Presentation
+
+- Added optional `presentation` to `item.schema.json`: a creator can bind a synced Blockbench model to an item without making a resource pack item model.
+- Creator item models now render through Minecraft's native item pipeline in first/third person, GUI/inventory, ground and fixed display contexts, with per-item scale, offset and rotation.
+- Added `BbModelItemRenderer` as the dedicated item-presentation module; `BbModelEntityRenderer` remains responsible for avatar rigs, attachment layers and first-person arms.
+- Added the Aether Focus Blockbench presentation example and documented the complete package workflow.
+
 ## Shyne Creator v2.12.5
 
 ### Aether Power & Item Showcase

@@ -1,0 +1,58 @@
+{
+  "meta": { "format_version": "4.10", "model_format": "free" },
+  "name": "Aether Focus — Item Presentation",
+  "resolution": { "width": 128, "height": 128 },
+  "textures": [
+    {
+      "id": "0",
+      "name": "aether_focus.png",
+      "relative_path": "aether_focus.png",
+      "uv_width": 128,
+      "uv_height": 128
+    }
+  ],
+  "elements": [
+    {
+      "name": "FocusCore",
+      "uuid": "aether-focus-core",
+      "type": "cube",
+      "from": [5, 4, 5],
+      "to": [11, 12, 11],
+      "origin": [8, 8, 8],
+      "faces": {
+        "north": { "uv": [28, 28, 68, 76], "texture": 0 },
+        "south": { "uv": [68, 28, 108, 76], "texture": 0 },
+        "east": { "uv": [8, 28, 28, 76], "texture": 0 },
+        "west": { "uv": [108, 28, 128, 76], "texture": 0 },
+        "up": { "uv": [28, 8, 68, 28], "texture": 0 },
+        "down": { "uv": [68, 8, 108, 28], "texture": 0 }
+      }
+    },
+    {
+      "name": "FocusHalo",
+      "uuid": "aether-focus-halo",
+      "type": "cube",
+      "from": [3, 7, 3],
+      "to": [13, 9, 13],
+      "origin": [8, 8, 8],
+      "rotation": [0, 45, 0],
+      "faces": {
+        "north": { "uv": [8, 84, 56, 94], "texture": 0 },
+        "south": { "uv": [56, 84, 104, 94], "texture": 0 },
+        "east": { "uv": [8, 94, 18, 104], "texture": 0 },
+        "west": { "uv": [104, 94, 114, 104], "texture": 0 },
+        "up": { "uv": [18, 94, 56, 104], "texture": 0 },
+        "down": { "uv": [56, 94, 94, 104], "texture": 0 }
+      }
+    }
+  ],
+  "outliner": [
+    {
+      "name": "AetherFocus",
+      "uuid": "aether-focus-root",
+      "origin": [8, 8, 8],
+      "children": ["aether-focus-core", "aether-focus-halo"]
+    }
+  ],
+  "animations": []
+}

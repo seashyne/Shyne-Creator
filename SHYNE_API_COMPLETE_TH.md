@@ -1,8 +1,8 @@
 # 📖 Shyne Creator — API Reference ฉบับสมบูรณ์
 
-> ตรวจทานกับ Shyne Creator `2.12.5` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
+> ตรวจทานกับ Shyne Creator `2.12.6` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
 
-> **เวอร์ชัน:** `2.12.5` | **Standard:** `2.0` | **ภาษา:** ไทย
+> **เวอร์ชัน:** `2.12.6` | **Standard:** `2.0` | **ภาษา:** ไทย
 > เอกสารนี้รวม **ทุก API** ของ Shyne Creator ไว้ในที่เดียว
 
 ---
@@ -937,6 +937,22 @@ model.detach(player_id)
 
 > ⚠️ สิทธิ์ต้องผ่านตัวตรวจของ Shyne/MC Server เสมอ ไม่ควรเชื่อค่า damage, mana, permission หรือ cooldown จาก Client
 
+### Creator item presentation
+
+`items/*.json` รับ `presentation` เพื่อแทน item model ด้วย Blockbench `.bbmodel` ในทุก native item context:
+
+```json
+"presentation": {
+  "model_id": "my_power_pack:arcane_focus",
+  "scale": 0.72,
+  "offset_y": 0.05,
+  "rotation_y": 18,
+  "replace_vanilla": true
+}
+```
+
+`model_id` ใช้ชื่อโฟลเดอร์แพ็กกับชื่อไฟล์โดยไม่รวม `.bbmodel`; runtime sync model/texture เดิมไปยัง client แล้วใช้ `BbModelItemRenderer` วาดใน first-person, third-person, GUI/inventory, ground และ fixed display. หากโมเดลยังไม่พร้อม item จะ fallback เป็น vanilla model โดย gameplay เดิมไม่เปลี่ยน.
+
 ---
 
 ## 19. Cloud API v2.2
@@ -1207,4 +1223,4 @@ figura.compatibility_level -- "100%"
 ---
 
 > 📝 เอกสารนี้สร้างอัตโนมัติจาก `SHYNE_LUA_API_TH.md`, `CUSTOM_RENDER_API_TH.md`, `RIG_API_TH.md`, `SHYNE_GAMEPLAY_API_TH.md`, `CLOUD_API.md` และ `60_figura_compat.lua`  
-> อัปเดตล่าสุด: 2026-10-01 | Shyne Creator v2.12.5
+> อัปเดตล่าสุด: 2026-10-01 | Shyne Creator v2.12.6
