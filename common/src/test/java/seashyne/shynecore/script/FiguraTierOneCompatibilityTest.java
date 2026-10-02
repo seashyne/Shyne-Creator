@@ -41,7 +41,7 @@ final class FiguraTierOneCompatibilityTest {
         LuaSandbox.Environment environment = LuaSandbox.create();
         Globals globals = environment.globals();
         LuaTable rendererWrites = new LuaTable();
-        installBootstrapMocks(globals, rendererWrites);
+        installBootstrapMocks(environment, rendererWrites);
         runBootstrap(environment);
 
         LuaValue result = globals.load("""
@@ -87,7 +87,7 @@ final class FiguraTierOneCompatibilityTest {
     void pingsQueueMultipleCallsAndDeduplicatesSyncedDeliveries() throws Exception {
         LuaSandbox.Environment environment = LuaSandbox.create();
         Globals globals = environment.globals();
-        installBootstrapMocks(globals, new LuaTable());
+        installBootstrapMocks(environment, new LuaTable());
         runBootstrap(environment);
 
         LuaValue result = globals.load("""
@@ -115,7 +115,7 @@ final class FiguraTierOneCompatibilityTest {
     void dynamicTextureFacadePublishesPixelsThroughNativeTextureBridge() throws Exception {
         LuaSandbox.Environment environment = LuaSandbox.create();
         Globals globals = environment.globals();
-        installBootstrapMocks(globals, new LuaTable());
+        installBootstrapMocks(environment, new LuaTable());
         runBootstrap(environment);
 
         LuaValue result = globals.load("""
@@ -132,8 +132,34 @@ final class FiguraTierOneCompatibilityTest {
         assertTrue(result.toboolean(), "Figura texture facade must route pixel edits and apply calls to the native texture bridge");
     }
 
+    @Test
+    void keybindFacadeUsesTheNativeInputBridgeAndPreservesFiguraControls() throws Exception {
+        LuaSandbox.Environment environment = LuaSandbox.create();
+        Globals globals = environment.globals();
+        installBootstrapMocks(environment, new LuaTable());
+        runBootstrap(environment);
+
+        LuaValue result = globals.load("""
+            local dash = keybinds:newKeybind("Dash", "key.keyboard.g", true)
+            dash.press = function() end
+            local created = dash ~= nil and dash:getName() == "Dash" and dash:getKey() == "key.keyboard.g"
+              and dash:isGuiEnabled() and dash:isDefault() and dash.press ~= nil and keybinds:getKeybinds().Dash == dash
+            dash:setKey("key.keyboard.h"):setEnabled(false):setGUI(false)
+            local changed = dash:getKey() == "key.keyboard.h" and dash:getKeyName() == "H" and dash:getID() == 72
+              and not dash:isDefault() and not dash:isEnabled() and not dash:isGuiEnabled()
+            dash:setEnabled(true):setGUI(true):reset()
+            local vanilla = keybinds:fromVanilla("key.jump")
+            return created and changed and dash:isEnabled() and dash:isGuiEnabled() and dash:isDefault()
+              and dash:getKey() == "key.keyboard.g" and vanilla ~= nil and vanilla:getKey() == "key.keyboard.space"
+              and keybinds:getVanillaKey("missing") == nil
+            """, "figura-tier-one-keybind-test").call();
+
+        assertTrue(result.toboolean(), "Figura keybind facade must use native bindings and expose key, GUI, enable, reset, and vanilla controls");
+    }
+
     /** Installs only the native callbacks needed to load and observe the compatibility facade. */
-    private static void installBootstrapMocks(Globals globals, LuaTable rendererWrites) {
+    private static void installBootstrapMocks(LuaSandbox.Environment environment, LuaTable rendererWrites) {
+        Globals globals = environment.globals();
         globals.set("SHYNE_API_VERSION", LuaValue.valueOf("2.0"));
         globals.set("SHYNE_API_AUTOMATIC", LuaValue.TRUE);
         globals.set("_shyne_api_modules", new ZeroArgFunction() {
@@ -227,6 +253,35 @@ final class FiguraTierOneCompatibilityTest {
                 return LuaValue.TRUE;
             }
         });
+        environment.budget().reset(1_000_000);
+        globals.load("""
+            local bindings = {}
+            local function binding(id) return bindings[id] end
+            function _shyne_input_bind(id, _, key, _, _, _, _, _, _, _, _, gui)
+              local value = { key = key, default_key = key, enabled = true, gui = gui == true }
+              bindings[id] = value
+              return id
+            end
+            function _shyne_input_unbind(id) bindings[id] = nil; return true end
+            function _shyne_input_is_down(_) return false end
+            function _shyne_input_get_key(id) return binding(id) and binding(id).key or nil end
+            function _shyne_input_get_key_name(id)
+              local key = binding(id) and binding(id).key or ""
+              return key == "key.keyboard.h" and "H" or (key == "key.keyboard.g" and "G" or "Space")
+            end
+            function _shyne_input_get_default_key(id) return binding(id) and binding(id).default_key or nil end
+            function _shyne_input_get_id(id) return binding(id) and (binding(id).key == "key.keyboard.h" and 72 or 71) or -1 end
+            function _shyne_input_set_key(id, key) if not binding(id) then return false end; binding(id).key = key; return true end
+            function _shyne_input_reset(id) if not binding(id) then return false end; binding(id).key = binding(id).default_key; return true end
+            function _shyne_input_is_default(id) return binding(id) and binding(id).key == binding(id).default_key or false end
+            function _shyne_input_set_enabled(id, enabled) if not binding(id) then return false end; binding(id).enabled = enabled; return true end
+            function _shyne_input_is_enabled(id) return binding(id) and binding(id).enabled or false end
+            function _shyne_input_set_gui(id, gui) if not binding(id) then return false end; binding(id).gui = gui; return true end
+            function _shyne_input_is_gui(id) return binding(id) and binding(id).gui or false end
+            function _shyne_input_conflicts(_) return {} end
+            function _shyne_input_vanilla_key(id) return id == "key.jump" and "key.keyboard.space" or nil end
+            function _shyne_input_vanilla_name(id) return id == "key.jump" and "Jump" or nil end
+            """, "figura-tier-one-input-mocks").call();
     }
 
     /** Returns the mocked read-only client or inventory value for a native Lua read. */

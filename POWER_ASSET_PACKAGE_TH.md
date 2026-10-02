@@ -1,6 +1,6 @@
 # Shyne Creator Asset Package 1.0
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.8` และ `shyne_asset_package.schema.json` คือ contract ที่ตรวจ manifest จริง ดู API อื่นที่เกี่ยวข้องได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.9` และ `shyne_asset_package.schema.json` คือ contract ที่ตรวจ manifest จริง ดู API อื่นที่เกี่ยวข้องได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 Creator Asset Package คือแพ็กคอนเทนต์สำหรับสกิล, ไอเท็ม และไอคอน native UI
 มันไม่ใช้ WebView, React หรือ SVG runtime ภายใน Minecraft: UI ในเกมเป็น native Java และรับเฉพาะ PNG ที่ผ่านการตรวจแล้ว

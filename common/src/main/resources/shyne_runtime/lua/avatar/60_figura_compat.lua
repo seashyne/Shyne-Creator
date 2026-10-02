@@ -150,39 +150,87 @@ end)
 
 -- ------------------------------------------------------------------------------
 -- 4. KEYBINDS BRIDGE (keybinds:newKeybind)
+-- สะพาน Keybind ที่รองรับรูปแบบ API ของ Figura เท่าที่ Shyne มี native input
 -- ------------------------------------------------------------------------------
 
 ---@class FiguraKeybinds
 keybinds = keybinds or {}
+local _figura_keybinds = {}
 local keybind_mt = {}
-keybind_mt.__index = keybind_mt
+keybind_mt.__index = function(self, key)
+  if key == "press" then return self._onPress end
+  if key == "release" then return self._onRelease end
+  return keybind_mt[key]
+end
 
-function keybind_mt:onPress(fn) self._onPress = fn; return self end
-function keybind_mt:onRelease(fn) self._onRelease = fn; return self end
+function keybind_mt:setOnPress(fn) self._onPress = fn; return self end
+function keybind_mt:onPress(fn) return self:setOnPress(fn) end
+function keybind_mt:setOnRelease(fn) self._onRelease = fn; return self end
+function keybind_mt:onRelease(fn) return self:setOnRelease(fn) end
+function keybind_mt:setKey(key)
+  if type(key) == "string" and _shyne_input_set_key(self._id, key) then self._key = key end
+  return self
+end
+function keybind_mt:key(key) return self:setKey(key) end
+function keybind_mt:getKey() return _shyne_input_get_key(self._id) end
+function keybind_mt:getKeyName() return _shyne_input_get_key_name(self._id) end
+function keybind_mt:getName() return self._name end
+function keybind_mt:getID() return _shyne_input_get_id(self._id) end
+function keybind_mt:isDefault() return _shyne_input_is_default(self._id) end
+function keybind_mt:reset() return _shyne_input_reset(self._id) end
+function keybind_mt:isEnabled() return _shyne_input_is_enabled(self._id) end
+function keybind_mt:setEnabled(enabled) _shyne_input_set_enabled(self._id, enabled ~= false); return self end
+function keybind_mt:enabled(enabled) return self:setEnabled(enabled) end
+function keybind_mt:isGuiEnabled() return _shyne_input_is_gui(self._id) end
+function keybind_mt:setGUI(enabled) _shyne_input_set_gui(self._id, enabled == true); return self end
+function keybind_mt:gui(enabled) return self:setGUI(enabled) end
 function keybind_mt:isPressed()
   return _shyne_input_is_down(self._id)
 end
 
-function keybinds:newKeybind(name, default_key)
+keybind_mt.__newindex = function(self, key, value)
+  if key == "press" then self._onPress = value
+  elseif key == "release" then self._onRelease = value
+  else rawset(self, key, value) end
+end
+
+function keybinds:newKeybind(name, default_key, gui)
   local id = "kb_" .. name:gsub("%s+", "_"):lower()
   local kb = setmetatable({
     _id = id,
     _name = name,
-    _default_key = default_key or -1,
+    _default_key = default_key or "key.keyboard.unknown",
+    _key = default_key or "key.keyboard.unknown",
     _onPress = nil,
     _onRelease = nil
   }, keybind_mt)
 
-  _avatar_input_bind(
+  _shyne_input_bind(
     id,
     name,
     kb._default_key,
     "keyboard",
     0,
-    function() if kb._onPress then kb._onPress() end end,
-    function() if kb._onRelease then kb._onRelease() end end
+    function() if kb._onPress then kb._onPress(0, kb) end end,
+    function() if kb._onRelease then kb._onRelease(0, kb) end end,
+    nil,
+    false,
+    10,
+    2,
+    gui == true
   )
+  _figura_keybinds[name] = kb
   return kb
+end
+
+function keybinds:of(name, default_key, gui) return self:newKeybind(name, default_key, gui) end
+function keybinds:getKeybinds() return _figura_keybinds end
+function keybinds:getVanillaKey(id) return _shyne_input_vanilla_key(id) end
+function keybinds:fromVanilla(id)
+  local key = _shyne_input_vanilla_key(id)
+  if key == nil then return nil end
+  local label = _shyne_input_vanilla_name(id) or id
+  return self:newKeybind("[Vanilla] " .. label, key, false)
 end
 
 -- renderer and client are implemented in 61_figura_client_renderer.lua

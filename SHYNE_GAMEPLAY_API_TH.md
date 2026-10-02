@@ -1,6 +1,6 @@
 # Shyne Gameplay API
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.8` Gameplay API ทำงานฝั่ง server และ server เป็น authority ของ mana, cooldown, requirement, damage, projectile, summon และการใช้ไอเท็ม ดูคู่มือและ schema ที่เกี่ยวข้องทั้งหมดได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.9` Gameplay API ทำงานฝั่ง server และ server เป็น authority ของ mana, cooldown, requirement, damage, projectile, summon และการใช้ไอเท็ม ดูคู่มือและ schema ที่เกี่ยวข้องทั้งหมดได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 ## ขอบเขตและโครงสร้างแพ็ก
 

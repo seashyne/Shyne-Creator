@@ -119,13 +119,37 @@ public final class DynamicAvatarInputRegistry {
     }
 
     public static synchronized boolean isDown(String stableId) {
+        return isDown(stableId, false);
+    }
+
+    public static synchronized boolean isDown(String stableId, boolean allowGui) {
         Entry entry = ENTRIES.get(stableId);
-        return entry != null && inputContextAvailable() && modifiersDown(entry.modifiers) && entry.mapping.isDown();
+        return entry != null && inputContextAvailable(allowGui) && modifiersDown(entry.modifiers) && entry.mapping.isDown();
     }
 
     public static synchronized boolean isBound(String stableId) {
         Entry entry = ENTRIES.get(stableId);
         return entry != null && !entry.mapping.isUnbound();
+    }
+
+    public static synchronized String keyName(String stableId) {
+        Entry entry = ENTRIES.get(stableId);
+        return entry == null ? null : entry.mapping.saveString();
+    }
+
+    public static synchronized String keyDisplayName(String stableId) {
+        Entry entry = ENTRIES.get(stableId);
+        return entry == null ? null : entry.mapping.getTranslatedKeyMessage().getString();
+    }
+
+    public static synchronized String defaultKeyName(String stableId) {
+        Entry entry = ENTRIES.get(stableId);
+        return entry == null ? null : entry.mapping.getDefaultKey().getName();
+    }
+
+    public static synchronized int keyCode(String stableId) {
+        Entry entry = ENTRIES.get(stableId);
+        return entry == null ? InputConstants.UNKNOWN.getValue() : InputConstants.getKey(entry.mapping.saveString()).getValue();
     }
 
     public static InputConstants.Type inputType(String name) {
@@ -160,9 +184,9 @@ public final class DynamicAvatarInputRegistry {
         return List.copyOf(result);
     }
 
-    private static boolean inputContextAvailable() {
+    private static boolean inputContextAvailable(boolean allowGui) {
         Minecraft client = Minecraft.getInstance();
-        return client.gui.screen() == null && client.gui.overlay() == null && client.isWindowActive();
+        return client.isWindowActive() && (allowGui || (client.gui.screen() == null && client.gui.overlay() == null));
     }
 
     private static boolean modifiersDown(int mask) {
@@ -245,7 +269,8 @@ public final class DynamicAvatarInputRegistry {
 
         private Handle(Object owner, String stableId) { this.owner = owner; this.stableId = stableId; }
         public String stableId() { return stableId; }
-        public boolean isDown() { return !closed && DynamicAvatarInputRegistry.isDown(stableId); }
+        public boolean isDown() { return isDown(false); }
+        public boolean isDown(boolean allowGui) { return !closed && DynamicAvatarInputRegistry.isDown(stableId, allowGui); }
         public boolean isBound() { return !closed && DynamicAvatarInputRegistry.isBound(stableId); }
         public List<String> conflicts() {
             synchronized (DynamicAvatarInputRegistry.class) {

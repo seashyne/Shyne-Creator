@@ -1,8 +1,8 @@
 # 📖 Shyne Creator — API Reference ฉบับสมบูรณ์
 
-> ตรวจทานกับ Shyne Creator `2.12.8` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
+> ตรวจทานกับ Shyne Creator `2.12.9` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
 
-> **เวอร์ชัน:** `2.12.8` | **Standard:** `2.0` | **ภาษา:** ไทย
+> **เวอร์ชัน:** `2.12.9` | **Standard:** `2.0` | **ภาษา:** ไทย
 > เอกสารนี้รวม **ทุก API** ของ Shyne Creator ไว้ในที่เดียว
 
 ---
@@ -1037,7 +1037,7 @@ X-Shyne-License: CC-BY-4.0
 
 Shyne Creator มี **Figura Compatibility Layer ระดับ Tier 1** สำหรับย้ายสคริปต์ Figura บางส่วนมาใช้บน Shyne Core โดยไม่ต้องเขียนทุกอย่างใหม่ แต่ **ไม่ใช่ Figura runtime แบบ 1:1 และไม่รับประกันว่า avatar Figura ทุกตัวจะทำงานได้โดยไม่แก้ไข**.
 
-**มีแล้ว:** vectors/matrices, event subset, action wheel, pings, keybind ขั้นพื้นฐาน, player/world/item proxy, particle/sound, renderer/client/raycast และ dynamic texture สำหรับ HUD/Canvas/world sprite.
+**มีแล้ว:** vectors/matrices, event subset, action wheel, pings, keybind พร้อมเปลี่ยนปุ่ม/เปิด GUI/fromVanilla, player/world/item proxy, particle/sound, renderer/client/raycast และ dynamic texture สำหรับ HUD/Canvas/world sprite.
 
 **ยังไม่มีหรือยังไม่เทียบเท่า:** event ครบชุด, keybind GUI/vanilla binding ครบ, nameplate API, resource/file/data/json/net/server-packets API, permission budget แบบ Figura และการ bind dynamic texture เข้ากับ material ของโมเดล. ให้ใช้ Shyne Native API เป็น API หลักสำหรับงานใหม่.
 
@@ -1131,10 +1131,15 @@ pings.myPing("hello")
 local kb = keybinds:newKeybind("Sprint Toggle", input.key.g)
 kb:onPress(function() print("pressed") end)
 kb:onRelease(function() print("released") end)
+kb:setKey("key.keyboard.h")
+kb:setGUI(true):setEnabled(true)
 local down = kb:isPressed()
+local vanilla_jump = keybinds:fromVanilla("key.jump")
 ```
 
-> Bridge → `_avatar_input_bind`
+`setOnPress/onPress`, `setOnRelease/onRelease`, `setKey/key`, `getKey`, `getKeyName`, `getName`, `getID`, `isDefault`, `reset`, `isPressed`, `setEnabled/enabled`, `isEnabled`, `setGUI/gui`, `isGuiEnabled`, `fromVanilla`, `getVanillaKey` และ `getKeybinds` ทำงานผ่าน Shyne native input bridge และจำปุ่มไว้ใน `config/shyne-creator/avatar-keybinds.json`.
+
+`fromVanilla(id)` คืน `nil` หากไม่พบ vanilla key mapping; callback ของ Shyne ส่ง `0, keybind` แทน modifier event เต็มรูปแบบของ Figura.
 
 ### 20.7 Player & World Proxies
 
@@ -1227,4 +1232,4 @@ figura.compatibility_level -- "tier_1"
 ---
 
 > 📝 เอกสารนี้สร้างอัตโนมัติจาก `SHYNE_LUA_API_TH.md`, `CUSTOM_RENDER_API_TH.md`, `RIG_API_TH.md`, `SHYNE_GAMEPLAY_API_TH.md`, `CLOUD_API.md` และ `60_figura_compat.lua`  
-> อัปเดตล่าสุด: 2026-10-02 | Shyne Creator v2.12.8
+> อัปเดตล่าสุด: 2026-10-02 | Shyne Creator v2.12.9

@@ -1,3 +1,11 @@
+## Shyne Creator v2.12.9
+
+### Figura-Style Keybinds That Reach Native Input
+
+- Corrected the Figura keybind facade to call Shyne's native input bridge, so Figura-style bindings no longer stop at an absent bridge name.
+- Added `setKey/key`, `getKey`, `getKeyName`, `getID`, `isDefault`, `reset`, `setEnabled/enabled`, `isEnabled`, `setGUI/gui`, `isGuiEnabled`, `getKeybinds`, `getVanillaKey`, and `fromVanilla`.
+- Native input now accepts named Minecraft keys, supports opt-in GUI input, persists remaps, and preserves loader-neutral behavior on Fabric and NeoForge.
+
 ## Shyne Creator v2.12.8
 
 ### Native Dynamic Textures & Honest Figura Compatibility
