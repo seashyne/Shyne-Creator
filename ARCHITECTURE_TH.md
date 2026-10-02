@@ -13,7 +13,12 @@
 | `shyne_runtime/lua/avatar/*.lua` | core API แยกเป็น vector/model-animation/avatar-world/render/easy API | host ต้องต่อทุกไฟล์แล้ว compile เป็น Lua chunk เดียวเพื่อรักษา scope ของ `local` |
 | `AvatarPhysicsController` | physics preset จาก Blockbench และ additive layer `shyne.physics` | ห้ามเขียนทับ rotation หลักหรือ Lua layer |
 | `AvatarRenderTaskRegistry` | snapshot ของ HUD/world task, budget, culling, lighting และ native bone binding | world task ต้องไม่ย้อนกลับไป project ลง HUD |
-| `BbModelEntityRenderer` | avatar rig, attachment layer, vanilla-part masking และ first-person arm | ไม่รับ responsibility ของ item presentation |
+| `BbModelEntityRenderer` | orchestration ของ avatar layer, attachment, masking และ publish bone matrix | ไม่เก็บกฎ pose/rig/vertex/first-person ไว้รวมกัน |
+| `BbModelVanillaPose` | snapshot transform ของแขนขา vanilla ก่อน animation ของครีเอเตอร์ | ใช้เป็น input เดียวของ avatar และ item path |
+| `BbModelPoseResolver` | compose Blockbench animation, vanilla pose และ Lua state เป็น bone pose | ไม่ submit vertex หรือเลือก rig topology |
+| `BbModelRigResolver` | ค้นหา bone, เลือกแขน, parent mapping และตรวจ visibility | ใช้ได้ร่วมกันโดยไม่ผูก Fabric/NeoForge |
+| `BbModelGeometryRenderer` | ปล่อย cube/mesh vertex ของ Blockbench | ไม่รับผิดชอบ animation หรือ entity state |
+| `BbModelFirstPersonRenderer` | adapter วาดแขน avatar ในมุมมองบุคคลที่หนึ่งของแต่ละ loader | เรียก pose/rig/geometry module ร่วม; ต้องรักษา parity |
 | `BbModelItemRenderer` | แปลง `item.presentation` เป็น native item render ในทุก display context | ใช้ vertex path เดียวกับ avatar แต่ไม่มี player rig หรือ avatar state |
 | `ShyneItemPresentationRenderer` | bridge จาก synced `ShyneItemDefinition` สู่ `SpecialModelRenderer` ของ Minecraft | fallback เป็น item model ปกติหาก model ยัง sync ไม่ครบ |
 | `AvatarMatrixDecomposition` | แปลง renderer matrix เป็น world rotation/scale สำหรับ Lua ให้ Fabric/NeoForge ใช้กฎเดียวกัน | ต้องลบ Blockbench Y reflection ก่อนคืน rotation |
@@ -27,9 +32,9 @@
 
 ## โมดูลการ render ของ item
 
-`ItemModelResolverMixin → ShyneItemPresentationRenderer → BbModelItemRenderer → shared Blockbench vertex path`
+`ItemModelResolverMixin → ShyneItemPresentationRenderer → BbModelItemRenderer → BbModelGeometryRenderer`
 
-Mixin จะเข้าแทนเฉพาะ item ที่มี `presentation.replace_vanilla: true` และ model ถูก sync/parse สำเร็จแล้วเท่านั้น. `BbModelItemRenderer` จึงกำหนด transform ของ GUI, ground, fixed, first-person และ third-person ไว้ศูนย์กลางเดียว ขณะที่ `BbModelEntityRenderer` ไม่ต้องรู้เรื่อง item definition. การแยกนี้ทำให้เพิ่มรูปแบบ item ใหม่ได้โดยไม่เสี่ยงกระทบ avatar rig.
+Mixin จะเข้าแทนเฉพาะ item ที่มี `presentation.replace_vanilla: true` และ model ถูก sync/parse สำเร็จแล้วเท่านั้น. `BbModelItemRenderer` จึงกำหนด transform ของ GUI, ground, fixed, first-person และ third-person ไว้ศูนย์กลางเดียว ขณะที่ `BbModelEntityRenderer` ไม่ต้องรู้เรื่อง item definition. ทั้ง item และ avatar เรียก `BbModelGeometryRenderer` เดียวกัน แต่ใช้ `BbModelPoseResolver` และ state ของตนเอง จึงเพิ่มรูปแบบ item ใหม่ได้โดยไม่เสี่ยงกระทบ avatar rig.
 
 ## Render lifecycle และ bone attachment
 
@@ -56,5 +61,5 @@ Blockbench `.bbmodel` format 4.x เก็บแกน animation ในทิศ
 1. เพิ่ม state และ test ใน `common` ก่อน
 2. เพิ่ม bridge ใน Fabric และ NeoForge ให้ parity ผ่าน
 3. เพิ่ม API หลักในโมดูลย่อย `shyne_runtime/lua/avatar/` หรือแยกระบบ optional เป็น `shyne_runtime/lua/shyne_<feature>.lua`; ห้ามทำ index กลับไปเป็นไฟล์ 800+ บรรทัด
-4. เพิ่ม comment ที่อธิบายเหตุผล, transform order, sync และข้อจำกัด—not comment ที่บอกเพียงว่าโค้ดบรรทัดนั้นทำอะไร
+4. เพิ่ม comment ที่อธิบายเหตุผล, transform order, sync และข้อจำกัด—not comment ที่บอกเพียงว่าโค้ดบรรทัดนั้นทำอะไร โดยทุก comment ที่เพิ่มหรือแก้ต้องมีคำอธิบาย **ไทยและอังกฤษ** ที่มีความหมายเท่ากันตาม `RULES.md`
 5. อัปเดต API standard, schema, docs และ protocol เมื่อ payload เปลี่ยน

@@ -1,3 +1,12 @@
+## Shyne Creator v2.12.7
+
+### Modular Blockbench Renderer & Bilingual Documentation
+
+- Split the oversized avatar renderer into focused `BbModelVanillaPose`, `BbModelPoseResolver`, `BbModelRigResolver`, `BbModelGeometryRenderer` and loader-specific `BbModelFirstPersonRenderer` modules.
+- `BbModelEntityRenderer` is now an orchestration layer (319 lines Fabric / 323 lines NeoForge) that submits the avatar layer, publishes bone matrices and preserves its public first-person hook.
+- Kept Fabric and NeoForge behavior in parity while retaining the shared Blockbench geometry path for avatar and native item presentation rendering.
+- Added a permanent project rule: every new or modified explanatory comment, Javadoc, API note and Lua documentation must state the same intent in both English and Thai before release.
+
 ## Shyne Creator v2.12.6
 
 ### Creator 3D Item Presentation

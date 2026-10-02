@@ -26,6 +26,7 @@
     * Purpose and architectural responsibility.
     * Thread safety and execution context (Render thread, Client tick thread, Worker thread).
     * Coordinate systems and conversion formulas (e.g. Blockbench 1/16th scale, OpenGL/OpenAL coordinates).
+  - **Bilingual comments are mandatory for every new or modified comment.** Write the English explanation and the equivalent Thai explanation together. This applies to Javadoc, inline implementation notes, API comments and Lua documentation. Do not add a one-language comment when code is created or changed.
 
 ## 3. MultiLoader Architecture & Parity Enforcement
 - **Zero Loader-Specific Imports in Common**:
@@ -42,3 +43,8 @@
   - Shyne Lua API 1.0, 2.0, and Easy API declarations (`shyne.setup`, `anim`, `part`, `on`).
   - Figura avatars and SquAPI scripts (`require("squapi")`).
 - All unit and integration tests (`:fabric:test` and `:neoforge:test`) must pass 100% before any change is marked complete.
+
+## 5. Mandatory Change Checklist
+- Every code/API change must add or update an explanatory bilingual comment where responsibility, lifecycle, safety, coordinate conversion, sync or a non-obvious constraint is involved.
+- English and Thai comments must communicate the same intent; one language must not contain constraints missing from the other.
+- Review `RULES.md`, public API guides and loader parity before committing. A release is complete only after validation, version bump, commit and push.

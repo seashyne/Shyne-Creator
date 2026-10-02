@@ -17,9 +17,12 @@ import java.util.UUID;
 
 /**
  * Renders a creator Blockbench model as an item in every vanilla item context.
+ * วาดโมเดล Blockbench ของครีเอเตอร์เป็น item ในทุก context ของ vanilla.
  *
  * <p>This module deliberately owns item-only transforms, leaving
  * {@link BbModelEntityRenderer} focused on avatar rig and attachment rendering.</p>
+ * <p>โมดูลนี้รับผิดชอบ transform เฉพาะ item เพื่อให้
+ * {@link BbModelEntityRenderer} รับผิดชอบเฉพาะ avatar rig และ attachment.</p>
  */
 public final class BbModelItemRenderer {
     private static final UUID STATIC_ITEM_RENDER_ID = new UUID(0L, 1L);
@@ -42,11 +45,12 @@ public final class BbModelItemRenderer {
         rotate(poseStack, Axis.YP.rotationDegrees(presentation.rotationY()));
         rotate(poseStack, Axis.ZP.rotationDegrees(presentation.rotationZ()));
         poseStack.scale(presentation.scale(), presentation.scale(), presentation.scale());
-        // The shared geometry path is avatar-origin based; item origin is not.
+        // The shared geometry path uses an avatar origin, while item rendering uses a separate origin.
+        // เส้นทาง geometry ที่ใช้ร่วมกันอิง origin ของ avatar แต่การวาด item ใช้ origin แยกต่างหาก.
         poseStack.translate(0.0f, -1.5f, 0.0f);
 
         Map<String, BbModelEntityRenderer.BonePose> poses = BbModelEntityRenderer.prepareBonePoses(
-            model, STATIC_ITEM_RENDER_ID, BbModelEntityRenderer.VanillaPose.EMPTY
+            model, STATIC_ITEM_RENDER_ID, BbModelVanillaPose.Snapshot.EMPTY
         );
         int textureCount = model.textures() == null || model.textures().isEmpty() ? 1 : model.textures().size();
         for (int textureIndex = 0; textureIndex < textureCount; textureIndex++) {

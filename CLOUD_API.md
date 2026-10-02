@@ -1,6 +1,6 @@
 # Shyne Avatar Cloud API v2.2
 
-เอกสาร HTTP นี้ใช้ร่วมกับ Shyne Creator `2.12.6`; Cloud API แยกจาก Avatar Lua และ Asset Package contract ดูภาพรวมได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสาร HTTP นี้ใช้ร่วมกับ Shyne Creator `2.12.7`; Cloud API แยกจาก Avatar Lua และ Asset Package contract ดูภาพรวมได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 Base URL: `https://shyne-avatar-cloud.jirayut-wh.workers.dev`
 
