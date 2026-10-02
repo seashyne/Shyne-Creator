@@ -181,7 +181,7 @@ function HomePage() {
       <div className="hero-copy">
         <p className="overline">PLAYER & CREATOR DOCUMENTATION <i></i></p>
         <h1>ติดตั้งแล้ว<br/>เริ่มใช้ได้เลย<span>.</span></h1>
-        <p className="lead">Shyne Creator 2.12.7 คือระบบ Avatar และ Content Pack สำหรับ Minecraft 26.3 บน Fabric และ NeoForge—จัดการ Avatar ในเครื่อง สำรองขึ้น Cloud และค้นหา Avatar ที่เผยแพร่สาธารณะได้จากในเกม</p>
+        <p className="lead">Shyne Creator 2.12.8 คือระบบ Avatar และ Content Pack สำหรับ Minecraft 26.3 บน Fabric และ NeoForge—จัดการ Avatar ในเครื่อง สำรองขึ้น Cloud และค้นหา Avatar ที่เผยแพร่สาธารณะได้จากในเกม</p>
         <div className="hero-actions"><Link className="primary" to="/docs/player-quickstart">เริ่มใช้ Shyne <ArrowRight size={18}/></Link><a className="download-cta" href={CURSEFORGE_URL} target="_blank" rel="noreferrer"><Download size={18}/> ดาวน์โหลด</a><Link className="secondary" to="/docs/installation"><BookOpen size={18}/> วิธีติดตั้ง</Link></div>
         <div className="hero-note"><Check size={16}/><span>เลือกใช้ Avatar จากไฟล์หรือ ZIP, สำรอง/กู้คืนด้วย Cloud และดาวน์โหลด Public Avatar ได้หลังลงชื่อเข้าใช้ Minecraft</span></div>
         <div className="compat"><span>VERSION</span><b>{version}</b><i></i><b>MINECRAFT {minecraftVersion}</b><small>JAVA 25</small></div>

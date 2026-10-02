@@ -111,6 +111,27 @@ final class FiguraTierOneCompatibilityTest {
         assertTrue(result.toboolean(), "Ping queue must retain same-tick calls and ignore duplicate synced deliveries");
     }
 
+    @Test
+    void dynamicTextureFacadePublishesPixelsThroughNativeTextureBridge() throws Exception {
+        LuaSandbox.Environment environment = LuaSandbox.create();
+        Globals globals = environment.globals();
+        installBootstrapMocks(globals, new LuaTable());
+        runBootstrap(environment);
+
+        LuaValue result = globals.load("""
+            local texture = textures:newTexture("hud_meter", 12, 8)
+            texture:setPixel(1, 2, 1, 0.5, 0, 0.25):apply()
+            local wrote_pixel = texture_writes.pixel.x == 1 and texture_writes.pixel.y == 2
+              and texture_writes.pixel.argb == 0x40FF8000
+            texture:fill(0, 0, 1, 1):apply()
+            return texture ~= nil and texture:id() == "shyne_creator:runtime/test/hud_meter"
+              and texture:getWidth() == 12 and texture:getHeight() == 8
+              and wrote_pixel and texture_writes.fill == 0xFF0000FF and texture_writes.applied == 2
+            """, "figura-tier-one-dynamic-texture-test").call();
+
+        assertTrue(result.toboolean(), "Figura texture facade must route pixel edits and apply calls to the native texture bridge");
+    }
+
     /** Installs only the native callbacks needed to load and observe the compatibility facade. */
     private static void installBootstrapMocks(Globals globals, LuaTable rendererWrites) {
         globals.set("SHYNE_API_VERSION", LuaValue.valueOf("2.0"));
@@ -171,6 +192,39 @@ final class FiguraTierOneCompatibilityTest {
                     case "fov" -> LuaValue.valueOf(1.1);
                     default -> LuaValue.NIL;
                 };
+            }
+        });
+        LuaTable textureWrites = new LuaTable();
+        globals.set("texture_writes", textureWrites);
+        globals.set("_avatar_dynamic_texture_create", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                LuaTable value = new LuaTable();
+                value.set("id", LuaValue.valueOf("shyne_creator:runtime/test/" + args.arg(1).optjstring("texture")));
+                value.set("width", LuaValue.valueOf(args.arg(2).optint(64)));
+                value.set("height", LuaValue.valueOf(args.arg(3).optint(64)));
+                return value;
+            }
+        });
+        globals.set("_avatar_dynamic_texture_set_pixel", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                LuaTable pixel = new LuaTable();
+                pixel.set("x", args.arg(2));
+                pixel.set("y", args.arg(3));
+                pixel.set("argb", LuaValue.valueOf(args.arg(4).optlong(0) & 0xFFFFFFFFL));
+                textureWrites.set("pixel", pixel);
+                return LuaValue.TRUE;
+            }
+        });
+        globals.set("_avatar_dynamic_texture_fill", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                textureWrites.set("fill", LuaValue.valueOf(args.arg(2).optlong(0) & 0xFFFFFFFFL));
+                return LuaValue.TRUE;
+            }
+        });
+        globals.set("_avatar_dynamic_texture_apply", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                textureWrites.set("applied", LuaValue.valueOf(textureWrites.get("applied").optint(0) + 1));
+                return LuaValue.TRUE;
             }
         });
     }

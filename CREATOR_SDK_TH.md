@@ -1,6 +1,6 @@
 # Shyne Creator SDK
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.7` schema ใน `shyne_sdk/schemas/` คือ contract สำหรับ JSON ของ Creator ดูภาพรวมได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.8` schema ใน `shyne_sdk/schemas/` คือ contract สำหรับ JSON ของ Creator ดูภาพรวมได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 เอกสารนี้เป็นจุดเริ่มต้นสำหรับมอดเสริมที่สร้าง Power, Skill และ Avatar โดยไม่ฝัง content ตัวอย่างไว้ใน Shyne Creator
 
@@ -145,7 +145,7 @@ shyne-mods/avatars/<avatar-id>/
 
 ### Avatar แบบ Overlay
 
-สำหรับหู หาง ปีก หรือ armor cosmetic ที่ยังต้องการให้เห็น skin/armor ของ Minecraft ให้ใช้ `"profile": "accessory"` และกำหนด `parent_type` ของ bone ใน Blockbench เป็น `Head`, `Body`, `LeftArm`, `RightArm`, `LeftLeg` หรือ `RightLeg` Shyne Creator 2.12.7 จะผูก bone ตามส่วนผู้เล่นอัตโนมัติ แม้ไม่มี Lua script โดย pose ของ vanilla part จะซ้อนกับ animation ของ bone อย่างเป็น parent transform
+สำหรับหู หาง ปีก หรือ armor cosmetic ที่ยังต้องการให้เห็น skin/armor ของ Minecraft ให้ใช้ `"profile": "accessory"` และกำหนด `parent_type` ของ bone ใน Blockbench เป็น `Head`, `Body`, `LeftArm`, `RightArm`, `LeftLeg` หรือ `RightLeg` Shyne Creator 2.12.8 จะผูก bone ตามส่วนผู้เล่นอัตโนมัติ แม้ไม่มี Lua script โดย pose ของ vanilla part จะซ้อนกับ animation ของ bone อย่างเป็น parent transform
 
 หาก asset จำเป็นต้องสลับ attachment ระหว่างเล่น จึงค่อยระบุ `main` และใช้ Shyne-native Lua:
 

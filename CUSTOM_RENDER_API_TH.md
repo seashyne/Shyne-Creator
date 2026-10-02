@@ -1,6 +1,6 @@
 # Shyne Custom Render API 1.4
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.7` และ Render API `1.4` ดูขอบเขต permission และเอกสาร API อื่นได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.8` และ Render API `1.4` ดูขอบเขต permission และเอกสาร API อื่นได้ที่ [API Contracts](API_CONTRACTS_TH.md)
 
 Custom Render API 1.4 เป็นโมดูล render ภายใต้ Shyne Avatar Standard 2.0 Avatar ใหม่ใช้ผ่าน `api: "2.0"` หรือ `api: "latest"` และตรวจได้จาก `shyne.api.supports("render", ">=1.4")`, `render.api_version` หรือ `diagnostics.snapshot().custom_render_api_version`
 
@@ -88,6 +88,24 @@ input.bind("open_menu", { title = "Open My Menu", key = input.key.u,
 - `canvas:update`, `canvas:remove` และ `canvas:clear` จัดการ task ของ Canvas โดยไม่กระทบ Avatar/HUD อื่น
 - ต้องประกาศ `"ui": ">=1.2"`, `"render": ">=1.4"` และ permission `hud_render`; Public Avatar ยังต้องได้รับอนุมัติ permission จากผู้ใช้
 - ไม่ใช้ WebView, React, HTML หรือ JavaScript runtime — ใช้ Lua และ native renderer โดยตรง
+
+### Dynamic texture สำหรับ HUD/Canvas/world sprite
+
+`textures:newTexture(name, width, height)` สร้าง texture native บน GPU ในเครื่องของผู้ใช้ เมื่อแก้ pixel แล้วต้องเรียก `:apply()` ก่อนวาดด้วย `canvas:sprite` หรือ `render.sprite`. `texture:id()` คืน resource ID ที่ส่งให้ field `texture` ได้โดยตรง. Texture ประเภทนี้เป็น local visual state, ไม่ sync pixel ไปยังผู้เล่นอื่น และในเวอร์ชันนี้ยัง bind เข้ากับ material ของโมเดล Blockbench ไม่ได้.
+
+```lua
+local meter = textures:newTexture("meter", 64, 8)
+meter:fill(0, 0, 0, 0)
+for x = 0, 47 do meter:setPixel(x, 2, 0.2, 0.9, 1.0, 1.0) end
+meter:apply()
+
+canvas:sprite("meter", {
+  texture = meter:id(), x = 18, y = 18, width = 128, height = 16
+})
+```
+
+- ขนาดสูงสุด 512×512 ต่อ texture, 16 texture และรวม 1,048,576 pixels ต่อ avatar runtime
+- ต้องมี permission `hud_render` หรือ `world_render`; หากไม่ผ่าน permission `newTexture` จะคืน `nil`
 
 ## World task
 

@@ -1,6 +1,6 @@
 # Shyne Native Lua API — Standard 2.0
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.7` และ Lua contract `api: "2.0"` รายการคู่มือและ schema ที่เกี่ยวข้องอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.8` และ Lua contract `api: "2.0"` รายการคู่มือและ schema ที่เกี่ยวข้องอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
 
 Lua เป็นชั้นควบคุมหลักสำหรับงานอิสระและงานขั้นสูงของ Shyne Avatar Standard 2.0 ส่วน Avatar แบบ model-first ทั่วไปเริ่มได้โดยไม่ต้องมี `script.lua` หากต้องใช้ procedural rig, physics, UI หรือ logic เฉพาะ ให้ระบุ `main` และใช้ API ของ Shyne โดยตรง โดยไม่พึ่ง Figura:
 
@@ -648,9 +648,11 @@ vanilla_model.RIGHT_ARM:show()
 vanilla_model.CAPE:hide()
 ```
 
-## Figura 100% Real-World Parity API Suite
+## Figura Tier-1 Compatibility API
 
-Shyne Creator รองรับ API มาตรฐานเดียวกับ Figura แบบสมบูรณ์ 100% โดยสามารถเรียกใช้งานได้ทันทีทั้งสคริปต์ที่แปลงมาจาก Figura หรือเขียนใหม่ใน Shyne:
+Shyne Creator มี compatibility facade สำหรับ API รูปแบบ Figura ที่ใช้บ่อย เพื่อช่วยย้ายหรือปรับสคริปต์เดิมบางส่วนมาใช้บน Shyne แต่ **ไม่ใช่ API parity 100%** และไม่ควรตั้ง `figura.compatibility_level` เป็นสัญญาว่า avatar จาก Figura จะทำงานโดยไม่แก้ไข. งานใหม่ควรใช้ Shyne Native API เป็นหลัก.
+
+รองรับใน Tier 1: renderer/client/raycast, vectors/matrices, event subset, pings, action wheel, keybind พื้นฐาน, player/world/item proxy, particles/sounds และ dynamic texture สำหรับ HUD/Canvas/world sprite. ยังไม่รองรับ Figura file/data/json/resources/net/server_packets, nameplate API, event ครบชุด, keybind GUI/vanilla binding ครบ และ dynamic texture ที่ bind เข้า material ของโมเดล.
 
 ### 1. ระบบควบคุมกล้องและเรนเดอร์ (`renderer` & `client`)
 ```lua

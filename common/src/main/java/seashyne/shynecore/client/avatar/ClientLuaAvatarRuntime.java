@@ -67,6 +67,7 @@ public final class ClientLuaAvatarRuntime {
     private final AvatarInputBridge inputBridge;
     private final AvatarRenderTaskBridge renderTaskBridge;
     private final AvatarScriptCanvasBridge scriptCanvasBridge;
+    private final AvatarDynamicTextureBridge dynamicTextureBridge;
     private final AvatarSystemBridge systemBridge;
 
     private long loadElapsedNanos;
@@ -81,6 +82,7 @@ public final class ClientLuaAvatarRuntime {
         this.inputBridge = new AvatarInputBridge(state);
         this.renderTaskBridge = new AvatarRenderTaskBridge(state);
         this.scriptCanvasBridge = new AvatarScriptCanvasBridge(state, () -> instructionBudget, EVENT_INSTRUCTION_LIMIT);
+        this.dynamicTextureBridge = new AvatarDynamicTextureBridge(state);
         this.animationBridge = new AvatarAnimationBridge(state, model);
         this.systemBridge = new AvatarSystemBridge(state, model,
             inputBridge::bindingCount,
@@ -152,6 +154,7 @@ public final class ClientLuaAvatarRuntime {
         inputBridge.register(globals);
         renderTaskBridge.register(globals);
         scriptCanvasBridge.register(globals);
+        dynamicTextureBridge.register(globals);
         systemBridge.register(globals);
         AvatarAudioStreamBridge.register(globals, state);
     }
@@ -285,6 +288,7 @@ public final class ClientLuaAvatarRuntime {
         inputBridge.dispose();
         renderTaskBridge.dispose();
         scriptCanvasBridge.dispose();
+        dynamicTextureBridge.dispose();
         globals = null;
         instructionBudget = null;
         modules.clear();

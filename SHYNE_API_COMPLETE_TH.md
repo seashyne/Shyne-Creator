@@ -1,8 +1,8 @@
 # 📖 Shyne Creator — API Reference ฉบับสมบูรณ์
 
-> ตรวจทานกับ Shyne Creator `2.12.7` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
+> ตรวจทานกับ Shyne Creator `2.12.8` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
 
-> **เวอร์ชัน:** `2.12.7` | **Standard:** `2.0` | **ภาษา:** ไทย
+> **เวอร์ชัน:** `2.12.8` | **Standard:** `2.0` | **ภาษา:** ไทย
 > เอกสารนี้รวม **ทุก API** ของ Shyne Creator ไว้ในที่เดียว
 
 ---
@@ -30,7 +30,7 @@
 | 17 | [Diagnostics & Profiler](#17-diagnostics--profiler) | ตรวจ API, error, เวลา, หน่วยความจำ |
 | 18 | [Gameplay API (Server)](#18-gameplay-api-server) | สคริปต์ฝั่งเซิร์ฟเวอร์ |
 | 19 | [Cloud API v2.2](#19-cloud-api-v22) | Backup, Share, Discover |
-| 20 | [Figura Compatibility Layer](#20-figura-compatibility-layer) | รองรับ Figura avatar 100% |
+| 20 | [Figura Compatibility Layer](#20-figura-compatibility-layer) | Tier 1: API ที่มีรูปแบบ Figura บางส่วน |
 
 ---
 
@@ -1035,7 +1035,11 @@ X-Shyne-License: CC-BY-4.0
 
 > ไฟล์: `60_figura_compat.lua` (483 บรรทัด) — โหลดอัตโนมัติตอน bootstrap
 
-Shyne Creator มี Compatibility Layer ที่ให้ Figura avatar ทำงานได้ 100% บน Shyne Core โดยไม่ต้องแก้ไขสคริปต์
+Shyne Creator มี **Figura Compatibility Layer ระดับ Tier 1** สำหรับย้ายสคริปต์ Figura บางส่วนมาใช้บน Shyne Core โดยไม่ต้องเขียนทุกอย่างใหม่ แต่ **ไม่ใช่ Figura runtime แบบ 1:1 และไม่รับประกันว่า avatar Figura ทุกตัวจะทำงานได้โดยไม่แก้ไข**.
+
+**มีแล้ว:** vectors/matrices, event subset, action wheel, pings, keybind ขั้นพื้นฐาน, player/world/item proxy, particle/sound, renderer/client/raycast และ dynamic texture สำหรับ HUD/Canvas/world sprite.
+
+**ยังไม่มีหรือยังไม่เทียบเท่า:** event ครบชุด, keybind GUI/vanilla binding ครบ, nameplate API, resource/file/data/json/net/server-packets API, permission budget แบบ Figura และการ bind dynamic texture เข้ากับ material ของโมเดล. ให้ใช้ Shyne Native API เป็น API หลักสำหรับงานใหม่.
 
 ### 20.1 Vectors Library (Figura-style)
 
@@ -1164,7 +1168,7 @@ particles:newParticle("minecraft:heart", vectors.vec3(0, 70, 0), vectors.vec3(0,
 figura.version       -- "0.1.4"
 figura.is_figura     -- true
 figura.engine        -- "shyne"
-figura.compatibility_level -- "100%"
+figura.compatibility_level -- "tier_1"
 ```
 
 ---
@@ -1223,4 +1227,4 @@ figura.compatibility_level -- "100%"
 ---
 
 > 📝 เอกสารนี้สร้างอัตโนมัติจาก `SHYNE_LUA_API_TH.md`, `CUSTOM_RENDER_API_TH.md`, `RIG_API_TH.md`, `SHYNE_GAMEPLAY_API_TH.md`, `CLOUD_API.md` และ `60_figura_compat.lua`  
-> อัปเดตล่าสุด: 2026-10-02 | Shyne Creator v2.12.7
+> อัปเดตล่าสุด: 2026-10-02 | Shyne Creator v2.12.8

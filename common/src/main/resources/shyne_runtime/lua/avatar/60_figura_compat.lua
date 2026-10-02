@@ -1,8 +1,10 @@
 -- ==============================================================================
--- Shyne Creator: Figura 100% Compatibility Layer (60_figura_compat.lua)
--- Provides 1:1 API compatibility for existing Figura avatars on Shyne Core.
+-- Shyne Creator: Figura Tier-1 Compatibility Layer (60_figura_compat.lua)
+-- Shyne Creator: ชั้นความเข้ากันกับ Figura ระดับ Tier-1 (60_figura_compat.lua)
+-- Provides the supported Figura-shaped APIs; it is not a 1:1 Figura runtime.
+-- ให้ API รูปแบบ Figura เฉพาะส่วนที่รองรับ; ไม่ใช่ runtime Figura แบบ 1:1.
 -- Includes Events bus, Action Wheel, Pings RPC, Keybinds, World/Player proxies,
--- and Particle/Sound emitters.
+-- รวม Events, Action Wheel, Pings RPC, Keybinds และ proxy ของ World/Player.
 -- ==============================================================================
 
 if not vectors or not matrices then
@@ -14,7 +16,7 @@ figura = figura or {
   version = "0.1.4",
   is_figura = true,
   engine = "shyne",
-  compatibility_level = "100%"
+  compatibility_level = "tier_1"
 }
 
 -- ------------------------------------------------------------------------------

@@ -1,3 +1,11 @@
+## Shyne Creator v2.12.8
+
+### Native Dynamic Textures & Honest Figura Compatibility
+
+- `textures:newTexture()` now creates an actual Minecraft GPU `DynamicTexture`; `setPixel()`, `fill()` and `apply()` update its native image instead of only retaining a Lua table.
+- Runtime texture IDs returned by `texture:id()` can be supplied to HUD Canvas and world `render.sprite` tasks. They are client-local, require visual permission, and are released whenever the Avatar runtime unloads.
+- Documented the Figura bridge as **Tier 1 compatibility**, rather than an inaccurate 100% parity claim. The API reference now distinguishes implemented facades from unsupported Figura systems.
+
 ## Shyne Creator v2.12.7
 
 ### Modular Blockbench Renderer & Bilingual Documentation
@@ -76,7 +84,7 @@
   - Full control handle: `play()`, `pause()`, `stop(fade)`, `setVolume(v)`, `setPitch(p)`, `setPos(x, y, z)`.
   - Real-time audio-reactive metrics: `getLevel()`, `getPeak()`, `isBeat()`, `isPlaying()`, `isBuffering()`.
   - Securely managed by client permission system and server policy (`audio_streams`).
-- **100% Figura Real-World Parity Suite**:
+- **Early Figura-facing Compatibility Suite**:
   - **Tier 1 - Client, Renderer, Raycast & Dynamic Textures (`61_figura_client_renderer.lua`)**:
     - `renderer`: Full control of camera and shadow radius with `setShadowRadius()`, `getShadowRadius()`, `setCameraPivot()`, `getCameraPivot()`, `setCameraPos()`, `getCameraPos()`, `setCameraRot()`, `getCameraRot()`, `setFOV()`, `getFOV()`, and all fluent aliases (`cameraPos`, `fov`, etc.).
     - `client`: `isFirstPerson()`, `getFPS()`, `isPaused()`, `isSingleplayer()`, `getMousePos()`, `getScaledWindowSize()`, `getViewer()`.

@@ -7,7 +7,7 @@ const releases = new Hono<{ Bindings: Env; Variables: Variables }>();
 const LATEST_RELEASE = {
   version: '2.12.0',
   minecraft: '26.3',
-  title: 'Shyne Creator v2.12.0 — 100% Figura Parity & Cloudflare R2 Sync',
+  title: 'Shyne Creator v2.12.0 — Figura Compatibility APIs & Cloudflare R2 Sync',
   published_at: new Date().toISOString(),
   files: {
     fabric: {

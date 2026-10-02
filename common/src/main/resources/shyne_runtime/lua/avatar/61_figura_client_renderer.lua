@@ -210,7 +210,8 @@ function raycast:raycast(from, to)
 end
 
 -- ------------------------------------------------------------------------------
--- 4. GLOBAL OBJECT: textures (Dynamic Canvas & Textures)
+-- 4. GLOBAL OBJECT: textures (native Dynamic Canvas & Textures)
+-- วัตถุ global textures สำหรับ Dynamic Canvas และ texture native ที่อยู่บน GPU
 -- ------------------------------------------------------------------------------
 
 ---@class FiguraTextures
@@ -223,6 +224,20 @@ texture_mt.__index = texture_mt
 function texture_mt:getWidth() return self._w end
 function texture_mt:getHeight() return self._h end
 function texture_mt:getDimensions() return vectors and vectors.vec2(self._w, self._h) or { x = self._w, y = self._h } end
+function texture_mt:getName() return self._name end
+function texture_mt:getID() return self._id end
+function texture_mt:id() return self._id end
+
+local function texture_channel(value)
+  local channel = tonumber(value) or 0
+  if channel >= 0 and channel <= 1 then channel = channel * 255 end
+  return math.floor(math.max(0, math.min(255, channel)) + 0.5)
+end
+
+local function texture_argb(r, g, b, a)
+  local red, green, blue, alpha = texture_channel(r), texture_channel(g), texture_channel(b), texture_channel(a == nil and 1 or a)
+  return alpha * 16777216 + red * 65536 + green * 256 + blue
+end
 
 function texture_mt:setPixel(x, y, r, g, b, a)
   x = math.floor(x or 0); y = math.floor(y or 0)
@@ -232,6 +247,7 @@ function texture_mt:setPixel(x, y, r, g, b, a)
     a = r[4] or r.a or 1; b = r[3] or r.b or 1; g = r[2] or r.g or 1; r = r[1] or r.r or 1
   end
   self._data[idx] = { r = r or 1, g = g or 1, b = b or 1, a = a or 1 }
+  _avatar_dynamic_texture_set_pixel(self._name, x, y, texture_argb(r, g, b, a))
   self._dirty = true
   return self
 end
@@ -247,22 +263,24 @@ function texture_mt:fill(r, g, b, a)
   for i = 1, self._w * self._h do
     self._data[i] = { r = r or 0, g = g or 0, b = b or 0, a = a or 1 }
   end
+  _avatar_dynamic_texture_fill(self._name, texture_argb(r, g, b, a))
   self._dirty = true
   return self
 end
 
 function texture_mt:apply()
-  self._dirty = false
+  if _avatar_dynamic_texture_apply(self._name) then self._dirty = false end
   return self
 end
 
 function textures:newTexture(name, width, height)
-  local w = math.max(1, math.min(1024, math.floor(tonumber(width) or 64)))
-  local h = math.max(1, math.min(1024, math.floor(tonumber(height) or 64)))
+  local native = _avatar_dynamic_texture_create(tostring(name or "custom_tex"), math.floor(tonumber(width) or 64), math.floor(tonumber(height) or 64))
+  if native == nil then return nil end
   local tex = setmetatable({
     _name = tostring(name or "custom_tex"),
-    _w = w,
-    _h = h,
+    _id = native.id,
+    _w = native.width,
+    _h = native.height,
     _data = {},
     _dirty = true
   }, texture_mt)
@@ -274,3 +292,5 @@ end
 function textures:getTexture(name)
   return _active_textures[tostring(name)]
 end
+
+function textures:fromVanilla(_) return nil end
