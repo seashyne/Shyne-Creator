@@ -97,7 +97,7 @@ tasks.register('verifyReleaseMetadata') {
             throw new GradleException("Could not read protocol version from ${networkSource}")
         }
         def expectedProtocol = protocolMatch.group(1)
-        def protocolDocs = [file('README.md'), file('MULTIPLAYER_TESTING.md')]
+        def protocolDocs = [file('README.md'), file('docs/architecture/MULTIPLAYER_TESTING.md')]
         def staleProtocolFiles = protocolDocs.findAll { source ->
             !source.getText('UTF-8').contains("protocol `${expectedProtocol}`") &&
                 !source.getText('UTF-8').contains("Protocol ปัจจุบันคือ ${expectedProtocol}")

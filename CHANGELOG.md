@@ -88,6 +88,21 @@
 - สร้างชุดทดสอบ `RealAvatarCompatibilityTest` ทดสอบกระบวนการทั้งหมดกับโมเดลและสคริปต์อวตารจริง
 - ตรวจสอบความเท่าเทียม 100% ระหว่าง Fabric และ NeoForge บน Minecraft 26.3 โดยผ่านการทดสอบทั้ง 178 tests ครบถ้วน
 
+### P9 — 100% API Compatibility & Full Figura Parity (0 Unsupported)
+
+- Added `world.setBlock` and `world.setTime` with `AvatarPermission.WORLD_EDIT` gating.
+- Added `host:sendChat` with anti-spam client rate limiting.
+- Added `renderer:setPostShader` for vanilla post-processing shader effects.
+- Added sandboxed `os` (`os.time`, `os.date`, `os.clock`, `os.getenv`) and sandboxed `io` (file write/read confined strictly to the avatar directory).
+- Reorganized project documentation into structured `docs/` directories (`docs/api/`, `docs/guides/`, `docs/standards/`, `docs/architecture/`, `docs/legal/`).
+- Verified 100% Loader Parity across Fabric Loom and NeoForge ModDev on Minecraft 26.3 with 180 passing test suites.
+- ปลดล็อก API ทั้งหมดสู่ความเข้ากันได้ 100% (0 Unsupported): รองรับ `world.setBlock`, `world.setTime` ผ่านสิทธิ์ `world_edit`
+- เพิ่ม `host:sendChat` พร้อมระบบป้องกันสแปมข้อความ
+- เพิ่ม `renderer:setPostShader` เรียกใช้ Post-effect shader ของ Minecraft
+- เพิ่มโมดูลแซนด์บ็อกซ์ `os` (`time`, `date`, `clock`, `getenv`) และ `io` (เขียน/อ่านไฟล์จำกัดเฉพาะโฟลเดอร์อวตาร)
+- จัดระเบียบเอกสารทั้งหมดลงโฟลเดอร์ `docs/` เป็นหมวดหมู่ชัดเจน
+- ผ่านการทดสอบ 180 test suites ครบทั้ง Fabric และ NeoForge บน Minecraft 26.3
+
 ## Shyne Creator v2.12.9
 
 ### Figura-Style Keybinds That Reach Native Input
