@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
+import seashyne.shynecore.client.avatar.AvatarNameplateStyle;
 import seashyne.shynecore.client.state.ClientAnimationState;
 
 @Mixin(EntityRenderer.class)
@@ -21,7 +22,14 @@ public abstract class AvatarNameplateMixin {
         if (client.player == null) return;
         boolean local = client.player.getUUID().equals(entity.getUUID());
         String text = local ? AvatarRuntime.localNameplateText() : ClientAnimationState.getRemoteNameplateText(entity.getUUID());
-        if (!text.isBlank()) cir.setReturnValue(Component.literal(text));
+        if (!text.isBlank()) {
+            AvatarNameplateStyle style = local ? AvatarRuntime.localNameplateStyle() : ClientAnimationState.getRemoteNameplateStyle(entity.getUUID());
+            String label = style.badge().isBlank() ? text : style.badge() + " " + text;
+            cir.setReturnValue(Component.literal(label).withStyle(current -> current
+                .withColor(style.colorArgb() & 0x00FFFFFF)
+                .withBold(style.bold())
+                .withItalic(style.italic())));
+        }
     }
 
     @Inject(method = "shouldShowName", at = @At("HEAD"), cancellable = true)

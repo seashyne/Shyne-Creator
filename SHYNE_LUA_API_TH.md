@@ -1,6 +1,6 @@
 # Shyne Native Lua API — Standard 2.0
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.12.9` และ Lua contract `api: "2.0"` รายการคู่มือและ schema ที่เกี่ยวข้องอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.13.0` และ Lua contract `api: "2.0"` รายการคู่มือและ schema ที่เกี่ยวข้องอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
 
 Lua เป็นชั้นควบคุมหลักสำหรับงานอิสระและงานขั้นสูงของ Shyne Avatar Standard 2.0 ส่วน Avatar แบบ model-first ทั่วไปเริ่มได้โดยไม่ต้องมี `script.lua` หากต้องใช้ procedural rig, physics, UI หรือ logic เฉพาะ ให้ระบุ `main` และใช้ API ของ Shyne โดยตรง โดยไม่พึ่ง Figura:
 
@@ -375,6 +375,8 @@ end)
 events.on("post_render", function(event) end)
 events.on("post_world_render", function(event) end)
 events.on("microphone", function(mic) end)
+events.on("key_press", function(event) print(event.key, event.modifiers) end)
+events.on("mouse_scroll", function(event) print(event.horizontal, event.vertical) end)
 events.on("avatar_unload", function(event) end)
 events.once("entity_init", function(event) end)
 ```
@@ -382,6 +384,10 @@ events.once("entity_init", function(event) end)
 ค่า `mic` มี `level`, `speaking`, `muted` และ `whispering` สามารถยกเลิก callback ด้วย `events.off("ชื่อ", callback)` หรือทั้งหมดด้วย `events.clear("ชื่อ")`
 
 ทุก event ส่ง table รูปแบบเดียวกัน โดยมี `type`, `time`, `tick`, `context`, `delta`, `sequence` และ `api` เป็นค่าพื้นฐาน `render`/`post_render` ทำงานตาม FPS จริง ไม่ใช่ 20 Hz และเพิ่ม `partial_tick`, `frame_delta`, `first_person`, `screen`, `camera_position`, `camera_rotation` ค่า context ที่เสถียรอยู่ใน `events.context`: `FIRST_PERSON`, `MINECRAFT_GUI`, `SHYNE_GUI`, `RENDER`, `WORLD`, `OTHER` Callback เรียงตามลำดับที่ลงทะเบียน และ error ของ callback หนึ่งจะถูกบันทึกใน `diagnostics.snapshot().runtime_errors` โดยไม่หยุด callback ตัวอื่น
+
+Input จากตัวเกมส่ง event `key_press`, `key_release`, `key_repeat`, `char_typed`, `mouse_press`, `mouse_release` และ `mouse_scroll`; payload มี `key`, `scan_code`, `action`, `modifiers`, `characters`, `horizontal`, `vertical` ตามชนิด event. Hook นี้อยู่ใน common runtime จึงทำงานเท่ากันบน Fabric และ NeoForge.
+
+Game input emits `key_press`, `key_release`, `key_repeat`, `char_typed`, `mouse_press`, `mouse_release`, and `mouse_scroll`. Their payload exposes `key`, `scan_code`, `action`, `modifiers`, `characters`, `horizontal`, and `vertical` when relevant; the common runtime keeps both loaders consistent.
 
 ## Matrix และพิกัด Bone
 
@@ -512,11 +518,13 @@ avatar.camera.configure({
   local_only = true
 })
 
-avatar.nameplate.configure({ text = "Custom Avatar", visible = true })
+avatar.nameplate.configure({ text = "Custom Avatar", visible = true, badge = "★", color = "#55FFFF", bold = true })
 local report = diagnostics.snapshot()
 ```
 
-Camera เป็น local-only เสมอ ส่วน nameplate ซิงก์ผ่าน Avatar snapshot และจำกัดข้อความ 128 ตัวอักษร Diagnostics รายงาน bones, cubes, textures, animation layers, input bindings และ feature flags
+Camera เป็น local-only เสมอ ส่วน nameplate ซิงก์ผ่าน Avatar snapshot และจำกัดข้อความ 128 ตัวอักษร ป้าย 24 ตัวอักษร รองรับ `badge`, สี RGB (`#RRGGBB` หรือ packed integer), `bold`, `italic` และ `visible` Diagnostics รายงาน bones, cubes, textures, animation layers, input bindings และ feature flags
+
+Camera remains local-only. Nameplates synchronize through the avatar snapshot, cap text at 128 characters and badges at 24 characters, and support `badge`, RGB color (`#RRGGBB` or packed integer), `bold`, `italic`, and `visible`.
 
 ## Render Task และ Profiler
 
@@ -652,7 +660,7 @@ vanilla_model.CAPE:hide()
 
 Shyne Creator มี compatibility facade สำหรับ API รูปแบบ Figura ที่ใช้บ่อย เพื่อช่วยย้ายหรือปรับสคริปต์เดิมบางส่วนมาใช้บน Shyne แต่ **ไม่ใช่ API parity 100%** และไม่ควรตั้ง `figura.compatibility_level` เป็นสัญญาว่า avatar จาก Figura จะทำงานโดยไม่แก้ไข. งานใหม่ควรใช้ Shyne Native API เป็นหลัก.
 
-รองรับใน Tier 1: renderer/client/raycast, vectors/matrices, event subset, pings, action wheel, keybind ที่เปลี่ยนปุ่ม/เปิด GUI/fromVanilla ได้, player/world/item proxy, particles/sounds และ dynamic texture สำหรับ HUD/Canvas/world sprite. ยังไม่รองรับ Figura file/data/json/resources/net/server_packets, nameplate API, event ครบชุด, modifier event ของ keybind แบบเต็ม และ dynamic texture ที่ bind เข้า material ของโมเดล.
+รองรับใน Tier 1: renderer/client/raycast, vectors/matrices, event subset พร้อม raw key/mouse input, pings, action wheel, keybind ที่เปลี่ยนปุ่ม/เปิด GUI/fromVanilla ได้, player/world/item proxy, particles/sounds, nameplate style และ dynamic texture สำหรับ HUD/Canvas/world sprite/Blockbench material ในเครื่อง. ยังไม่รองรับ Figura file/data/json/resources/net/server_packets, event gameplay/chat ครบชุด, modifier event ของ keybind แบบเต็ม และ dynamic texture pixel sync ข้ามผู้เล่น.
 
 ### 1. ระบบควบคุมกล้องและเรนเดอร์ (`renderer` & `client`)
 ```lua

@@ -38,38 +38,44 @@ public final class BbModelItemRenderer {
         ItemDisplayContext context
     ) {
         if (model == null || !model.hasGeometry() || presentation == null || !presentation.enabled()) return false;
-        poseStack.pushPose();
-        applyContextTransform(poseStack, context);
-        poseStack.translate(presentation.offsetX(), presentation.offsetY(), presentation.offsetZ());
-        rotate(poseStack, Axis.XP.rotationDegrees(presentation.rotationX()));
-        rotate(poseStack, Axis.YP.rotationDegrees(presentation.rotationY()));
-        rotate(poseStack, Axis.ZP.rotationDegrees(presentation.rotationZ()));
-        poseStack.scale(presentation.scale(), presentation.scale(), presentation.scale());
-        // The shared geometry path uses an avatar origin, while item rendering uses a separate origin.
-        // เส้นทาง geometry ที่ใช้ร่วมกันอิง origin ของ avatar แต่การวาด item ใช้ origin แยกต่างหาก.
-        poseStack.translate(0.0f, -1.5f, 0.0f);
+        String presentationContext = context == ItemDisplayContext.GUI ? AvatarRenderContext.PORTRAIT : AvatarRenderContext.HELD_ITEM;
+        AvatarRenderContext.pushContext(presentationContext);
+        try {
+            poseStack.pushPose();
+            applyContextTransform(poseStack, context);
+            poseStack.translate(presentation.offsetX(), presentation.offsetY(), presentation.offsetZ());
+            rotate(poseStack, Axis.XP.rotationDegrees(presentation.rotationX()));
+            rotate(poseStack, Axis.YP.rotationDegrees(presentation.rotationY()));
+            rotate(poseStack, Axis.ZP.rotationDegrees(presentation.rotationZ()));
+            poseStack.scale(presentation.scale(), presentation.scale(), presentation.scale());
+            // The shared geometry path uses an avatar origin, while item rendering uses a separate origin.
+            // เส้นทาง geometry ที่ใช้ร่วมกันอิง origin ของ avatar แต่การวาด item ใช้ origin แยกต่างหาก.
+            poseStack.translate(0.0f, -1.5f, 0.0f);
 
-        Map<String, BbModelEntityRenderer.BonePose> poses = BbModelEntityRenderer.prepareBonePoses(
-            model, STATIC_ITEM_RENDER_ID, BbModelVanillaPose.Snapshot.EMPTY
-        );
-        int textureCount = model.textures() == null || model.textures().isEmpty() ? 1 : model.textures().size();
-        for (int textureIndex = 0; textureIndex < textureCount; textureIndex++) {
-            BbTextureDefinition definition = model.texture(textureIndex);
-            int textureWidth = definition == null ? model.textureWidth() : definition.width();
-            int textureHeight = definition == null ? model.textureHeight() : definition.height();
-            Identifier texture = BbModelTextures.resolve(model, textureIndex);
-            int passLight = definition != null && BbModelEntityRenderer.isEmissiveTexture(definition.name())
-                ? 0x00F000F0 : lightCoords;
-            int passTextureIndex = textureIndex;
-            collector.order(1).submitCustomGeometry(poseStack, RenderTypes.entityCutout(texture),
-                (pose, vertices) -> BbModelEntityRenderer.renderModel(pose, vertices, model, STATIC_ITEM_RENDER_ID, passLight,
-                    passTextureIndex, textureCount, textureWidth, textureHeight, poses, null, 0f, 1f, 1f, 1f, false, Set.of()));
-            collector.order(2).submitCustomGeometry(poseStack, RenderTypes.entityTranslucent(texture),
-                (pose, vertices) -> BbModelEntityRenderer.renderModel(pose, vertices, model, STATIC_ITEM_RENDER_ID, passLight,
-                    passTextureIndex, textureCount, textureWidth, textureHeight, poses, null, 0f, 1f, 1f, 1f, true, Set.of()));
+            Map<String, BbModelEntityRenderer.BonePose> poses = BbModelEntityRenderer.prepareBonePoses(
+                model, STATIC_ITEM_RENDER_ID, BbModelVanillaPose.Snapshot.EMPTY
+            );
+            int textureCount = model.textures() == null || model.textures().isEmpty() ? 1 : model.textures().size();
+            for (int textureIndex = 0; textureIndex < textureCount; textureIndex++) {
+                BbTextureDefinition definition = model.texture(textureIndex);
+                int textureWidth = definition == null ? model.textureWidth() : definition.width();
+                int textureHeight = definition == null ? model.textureHeight() : definition.height();
+                Identifier texture = BbModelTextures.resolveLocalAvatar(model, textureIndex);
+                int passLight = definition != null && BbModelEntityRenderer.isEmissiveTexture(definition.name())
+                    ? 0x00F000F0 : lightCoords;
+                int passTextureIndex = textureIndex;
+                collector.order(1).submitCustomGeometry(poseStack, RenderTypes.entityCutout(texture),
+                    (pose, vertices) -> BbModelEntityRenderer.renderModel(pose, vertices, model, STATIC_ITEM_RENDER_ID, passLight,
+                        passTextureIndex, textureCount, textureWidth, textureHeight, poses, null, 0f, 1f, 1f, 1f, false, Set.of()));
+                collector.order(2).submitCustomGeometry(poseStack, RenderTypes.entityTranslucent(texture),
+                    (pose, vertices) -> BbModelEntityRenderer.renderModel(pose, vertices, model, STATIC_ITEM_RENDER_ID, passLight,
+                        passTextureIndex, textureCount, textureWidth, textureHeight, poses, null, 0f, 1f, 1f, 1f, true, Set.of()));
+            }
+            poseStack.popPose();
+            return true;
+        } finally {
+            AvatarRenderContext.popContext();
         }
-        poseStack.popPose();
-        return true;
     }
 
     private static void applyContextTransform(PoseStack poseStack, ItemDisplayContext context) {

@@ -1,8 +1,8 @@
 # 📖 Shyne Creator — API Reference ฉบับสมบูรณ์
 
-> ตรวจทานกับ Shyne Creator `2.12.9` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
+> ตรวจทานกับ Shyne Creator `2.13.0` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
 
-> **เวอร์ชัน:** `2.12.9` | **Standard:** `2.0` | **ภาษา:** ไทย
+> **เวอร์ชัน:** `2.13.0` | **Standard:** `2.0` | **ภาษา:** ไทย
 > เอกสารนี้รวม **ทุก API** ของ Shyne Creator ไว้ในที่เดียว
 
 ---
@@ -321,8 +321,11 @@ avatar.texture.sync("manifest")
 ### Nameplate
 
 ```lua
-avatar.nameplate.configure({ text = "Custom Avatar", visible = true })
--- จำกัด 128 ตัวอักษร | ซิงก์ผ่าน Avatar snapshot
+avatar.nameplate.configure({
+  text = "Custom Avatar", visible = true,
+  badge = "★", color = "#55FFFF", bold = true, italic = false
+})
+-- จำกัดข้อความ 128 ตัวอักษร ป้าย 24 ตัวอักษร และซิงก์ผ่าน Avatar snapshot
 ```
 
 ### Network
@@ -389,6 +392,10 @@ events.clear("event_name")
 | `synced_var_change` | เมื่อรับ | ค่า synced เปลี่ยน |
 | `damage` | เมื่อโดน | โดนโจมตี |
 | `chat_send_message` | เมื่อส่ง | ส่งข้อความ chat |
+| `key_press` / `key_release` / `key_repeat` | เมื่อกด | key, scan code, action และ modifiers จากเกมจริง |
+| `char_typed` | เมื่อพิมพ์ | code point, characters และ modifiers จากเกมจริง |
+| `mouse_press` / `mouse_release` | เมื่อกด | ปุ่มเมาส์, action และ modifiers จากเกมจริง |
+| `mouse_scroll` | เมื่อเลื่อน | ค่า horizontal และ vertical จากเกมจริง |
 
 ### Event Payload
 
@@ -397,6 +404,10 @@ events.clear("event_name")
 `render`/`post_render` เพิ่ม:
 - `partial_tick`, `frame_delta`, `first_person`
 - `screen`, `camera_position`, `camera_rotation`
+
+Event input เพิ่ม `key`, `scan_code`, `action`, `modifiers`, `characters`, `horizontal` และ `vertical` ตามชนิด event. Native `events.on` รับ table นี้โดยตรง.
+
+Input events additionally provide `key`, `scan_code`, `action`, `modifiers`, `characters`, `horizontal`, and `vertical` when applicable. Native `events.on` receives the payload table directly.
 
 ### Event Context
 
@@ -1037,9 +1048,9 @@ X-Shyne-License: CC-BY-4.0
 
 Shyne Creator มี **Figura Compatibility Layer ระดับ Tier 1** สำหรับย้ายสคริปต์ Figura บางส่วนมาใช้บน Shyne Core โดยไม่ต้องเขียนทุกอย่างใหม่ แต่ **ไม่ใช่ Figura runtime แบบ 1:1 และไม่รับประกันว่า avatar Figura ทุกตัวจะทำงานได้โดยไม่แก้ไข**.
 
-**มีแล้ว:** vectors/matrices, event subset, action wheel, pings, keybind พร้อมเปลี่ยนปุ่ม/เปิด GUI/fromVanilla, player/world/item proxy, particle/sound, renderer/client/raycast และ dynamic texture สำหรับ HUD/Canvas/world sprite.
+**มีแล้ว:** vectors/matrices, event subset ที่มี raw keyboard/mouse input, action wheel, pings, keybind พร้อมเปลี่ยนปุ่ม/เปิด GUI/fromVanilla, player/world/item proxy, particle/sound, renderer/client/raycast, nameplate style และ dynamic texture สำหรับ HUD/Canvas/world sprite/Blockbench material ในเครื่อง.
 
-**ยังไม่มีหรือยังไม่เทียบเท่า:** event ครบชุด, keybind GUI/vanilla binding ครบ, nameplate API, resource/file/data/json/net/server-packets API, permission budget แบบ Figura และการ bind dynamic texture เข้ากับ material ของโมเดล. ให้ใช้ Shyne Native API เป็น API หลักสำหรับงานใหม่.
+**ยังไม่มีหรือยังไม่เทียบเท่า:** event gameplay/chat ครบชุด, resource/file/data/json/net/server-packets API, permission budget แบบ Figura และการ sync pixel ของ dynamic texture ไปยังผู้เล่นอื่น. ให้ใช้ Shyne Native API เป็น API หลักสำหรับงานใหม่.
 
 ### 20.1 Vectors Library (Figura-style)
 
@@ -1088,10 +1099,21 @@ events.POST_WORLD_RENDER:register(fn)
 events.ENTITY_INIT:register(fn)
 events.DAMAGE:register(fn)
 events.CHAT_SEND_MESSAGE:register(fn)
+events.KEY_PRESS:register(function(key, scan_code, modifiers, event) end)
+events.KEY_RELEASE:register(function(key, scan_code, modifiers, event) end)
+events.KEY_REPEAT:register(function(key, scan_code, modifiers, event) end)
+events.MOUSE_PRESS:register(function(button, _, modifiers, event) end)
+events.MOUSE_RELEASE:register(function(button, _, modifiers, event) end)
+events.MOUSE_SCROLL:register(function(horizontal, vertical, event) end)
+events.CHAR_TYPED:register(function(characters, modifiers, event) end)
 
 events.TICK:remove("my_tick")
 events.TICK:clear()
 ```
+
+Keyboard และ mouse event มาจาก input handler ของ Minecraft จริงทั้ง Fabric และ NeoForge. Callback Figura-style รับ positional arguments ตามตัวอย่าง และ argument สุดท้ายเป็น event table; `events.on("key_press", function(event) ... end)` ยังรับ table เพียงตัวเดียวตาม Native API.
+
+Keyboard and mouse events come from Minecraft's real input handlers on both Fabric and NeoForge. Figura-style callbacks receive the positional arguments shown above plus the event table; Native `events.on("key_press", function(event) ... end)` continues to receive one table.
 
 ### 20.4 Action Wheel
 
@@ -1232,4 +1254,4 @@ figura.compatibility_level -- "tier_1"
 ---
 
 > 📝 เอกสารนี้สร้างอัตโนมัติจาก `SHYNE_LUA_API_TH.md`, `CUSTOM_RENDER_API_TH.md`, `RIG_API_TH.md`, `SHYNE_GAMEPLAY_API_TH.md`, `CLOUD_API.md` และ `60_figura_compat.lua`  
-> อัปเดตล่าสุด: 2026-10-02 | Shyne Creator v2.12.9
+> อัปเดตล่าสุด: 2026-10-02 | Shyne Creator v2.13.0

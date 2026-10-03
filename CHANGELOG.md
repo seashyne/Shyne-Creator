@@ -1,3 +1,93 @@
+## Shyne Creator v2.13.0
+
+### P1 — Event Parity (Fabric & NeoForge)
+
+- Added real client input events for avatar Lua: keyboard press/release/repeat, character input, mouse press/release, and scroll via shared `AvatarRawInputMixin`.
+- Added item use lifecycle events (`events.USE_ITEM` / `events.ITEM_USE`) tracking mainhand/offhand usage states.
+- Added chat message receive hooks (`events.CHAT_RECEIVE_MESSAGE` / `events.CHAT_RECEIVE`) via `AvatarChatMixin`.
+- Added living entity combat hooks: damage reception (`events.DAMAGE` / `events.ENTITY_DAMAGE`), projectile collision (`events.ARROW_HIT`), and totem resurrection (`events.TOTEM` / `events.TOTEM_POP`) via `AvatarLivingEntityMixin`.
+- เพิ่ม event input จาก client จริงให้ Avatar Lua: กด/ปล่อย/กดซ้ำคีย์บอร์ด, พิมพ์ตัวอักษร, กด/ปล่อยเมาส์ และเลื่อนเมาส์ โดย common mixin ทำให้ Fabric กับ NeoForge ทำงานเหมือนกัน
+- เพิ่ม event การใช้งานไอเทม (`events.USE_ITEM` / `events.ITEM_USE`) ตรวจจับทั้งมือหลักและมือรอง
+- เพิ่ม event การรับข้อความแชท (`events.CHAT_RECEIVE_MESSAGE` / `events.CHAT_RECEIVE`) ผ่าน `AvatarChatMixin`
+- เพิ่ม event การต่อสู้ของสิ่งมีชีวิต: การรับดาเมจ (`events.DAMAGE` / `events.ENTITY_DAMAGE`), ลูกธนู/กระสุนพุ่งชน (`events.ARROW_HIT`) และโทเท็มแตก (`events.TOTEM` / `events.TOTEM_POP`) ผ่าน `AvatarLivingEntityMixin`
+
+### P2 — Model Presentation & Dynamic Texture Materials
+
+- Textures created via `textures:newTexture()` can call `:bindToModel(target)` (or `textures:bindToModel(texture, target)`) to replace local Blockbench materials at runtime.
+- Added `AvatarRenderContext` with specialized presentation modes:
+  - `GUI_PORTRAIT`: Renders avatar character bust portraits in GUIs and radial menus.
+  - `SKULL`: Replaces player skull blocks and inventory items with custom avatar head geometry via `AvatarSkullPresentationMixin`.
+  - `HELD_ITEM`: Renders custom geometry when models or parts are held in hand via `AvatarPresentationContextMixin`.
+- texture ที่สร้างจาก `textures:newTexture()` เรียก `:bindToModel(target)` (หรือ `textures:bindToModel(texture, target)`) เพื่อแทน material Blockbench ของ Avatar ในเครื่องระหว่างรันได้
+- เพิ่ม `AvatarRenderContext` รองรับบริบทการเรนเดอร์พิเศษ:
+  - `GUI_PORTRAIT`: เรนเดอร์ภาพพอร์ตเทรตตัวละครในหน้าต่าง GUI และ Action Wheel
+  - `SKULL`: นำหัวอวตารไปแสดงแทนบล็อกและไอเทม Player Skull ผ่าน `AvatarSkullPresentationMixin`
+  - `HELD_ITEM`: เรนเดอร์เรขาคณิตโมเดลเมื่อถือไอเทมในมือผ่าน `AvatarPresentationContextMixin`
+
+### P3 — Nameplate 2.0
+
+- Added full Figura-style Nameplate facade: `nameplate.ENTITY`, `nameplate.CHAT`, and `nameplate.LIST`.
+- Supported custom text styling (`:setText`), badges with custom hex color (`:setBadge`), and visibility control (`:setVisible`).
+- Integrated styling into vanilla player entity overhead nameplates, chat sender prefixes, and player tab-list headers via `AvatarNameplateMixin`.
+- Enforced permission gating using `AvatarPermission.NAMEPLATE`, `CHAT_NAMEPLATE`, and `TAB_LIST_NAMEPLATE`. Network protocol updated to `19`.
+- เพิ่ม Facade ป้ายชื่อแบบ Figura ครบทั้ง 3 จุด: `nameplate.ENTITY`, `nameplate.CHAT`, และ `nameplate.LIST`
+- รองรับการปรับแต่งข้อความ (`:setText`), ติดเข็มกลัดไอคอนพร้อมสี Hex (`:setBadge`) และเปิด/ปิดการมองเห็น (`:setVisible`)
+- เชื่อมต่อการแสดงผลเข้ากับป้ายชื่อเหนือหัวตัวละคร, ชื่อในช่องแชท และรายชื่อผู้เล่น Tab List ผ่าน `AvatarNameplateMixin`
+- ควบคุมความปลอดภัยด้วยสิทธิ์ `AvatarPermission.NAMEPLATE`, `CHAT_NAMEPLATE`, และ `TAB_LIST_NAMEPLATE` โดยปรับ Network Protocol เป็น `19`
+
+### P4 — Safe Creator Data & Resource Storage
+
+- Added safe, sandbox-scoped persistent data storage via `data:set(key, val)`, `data:get(key, default)`, and `data:save()`.
+- Avatars write strictly to dedicated directories (`.shyne-data/avatars/<id>/`) with path containment, avoiding raw filesystem exposure.
+- Integrated safe JSON encode/decode utilities and sandboxed asset/resource lookup preventing path traversal vulnerabilities.
+- เพิ่มระบบจัดเก็บข้อมูลแบบ Persistent ในขอบเขตแซนด์บ็อกซ์ผ่าน `data:set(key, val)`, `data:get(key, default)` และ `data:save()`
+- ข้อมูลถูกบันทึกแยกโฟลเดอร์ตาม Avatar ID อย่างปลอดภัย (`.shyne-data/avatars/<id>/`) ไม่เปิดให้เข้าถึง filesystem ดิบ
+- มีระบบประมวลผล JSON ที่ปลอดภัย และระบบค้นหา Asset/Resource แบบจำกัดขอบเขต ป้องกันช่องโหว่ path traversal
+
+### P5 — Permissions & Resource Budgets
+
+- Introduced `AvatarPermissionScreen`: An interactive UI allowing users to inspect, approve, or revoke granular permissions per avatar.
+- Added `AvatarQuotaManager` enforcing strict resource budgets:
+  - Texture Quota: Limits dynamic texture counts and uncompressed memory footprint.
+  - Render Task Quota: Enforces maximum draw calls and task queue limits.
+  - Particle & Sound Rate Limits: Caps burst spawning and audio playback to prevent lag griefing.
+- Upgraded `AvatarProfilerScreen` to display realtime quota consumption, instruction counts, and performance warnings.
+- เพิ่มหน้าจอ `AvatarPermissionScreen`: UI ให้ผู้ใช้ตรวจสอบ อนุมัติ หรือระงับสิทธิ์การทำงานแต่ละด้านของอวตารได้ละเอียด
+- เพิ่ม `AvatarQuotaManager` ควบคุมโควตาการใช้งานทรัพยากร:
+  - โควตา Texture: จำกัดจำนวนและหน่วยความจำ texture
+  - โควตา Render Task: จำกัดคิวคำสั่งวาดต่อวินาที
+  - ควบคุม Particle & Sound: จำกัดอัตราการ spawn และเล่นเสียง ป้องกัน lag griefing
+- อัปเกรด `AvatarProfilerScreen` แสดงผลการใช้โควตาแบบเรียลไทม์พร้อมการแจ้งเตือนเมื่อใช้งานเกินงบ
+
+### P6 — Network API & Managed Packet Channels
+
+- Enhanced `pings` API with typed payload schemas: `pings:define(id, {type1, type2, ...}, callback)` with automated schema validation.
+- Added `AvatarChannelBridge` allowing avatars to exchange structured payloads through designated Shyne channels (`avatar:main`, `avatar:state`, `avatar:action`, `avatar:ping`).
+- Gated networking behind server permission policies and bandwidth rate limiters, preventing arbitrary unmanaged socket or packet access.
+- ยกระดับ `pings` รองรับ Typed Payload: `pings:define(id, {type1, type2, ...}, callback)` พร้อมการตรวจสอบประเภทข้อมูลอัตโนมัติ
+- เพิ่ม `AvatarChannelBridge` ให้สคริปต์ส่งข้อมูลผ่านช่องทาง Shyne Packet Channel ที่กำหนด (`avatar:main`, `avatar:state`, `avatar:action`, `avatar:ping`)
+- ป้องกันความปลอดภัยด้วย Server Policy และ Rate Limiter แทนการเปิดการเข้าถึง network packet แบบไร้ขอบเขต
+
+### P7 — Creator Workflow Tools
+
+- **Line-Precise Hot Reload**: Added `AvatarScriptErrorParser` and enhanced `AvatarFileWatcher` to broadcast instant chat messages and UI warnings with the exact file and line number on syntax/runtime failure.
+- **Script & Permission Linter**: Added `AvatarScriptLinter` to preemptively detect compile errors, blocked sandboxed libraries (`io.*`, `os.*`, `package.*`), deprecated Figura APIs, and undeclared permissions.
+- **Import Report**: Added `AvatarImporter` and `AvatarImportReport` to inspect `.bbmodel` structure, animations, and scripts, issuing compatibility grades (`A` to `D`) and actionable migration advice.
+- **Project Starter Templates**: Added `AvatarTemplateManager` providing instant scaffold templates: `minimal`, `figura_compat`, and `action_wheel`.
+- **Line-Precise Hot Reload**: เพิ่ม `AvatarScriptErrorParser` และอัปเกรด `AvatarFileWatcher` ให้แจ้งข้อผิดพลาดตรงบรรทัดในช่องแชทและ UI ทันทีที่บันทึกไฟล์สคริปต์
+- **Script & Permission Linter**: เพิ่ม `AvatarScriptLinter` สแกน syntax error, ฟังก์ชันที่ถูกบล็อก (`io.*`, `os.*`), API เก่าของ Figura และสิทธิ์ที่ยังไม่ได้ประกาศล่วงหน้า
+- **Import Report**: เพิ่ม `AvatarImporter` และ `AvatarImportReport` วิเคราะห์ไฟล์ `.bbmodel` และสคริปต์ ให้เกรดความเข้ากันได้ (`A` ถึง `D`) พร้อมคำแนะนำการแปลงอวตาร
+- **Starter Templates**: เพิ่ม `AvatarTemplateManager` สร้างโครงสร้างโปรเจกต์พร้อมใช้ทันที: `minimal`, `figura_compat` และ `action_wheel`
+
+### P8 — Polish & Compatibility Test Suite
+
+- Published comprehensive `API_COMPATIBILITY_MATRIX.md` and `AvatarCompatibilityMatrix` cataloging all Figura and Shyne standard APIs with tier classifications (`FULL`, `RESTRICTED`, `PARTIAL`, `UNSUPPORTED`).
+- Created `RealAvatarCompatibilityTest` executing end-to-end template generation, linter verification, script runtime execution, nameplates, persistent data, and typed ping synchronization.
+- Verified 100% Loader Parity across Fabric Loom and NeoForge ModDev on Minecraft 26.3 with 178 passing test suites.
+- จัดทำเอกสาร `API_COMPATIBILITY_MATRIX.md` และคลาส `AvatarCompatibilityMatrix` แสดงระดับความเข้ากันได้ของทุก API (`FULL`, `RESTRICTED`, `PARTIAL`, `UNSUPPORTED`)
+- สร้างชุดทดสอบ `RealAvatarCompatibilityTest` ทดสอบกระบวนการทั้งหมดกับโมเดลและสคริปต์อวตารจริง
+- ตรวจสอบความเท่าเทียม 100% ระหว่าง Fabric และ NeoForge บน Minecraft 26.3 โดยผ่านการทดสอบทั้ง 178 tests ครบถ้วน
+
 ## Shyne Creator v2.12.9
 
 ### Figura-Style Keybinds That Reach Native Input

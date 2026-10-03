@@ -65,12 +65,39 @@ public final class ShyneTabStatusIcons {
     public static Component decorate(PlayerInfo playerInfo, Component playerName) {
         if (playerInfo == null || playerName == null) return playerName;
         UUID playerId = playerInfo.getProfile().id();
+        Minecraft minecraft = Minecraft.getInstance();
+        boolean isLocal = minecraft.player != null && playerId.equals(minecraft.player.getUUID());
+
+        Component styledName = playerName;
+        if (isLocal) {
+            String listText = seashyne.shynecore.client.avatar.AvatarRuntime.localListNameplateText();
+            var listStyle = seashyne.shynecore.client.avatar.AvatarRuntime.localListNameplateStyle();
+            boolean visible = seashyne.shynecore.client.avatar.AvatarRuntime.localListNameplateVisible();
+            if (visible && (!listText.isBlank() || !listStyle.badge().isBlank())) {
+                String label = listText.isBlank() ? playerName.getString() : listText;
+                if (!listStyle.badge().isBlank()) label = listStyle.badge() + " " + label;
+                styledName = Component.literal(label).withStyle(s -> s
+                    .withColor(listStyle.colorArgb() & 0x00FFFFFF)
+                    .withBold(listStyle.bold())
+                    .withItalic(listStyle.italic()));
+            }
+        } else {
+            var remoteStyle = ClientAnimationState.getRemoteNameplateStyle(playerId);
+            Boolean visible = ClientAnimationState.getRemoteNameplateVisible(playerId);
+            if (Boolean.TRUE.equals(visible) && remoteStyle != null && !remoteStyle.badge().isBlank()) {
+                styledName = Component.literal(remoteStyle.badge() + " ").withStyle(s -> s
+                    .withColor(remoteStyle.colorArgb() & 0x00FFFFFF)
+                    .withBold(remoteStyle.bold())
+                    .withItalic(remoteStyle.italic())).append(playerName);
+            }
+        }
+
         ShyneNetwork.NetPlayerPresence presence = PRESENCE.get(playerId);
-        if (presence == null) return playerName;
+        if (presence == null) return styledName;
 
         String glyph = statusGlyph(playerId, presence);
         Component icon = Component.literal(glyph).withStyle(style -> style.withFont(ICON_FONT));
-        return Component.empty().append(icon).append(" ").append(playerName);
+        return Component.empty().append(icon).append(" ").append(styledName);
     }
 
     private static String statusGlyph(UUID playerId, ShyneNetwork.NetPlayerPresence presence) {

@@ -110,7 +110,9 @@ public final class BbModelEntityRenderer {
                 BbTextureDefinition definition = model.texture(textureIndex);
                 int uvWidth = definition == null ? model.textureWidth() : definition.width();
                 int uvHeight = definition == null ? model.textureHeight() : definition.height();
-                Identifier texture = BbModelTextures.resolve(model, textureIndex);
+                Identifier texture = client.player != null && entityId.equals(client.player.getUUID())
+                    ? BbModelTextures.resolveLocalAvatar(model, textureIndex)
+                    : BbModelTextures.resolve(model, textureIndex);
                 boolean emissive = definition != null && isEmissiveTexture(definition.name());
                 int passLight = emissive ? 0x00F000F0 : lightCoords;
                 int passTextureIndex = textureIndex;

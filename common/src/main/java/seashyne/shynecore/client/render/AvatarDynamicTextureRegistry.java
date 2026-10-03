@@ -5,6 +5,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 import seashyne.shynecore.ShyneCore;
+import seashyne.shynecore.model.BbModelDefinition;
+import seashyne.shynecore.model.BbTextureDefinition;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,6 +32,7 @@ public final class AvatarDynamicTextureRegistry {
 
     private static final Map<String, Entry> ENTRIES = new HashMap<>();
     private static final Map<Object, Set<String>> OWNER_ENTRIES = new HashMap<>();
+    private static final Map<String, Entry> MODEL_TEXTURES = new HashMap<>();
 
     private AvatarDynamicTextureRegistry() {}
 
@@ -44,10 +47,16 @@ public final class AvatarDynamicTextureRegistry {
         int width = Math.max(1, Math.min(MAX_TEXTURE_EDGE, requestedWidth));
         int height = Math.max(1, Math.min(MAX_TEXTURE_EDGE, requestedHeight));
         if ((long) width * height > MAX_PIXELS_PER_AVATAR) return null;
+        if (!seashyne.shynecore.client.avatar.AvatarQuotaManager.get(safeAvatar).tryAllocateTexture(width, height)) {
+            return null;
+        }
 
         String key = safeAvatar + ":" + safeName;
         Set<String> owned = OWNER_ENTRIES.computeIfAbsent(owner, ignored -> new HashSet<>());
-        if (!owned.contains(key) && owned.size() >= MAX_TEXTURES_PER_AVATAR) return null;
+        if (!owned.contains(key) && owned.size() >= MAX_TEXTURES_PER_AVATAR) {
+            seashyne.shynecore.client.avatar.AvatarQuotaManager.get(safeAvatar).releaseTexture(width, height);
+            return null;
+        }
         Entry previous = ENTRIES.remove(key);
         if (previous != null) {
             Set<String> previousOwned = OWNER_ENTRIES.get(previous.owner);
@@ -57,7 +66,7 @@ public final class AvatarDynamicTextureRegistry {
 
         String avatarSegment = Integer.toUnsignedString(safeAvatar.hashCode(), 36);
         Identifier id = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "runtime/" + avatarSegment + "/" + safeName);
-        Entry entry = new Entry(owner, id, new NativeImage(width, height, true), width, height);
+        Entry entry = new Entry(safeAvatar, owner, id, new NativeImage(width, height, true), width, height);
         ENTRIES.put(key, entry);
         owned.add(key);
         register(entry);
@@ -101,6 +110,27 @@ public final class AvatarDynamicTextureRegistry {
         return true;
     }
 
+    public static synchronized boolean bindModelTexture(Object owner, String avatarId, String modelId, String runtimeTexture, String targetTexture) {
+        Entry entry = find(owner, avatarId, runtimeTexture);
+        if (entry == null || modelId == null || modelId.isBlank()) return false;
+        String target = safe(targetTexture, "0");
+        MODEL_TEXTURES.put(modelBindingKey(modelId, target), entry);
+        if (target.endsWith(".png")) {
+            MODEL_TEXTURES.put(modelBindingKey(modelId, target.substring(0, target.length() - 4)), entry);
+        }
+        return true;
+    }
+
+    public static synchronized Identifier resolveModelTexture(BbModelDefinition model, int textureIndex) {
+        if (model == null || model.modelId() == null || model.modelId().isBlank()) return null;
+        BbTextureDefinition definition = model.texture(textureIndex);
+        for (String target : textureTargets(textureIndex, definition)) {
+            Entry entry = MODEL_TEXTURES.get(modelBindingKey(model.modelId(), target));
+            if (entry != null && !entry.released) return entry.id;
+        }
+        return null;
+    }
+
     /**
      * Removes all runtime textures owned by an avatar runtime and releases their GPU resources.
      * ลบ texture runtime ทั้งหมดของ avatar runtime และคืนทรัพยากร GPU ของ texture เหล่านั้น.
@@ -110,7 +140,10 @@ public final class AvatarDynamicTextureRegistry {
         if (keys == null || keys.isEmpty()) return;
         for (String key : keys) {
             Entry entry = ENTRIES.remove(key);
-            if (entry != null) release(entry);
+            if (entry != null) {
+                MODEL_TEXTURES.entrySet().removeIf(binding -> binding.getValue() == entry);
+                release(entry);
+            }
         }
     }
 
@@ -146,6 +179,7 @@ public final class AvatarDynamicTextureRegistry {
 
     private static void release(Entry entry) {
         entry.released = true;
+        seashyne.shynecore.client.avatar.AvatarQuotaManager.get(entry.avatarId).releaseTexture(entry.width, entry.height);
         Minecraft.getInstance().execute(() -> {
             if (entry.texture == null) {
                 entry.image.close();
@@ -163,6 +197,30 @@ public final class AvatarDynamicTextureRegistry {
         return normalized.isBlank() ? fallback : normalized;
     }
 
+    private static String modelBindingKey(String modelId, String target) {
+        return safe(modelId, "model") + ":" + safe(target, "0");
+    }
+
+    private static Set<String> textureTargets(int textureIndex, BbTextureDefinition texture) {
+        Set<String> targets = new HashSet<>();
+        targets.add(safe(Integer.toString(Math.max(0, textureIndex)), "0"));
+        if (texture != null) {
+            String id = safe(texture.id(), "");
+            if (!id.isBlank()) targets.add(id);
+            String name = safe(texture.name(), "");
+            if (!name.isBlank()) {
+                targets.add(name);
+                if (name.endsWith(".png")) targets.add(name.substring(0, name.length() - 4));
+            }
+            String path = safe(texture.relativePath(), "");
+            if (!path.isBlank()) {
+                targets.add(path);
+                if (path.endsWith(".png")) targets.add(path.substring(0, path.length() - 4));
+            }
+        }
+        return targets;
+    }
+
     /**
      * A renderable resource identifier and immutable texture dimensions for Lua.
      * resource identifier ที่วาดได้และขนาด texture ที่เปลี่ยนไม่ได้สำหรับ Lua.
@@ -170,6 +228,7 @@ public final class AvatarDynamicTextureRegistry {
     public record TextureInfo(String id, int width, int height) {}
 
     private static final class Entry {
+        private final String avatarId;
         private final Object owner;
         private final Identifier id;
         private final NativeImage image;
@@ -179,7 +238,8 @@ public final class AvatarDynamicTextureRegistry {
         private boolean dirty = true;
         private boolean released;
 
-        private Entry(Object owner, Identifier id, NativeImage image, int width, int height) {
+        private Entry(String avatarId, Object owner, Identifier id, NativeImage image, int width, int height) {
+            this.avatarId = avatarId;
             this.owner = owner;
             this.id = id;
             this.image = image;

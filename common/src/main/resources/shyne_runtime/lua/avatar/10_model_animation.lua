@@ -125,7 +125,14 @@ local function part_proxy(path)
               })
             end
           end
-          function proxy:setTexture(t) proxy._tex = tostring(t or ""); proxy:_sync(); return proxy end
+          function proxy:setTexture(t)
+            if type(t) == "table" then
+              t = t.id or t._name or (type(t.id) == "function" and t:id()) or (type(t.name) == "function" and t:name()) or tostring(t)
+            end
+            proxy._tex = tostring(t or "")
+            proxy:_sync()
+            return proxy
+          end
           function proxy:texture(t) return proxy:setTexture(t) end
           function proxy:setPos(x, y, z) proxy._pos = { x = x or 0, y = y or 0, z = z or 0 }; proxy:_sync(); return proxy end
           function proxy:setScale(s) proxy._scale = tonumber(s) or 1; proxy:_sync(); return proxy end

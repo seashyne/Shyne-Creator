@@ -145,10 +145,11 @@ public final class ShyneSecureAvatar {
     public static boolean isRuntimePath(Path root) {
         if (root == null) return false;
         try {
+            if (FMLPaths.GAMEDIR == null || FMLPaths.GAMEDIR.get() == null) return false;
             Path runtimeRoot = FMLPaths.GAMEDIR.get()
                 .resolve(".shyne-cache").resolve("public-runtime").toAbsolutePath().normalize();
             return root.toAbsolutePath().normalize().startsWith(runtimeRoot);
-        } catch (IllegalStateException | LinkageError unavailableOutsideGameRuntime) {
+        } catch (Throwable unavailableOutsideGameRuntime) {
             return false;
         }
     }

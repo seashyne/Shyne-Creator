@@ -47,6 +47,8 @@ public final class ClientLuaAvatarRuntime {
         "/shyne_runtime/lua/avatar/61_figura_client_renderer.lua",
         "/shyne_runtime/lua/avatar/62_figura_items_world.lua",
         "/shyne_runtime/lua/avatar/63_figura_action_wheel.lua",
+        "/shyne_runtime/lua/avatar/64_figura_data_nameplate.lua",
+        "/shyne_runtime/lua/avatar/65_figura_network.lua",
         "/shyne_runtime/lua/compat/squapi/squapi_core.lua",
         "/shyne_runtime/lua/compat/squapi/squapi_math.lua",
         "/shyne_runtime/lua/compat/squapi/squapi_springs.lua",
@@ -69,6 +71,8 @@ public final class ClientLuaAvatarRuntime {
     private final AvatarScriptCanvasBridge scriptCanvasBridge;
     private final AvatarDynamicTextureBridge dynamicTextureBridge;
     private final AvatarSystemBridge systemBridge;
+    private final AvatarDataBridge dataBridge;
+    private final AvatarChannelBridge channelBridge;
 
     private long loadElapsedNanos;
     private final Map<String, Long> eventTimes = new HashMap<>();
@@ -89,6 +93,8 @@ public final class ClientLuaAvatarRuntime {
             inputBridge::conflictCount,
             renderTaskBridge::taskCount,
             modules::size);
+        this.dataBridge = new AvatarDataBridge(state);
+        this.channelBridge = new AvatarChannelBridge(state);
         this.modelBridge = new AvatarModelBridge(state, model,
             () -> instructionBudget, EVENT_INSTRUCTION_LIMIT);
     }
@@ -115,12 +121,17 @@ public final class ClientLuaAvatarRuntime {
             return true;
         } catch (Exception e) {
             ShyneCore.LOGGER.error("[AvatarLua] Could not load {}: {}", scriptPath, e.getMessage(), e);
-            systemBridge.reportRuntimeError("script_load", scriptPath != null ? scriptPath.getFileName().toString() : "unknown", e.getMessage());
+            String defaultFile = scriptPath != null ? scriptPath.getFileName().toString() : "avatar.lua";
+            lastLoadError = seashyne.shynecore.client.avatar.runtime.AvatarScriptErrorParser.parse(e, defaultFile);
+            systemBridge.reportRuntimeError("script_load", lastLoadError.file(), lastLoadError.cleanMessage());
             return false;
         } finally {
             loadElapsedNanos = System.nanoTime() - started;
         }
     }
+
+    private seashyne.shynecore.client.avatar.runtime.AvatarScriptErrorParser.ScriptErrorInfo lastLoadError;
+    public seashyne.shynecore.client.avatar.runtime.AvatarScriptErrorParser.ScriptErrorInfo lastLoadError() { return lastLoadError; }
 
     public long loadElapsedNanos() { return loadElapsedNanos; }
 
@@ -156,6 +167,8 @@ public final class ClientLuaAvatarRuntime {
         scriptCanvasBridge.register(globals);
         dynamicTextureBridge.register(globals);
         systemBridge.register(globals);
+        dataBridge.register(globals);
+        channelBridge.register(globals);
         AvatarAudioStreamBridge.register(globals, state);
     }
 
@@ -283,8 +296,65 @@ public final class ClientLuaAvatarRuntime {
         callEvent("MICROPHONE", event);
     }
 
+    public void input(String type, int key, int scanCode, int action, int modifiers, double horizontal, double vertical, String characters) {
+        String normalized = type == null ? "input" : type.trim().toLowerCase(Locale.ROOT);
+        LuaTable event = eventPayload(normalized);
+        event.set("key", LuaValue.valueOf(key));
+        event.set("scan_code", LuaValue.valueOf(scanCode));
+        event.set("action", LuaValue.valueOf(action));
+        event.set("modifiers", LuaValue.valueOf(modifiers));
+        event.set("horizontal", LuaValue.valueOf(horizontal));
+        event.set("vertical", LuaValue.valueOf(vertical));
+        event.set("characters", LuaValue.valueOf(characters == null ? "" : characters));
+        callEvent(normalized.toUpperCase(Locale.ROOT), event);
+    }
+
+    public void itemUse(String itemId, String hand, String action, int particleCount) {
+        LuaTable event = eventPayload("use_item");
+        event.set("item", LuaValue.valueOf(itemId == null ? "" : itemId));
+        event.set("hand", LuaValue.valueOf(hand == null ? "main_hand" : hand));
+        event.set("action", LuaValue.valueOf(action == null ? "use" : action));
+        event.set("particle_count", LuaValue.valueOf(particleCount));
+        callEvent("USE_ITEM", event);
+    }
+
+    public void chatReceive(String text, String json, String senderUuid, String senderName) {
+        LuaTable event = eventPayload("chat_receive_message");
+        event.set("text", LuaValue.valueOf(text == null ? "" : text));
+        event.set("json", LuaValue.valueOf(json == null ? "" : json));
+        event.set("sender", LuaValue.valueOf(senderUuid == null ? "" : senderUuid));
+        event.set("sender_name", LuaValue.valueOf(senderName == null ? "" : senderName));
+        callEvent("CHAT_RECEIVE_MESSAGE", event);
+    }
+
+    public void damage(float amount, String sourceType, String attackerId, boolean isLocalPlayer) {
+        LuaTable event = eventPayload("damage");
+        event.set("amount", LuaValue.valueOf(amount));
+        event.set("source", LuaValue.valueOf(sourceType == null ? "generic" : sourceType));
+        event.set("attacker", LuaValue.valueOf(attackerId == null ? "" : attackerId));
+        event.set("local_player", LuaValue.valueOf(isLocalPlayer));
+        callEvent("DAMAGE", event);
+    }
+
+    public void totem(String entityId, boolean isLocalPlayer) {
+        LuaTable event = eventPayload("totem");
+        event.set("entity", LuaValue.valueOf(entityId == null ? "" : entityId));
+        event.set("local_player", LuaValue.valueOf(isLocalPlayer));
+        callEvent("TOTEM", event);
+    }
+
+    public void channelPacket(String senderUuid, String channel, String payloadJson) {
+        LuaTable event = eventPayload("channel_packet");
+        event.set("sender", LuaValue.valueOf(senderUuid == null ? "" : senderUuid));
+        event.set("channel", LuaValue.valueOf(channel == null ? "" : channel));
+        event.set("data", LuaValue.valueOf(payloadJson == null ? "{}" : payloadJson));
+        callEvent("CHANNEL_PACKET", event);
+    }
+
     public void dispose() {
-        callEvent("AVATAR_UNLOAD", eventPayload("avatar_unload"));
+        if (globals != null) {
+            callEvent("AVATAR_UNLOAD", eventPayload("avatar_unload"));
+        }
         inputBridge.dispose();
         renderTaskBridge.dispose();
         scriptCanvasBridge.dispose();
@@ -295,13 +365,16 @@ public final class ClientLuaAvatarRuntime {
     }
 
     private LuaTable eventPayload(String type) {
-        Minecraft client = Minecraft.getInstance();
+        Minecraft client = null;
+        try {
+            client = Minecraft.getInstance();
+        } catch (Throwable ignored) {}
         long now = System.nanoTime();
         Long previous = eventTimes.put(type, now);
         LuaTable event = new LuaTable();
         event.set("type", LuaValue.valueOf(type));
         event.set("time", LuaValue.valueOf(now / 1_000_000_000.0));
-        event.set("tick", LuaValue.valueOf(client.level == null ? 0 : client.level.getGameTime()));
+        event.set("tick", LuaValue.valueOf(client == null || client.level == null ? 0 : client.level.getGameTime()));
         event.set("context", LuaValue.valueOf(type.equals("render") ? "player" : "client"));
         event.set("delta", LuaValue.valueOf(previous == null ? 0 : Math.min(1.0, (now - previous) / 1_000_000_000.0)));
         event.set("sequence", LuaValue.valueOf(++eventSequence));
@@ -310,18 +383,29 @@ public final class ClientLuaAvatarRuntime {
     }
 
     private LuaTable renderEventPayload(String type, float partialTick, String context) {
-        Minecraft client = Minecraft.getInstance();
+        Minecraft client = null;
+        try {
+            client = Minecraft.getInstance();
+        } catch (Throwable ignored) {}
         LuaTable event = eventPayload(type);
-        event.set("context", LuaValue.valueOf(AvatarRenderContext.normalize(context)));
+        String normContext = AvatarRenderContext.normalize(context);
+        event.set("context", LuaValue.valueOf(normContext));
         event.set("delta", LuaValue.valueOf(Math.max(0f, Math.min(1f, partialTick))));
         event.set("partial_tick", event.get("delta"));
-        event.set("frame_delta", LuaValue.valueOf(client.getDeltaTracker().getRealtimeDeltaTicks()));
-        event.set("first_person", LuaValue.valueOf(AvatarRenderContext.FIRST_PERSON.equals(AvatarRenderContext.normalize(context))));
-        var screen = client.gui.screen();
-        event.set("screen", LuaValue.valueOf(screen == null ? "" : screen.getClass().getSimpleName()));
-        var camera = client.gameRenderer.mainCamera();
-        event.set("camera_position", vec3(camera.position().x, camera.position().y, camera.position().z));
-        event.set("camera_rotation", vec3(camera.xRot(), camera.yRot(), 0));
+        event.set("frame_delta", LuaValue.valueOf(client == null || client.getDeltaTracker() == null ? 1.0f : client.getDeltaTracker().getRealtimeDeltaTicks()));
+        event.set("first_person", LuaValue.valueOf(AvatarRenderContext.FIRST_PERSON.equals(normContext)));
+        event.set("is_portrait", LuaValue.valueOf(AvatarRenderContext.PORTRAIT.equals(normContext)));
+        event.set("is_skull", LuaValue.valueOf(AvatarRenderContext.SKULL.equals(normContext)));
+        event.set("is_held_item", LuaValue.valueOf(AvatarRenderContext.HELD_ITEM.equals(normContext)));
+        if (client != null && client.gui != null) {
+            var screen = client.gui.screen();
+            event.set("screen", LuaValue.valueOf(screen == null ? "" : screen.getClass().getSimpleName()));
+        }
+        if (client != null && client.gameRenderer != null && client.gameRenderer.mainCamera() != null) {
+            var camera = client.gameRenderer.mainCamera();
+            event.set("camera_position", vec3(camera.position().x, camera.position().y, camera.position().z));
+            event.set("camera_rotation", vec3(camera.xRot(), camera.yRot(), 0));
+        }
         return event;
     }
 

@@ -23,7 +23,7 @@ public final class AvatarState {
     private final boolean replaceVanilla;
     private final boolean publicShare;
     private final Set<AvatarPermission> requestedPermissions;
-    private final Set<AvatarPermission> grantedPermissions;
+    private volatile Set<AvatarPermission> grantedPermissions;
     private String apiStandard = ShyneApiStandard.LATEST;
     private boolean automaticApi = true;
     private Map<String, String> apiRequirements = Map.of();
@@ -46,6 +46,16 @@ public final class AvatarState {
     private float shadowRadius = -1.0f;
     private String nameplateText = "";
     private boolean nameplateVisible = true;
+    private AvatarNameplateStyle nameplateStyle = AvatarNameplateStyle.DEFAULT;
+    private float nameplatePosX, nameplatePosY, nameplatePosZ;
+    private float nameplateScaleX = 1f, nameplateScaleY = 1f, nameplateScaleZ = 1f;
+    private float nameplatePivotX, nameplatePivotY, nameplatePivotZ;
+    private String chatNameplateText = "";
+    private boolean chatNameplateVisible = true;
+    private AvatarNameplateStyle chatNameplateStyle = AvatarNameplateStyle.DEFAULT;
+    private String listNameplateText = "";
+    private boolean listNameplateVisible = true;
+    private AvatarNameplateStyle listNameplateStyle = AvatarNameplateStyle.DEFAULT;
     private String textureSyncMode = "manifest";
     private String syncedSchemaPath = "";
     private AvatarSyncedSchema syncedSchema = AvatarSyncedSchema.allowAll();
@@ -125,6 +135,9 @@ public final class AvatarState {
     public boolean publicShare() { return publicShare; }
     public Set<AvatarPermission> requestedPermissions() { return requestedPermissions; }
     public Set<AvatarPermission> grantedPermissions() { return grantedPermissions; }
+    public void setGrantedPermissions(Set<AvatarPermission> permissions) {
+        this.grantedPermissions = permissions == null ? Set.of() : Set.copyOf(permissions);
+    }
     public String apiStandard() { return apiStandard; }
     public boolean automaticApi() { return automaticApi; }
     public Map<String, String> apiRequirements() { return apiRequirements; }
@@ -134,7 +147,8 @@ public final class AvatarState {
         this.apiRequirements = requirements == null ? Map.of() : Map.copyOf(requirements);
     }
     public boolean permissionAllowed(AvatarPermission permission) {
-        return !publicShare || (requestedPermissions.contains(permission) && grantedPermissions.contains(permission));
+        if (permission == null) return false;
+        return grantedPermissions.contains(permission);
     }
     public Map<String, Object> vars() { return vars; }
     public boolean firstPersonMasking() { return firstPersonMasking; }
@@ -184,6 +198,56 @@ public final class AvatarState {
     public String nameplateText() { return nameplateText; }
     public boolean nameplateVisible() { return nameplateVisible; }
     public void setNameplate(String text, boolean visible) { nameplateText = text == null ? "" : text.substring(0, Math.min(128, text.length())); nameplateVisible = visible; markSnapshotDirty(); }
+    public AvatarNameplateStyle nameplateStyle() { return nameplateStyle; }
+    public void setNameplateStyle(String badge, int colorArgb, boolean bold, boolean italic) {
+        nameplateStyle = new AvatarNameplateStyle(badge, colorArgb, bold, italic);
+        markSnapshotDirty();
+    }
+    public float nameplatePosX() { return nameplatePosX; }
+    public float nameplatePosY() { return nameplatePosY; }
+    public float nameplatePosZ() { return nameplatePosZ; }
+    public float nameplateScaleX() { return nameplateScaleX; }
+    public float nameplateScaleY() { return nameplateScaleY; }
+    public float nameplateScaleZ() { return nameplateScaleZ; }
+    public float nameplatePivotX() { return nameplatePivotX; }
+    public float nameplatePivotY() { return nameplatePivotY; }
+    public float nameplatePivotZ() { return nameplatePivotZ; }
+    public void setNameplatePos(float x, float y, float z) {
+        this.nameplatePosX = x; this.nameplatePosY = y; this.nameplatePosZ = z;
+        markSnapshotDirty();
+    }
+    public void setNameplateScale(float x, float y, float z) {
+        this.nameplateScaleX = x; this.nameplateScaleY = y; this.nameplateScaleZ = z;
+        markSnapshotDirty();
+    }
+    public void setNameplatePivot(float x, float y, float z) {
+        this.nameplatePivotX = x; this.nameplatePivotY = y; this.nameplatePivotZ = z;
+        markSnapshotDirty();
+    }
+    public String chatNameplateText() { return chatNameplateText; }
+    public boolean chatNameplateVisible() { return chatNameplateVisible; }
+    public AvatarNameplateStyle chatNameplateStyle() { return chatNameplateStyle; }
+    public void setChatNameplate(String text, boolean visible) {
+        chatNameplateText = text == null ? "" : text.substring(0, Math.min(128, text.length()));
+        chatNameplateVisible = visible;
+        markSnapshotDirty();
+    }
+    public void setChatNameplateStyle(String badge, int colorArgb, boolean bold, boolean italic) {
+        chatNameplateStyle = new AvatarNameplateStyle(badge, colorArgb, bold, italic);
+        markSnapshotDirty();
+    }
+    public String listNameplateText() { return listNameplateText; }
+    public boolean listNameplateVisible() { return listNameplateVisible; }
+    public AvatarNameplateStyle listNameplateStyle() { return listNameplateStyle; }
+    public void setListNameplate(String text, boolean visible) {
+        listNameplateText = text == null ? "" : text.substring(0, Math.min(128, text.length()));
+        listNameplateVisible = visible;
+        markSnapshotDirty();
+    }
+    public void setListNameplateStyle(String badge, int colorArgb, boolean bold, boolean italic) {
+        listNameplateStyle = new AvatarNameplateStyle(badge, colorArgb, bold, italic);
+        markSnapshotDirty();
+    }
     public String textureSyncMode() { return textureSyncMode; }
     public void setTextureSyncMode(String value) { this.textureSyncMode = value == null || value.isBlank() ? "manifest" : value; markSnapshotDirty(); }
     public String syncedSchemaPath() { return syncedSchemaPath; }

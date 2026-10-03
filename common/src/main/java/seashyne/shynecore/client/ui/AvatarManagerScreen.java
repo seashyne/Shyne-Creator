@@ -273,10 +273,18 @@ public class AvatarManagerScreen extends Screen {
             }
         ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.more.tooltip"))).build();
 
+        Button permissions = Button.builder(Component.literal("Permissions"), btn -> {
+            AvatarState current = AvatarRuntime.active();
+            if (current != null && this.minecraft != null) {
+                this.minecraft.gui.setScreen(new AvatarPermissionScreen(this, current.avatarId(), current.avatarId(), current.requestedPermissions(), () -> rebuildWidgets()));
+            }
+        }).tooltip(Tooltip.create(Component.literal("Manage capabilities and permissions for this avatar"))).build();
+        permissions.active = active != null;
+
         if (moreOpen) {
             placeRow(innerX, footerTop - 24, innerWidth, active == null
-                ? List.of(mask, validate, verify, cloudSettings)
-                : List.of(mask, validate, folder, verify, cloudSettings));
+                ? List.of(permissions, mask, validate, verify, cloudSettings)
+                : List.of(permissions, mask, validate, folder, verify, cloudSettings));
         }
 
         if (compactFooter) {
@@ -385,10 +393,11 @@ public class AvatarManagerScreen extends Screen {
         AvatarActivationResult result = AvatarRuntime.lastActivation();
         String activation = active == null
             ? Component.translatable("screen.shyne_core.avatars.vanilla").getString()
-            : result.message();
+            : (result.success() ? result.message() : result.formattedError());
         int activationColor = result.success() || active == null ? 0xFF7DDBB3 : 0xFFFF8793;
         String shortActivation = this.font.plainSubstrByWidth(activation, previewWidth - 24);
-        graphics.text(this.font, Component.literal("✓ " + shortActivation), previewX + 12, statusLineY, activationColor, false);
+        String prefix = result.success() || active == null ? "✓ " : "✗ ";
+        graphics.text(this.font, Component.literal(prefix + shortActivation), previewX + 12, statusLineY, activationColor, false);
 
         UiViewportBounds preview = UiViewportBounds.clip(
             previewX + 4, contentTop + 4, previewX + previewWidth - 4, labelY - 5,

@@ -49,13 +49,16 @@ public final class AvatarProfilerScreen extends Screen {
 
         int summaryY = panelY + 48;
         value(graphics, "FPS", Integer.toString(snapshot.fps()), panelX + 12, summaryY, snapshot.fps() < 60 ? 0xFFFF6B7A : 0xFF65F2B3);
-        value(graphics, "Frame", ms(snapshot.frameMs()), panelX + 130, summaryY, 0xFFF3F7FF);
-        value(graphics, "Avatar/frame", ms(snapshot.avatarFrameMs()), panelX + 260, summaryY, snapshot.avatarFrameMs() > 4 ? 0xFFFFB86B : 0xFFF3F7FF);
-        value(graphics, "Estimated FPS loss", String.format(Locale.ROOT, "%.1f", snapshot.estimatedFpsLoss()), panelX + 420, summaryY, 0xFFFFB86B);
-        value(graphics, "Avatar memory", bytes(snapshot.avatarBytes()), panelX + 12, summaryY + 28, 0xFFF3F7FF);
-        value(graphics, "JVM heap", bytes(snapshot.heapBytes()), panelX + 180, summaryY + 28, 0xFFF3F7FF);
-        value(graphics, "Tasks", AvatarRenderTaskRegistry.lastRendered() + "/" + snapshot.taskCount(), panelX + 340, summaryY + 28, AvatarRenderTaskRegistry.lastCulled() > 0 ? 0xFFFFB86B : 0xFFF3F7FF);
-        value(graphics, "Model", snapshot.bones() + " bones · " + snapshot.cubes() + " cubes", panelX + 430, summaryY + 28, 0xFFF3F7FF);
+        value(graphics, "Frame", ms(snapshot.frameMs()), panelX + 110, summaryY, 0xFFF3F7FF);
+        value(graphics, "Avatar/frame", ms(snapshot.avatarFrameMs()), panelX + 220, summaryY, snapshot.avatarFrameMs() > 4 ? 0xFFFFB86B : 0xFFF3F7FF);
+        value(graphics, "Est FPS loss", String.format(Locale.ROOT, "%.1f", snapshot.estimatedFpsLoss()), panelX + 340, summaryY, 0xFFFFB86B);
+        value(graphics, "Memory", bytes(snapshot.avatarBytes()), panelX + 460, summaryY, 0xFFF3F7FF);
+
+        var quota = snapshot.quota();
+        value(graphics, "Dyn Textures", (quota != null ? quota.dynamicTextures() + "/" + quota.maxDynamicTextures() : "0/16") + " (" + bytes(quota != null ? quota.dynamicTextureBytes() : 0) + ")", panelX + 12, summaryY + 28, 0xFFF3F7FF);
+        value(graphics, "Particles", (quota != null ? quota.particlesPerSecond() + "/s" + (quota.particlesDroppedPerSecond() > 0 ? " (drop " + quota.particlesDroppedPerSecond() + ")" : "") : "0/s"), panelX + 180, summaryY + 28, (quota != null && quota.particlesDroppedPerSecond() > 0) ? 0xFFFF6B7A : 0xFFF3F7FF);
+        value(graphics, "Sounds", (quota != null ? quota.soundsPerSecond() + "/s" + (quota.soundsDroppedPerSecond() > 0 ? " (drop " + quota.soundsDroppedPerSecond() + ")" : "") : "0/s"), panelX + 340, summaryY + 28, (quota != null && quota.soundsDroppedPerSecond() > 0) ? 0xFFFF6B7A : 0xFFF3F7FF);
+        value(graphics, "Tasks", AvatarRenderTaskRegistry.lastRendered() + "/" + snapshot.taskCount(), panelX + 460, summaryY + 28, AvatarRenderTaskRegistry.lastCulled() > 0 ? 0xFFFFB86B : 0xFFF3F7FF);
 
         graphics.text(this.font, Component.translatable("screen.shyne_core.profiler.metrics").withStyle(ChatFormatting.AQUA), panelX + 12, panelY + 112, 0xFFFFFFFF, false);
         int row = 0;

@@ -331,7 +331,11 @@ public final class ClientAnimationState {
             Map<String, Double> animationParameters = new HashMap<>();
             copyNonNullEntries(snapshot.animationParameters(), animationParameters);
             REMOTE_ANIMATION_PARAMETERS.put(playerId, Map.copyOf(animationParameters));
-            REMOTE_NAMEPLATES.put(playerId, new RemoteNameplate(snapshot.nameplateText() == null ? "" : snapshot.nameplateText(), snapshot.nameplateVisible()));
+            REMOTE_NAMEPLATES.put(playerId, new RemoteNameplate(
+                snapshot.nameplateText() == null ? "" : snapshot.nameplateText(),
+                snapshot.nameplateVisible(),
+                new seashyne.shynecore.client.avatar.AvatarNameplateStyle(snapshot.nameplateBadge(), snapshot.nameplateColorArgb(), snapshot.nameplateBold(), snapshot.nameplateItalic())
+            ));
             Map<String, Boolean> visibility = new ConcurrentHashMap<>();
             copyNonNullEntries(snapshot.vanillaVisibility(), visibility);
             REMOTE_VANILLA_VISIBILITY.put(playerId, visibility);
@@ -667,6 +671,10 @@ public final class ClientAnimationState {
         RemoteNameplate value = REMOTE_NAMEPLATES.get(playerId);
         return value == null ? null : value.visible();
     }
+    public static seashyne.shynecore.client.avatar.AvatarNameplateStyle getRemoteNameplateStyle(UUID playerId) {
+        RemoteNameplate value = REMOTE_NAMEPLATES.get(playerId);
+        return value == null ? seashyne.shynecore.client.avatar.AvatarNameplateStyle.DEFAULT : value.style();
+    }
     private static AvatarPartState interpolated(RemotePartKey key, AvatarPartState target) {
         RemotePartTransition transition = REMOTE_PART_TRANSITIONS.get(key);
         if (transition == null) return target;
@@ -693,5 +701,5 @@ public final class ClientAnimationState {
     }
     private record RemotePartKey(UUID entityId, String modelId, String path) {}
     private record RemotePartTransition(AvatarPartState previous, AvatarPartState target, long startedAtMillis) {}
-    private record RemoteNameplate(String text, boolean visible) {}
+    private record RemoteNameplate(String text, boolean visible, seashyne.shynecore.client.avatar.AvatarNameplateStyle style) {}
 }

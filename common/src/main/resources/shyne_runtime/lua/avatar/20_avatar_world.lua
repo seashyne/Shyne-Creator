@@ -35,9 +35,22 @@ function avatar:setFirstPersonArm(value) _avatar_camera_set("first_person_arm", 
 function avatar:setFirstPersonHand(value) _avatar_camera_set("first_person_arm", bool(value)); return self end
 
 avatar.nameplate = {}
+local function nameplate_color(value)
+  if type(value) == "number" then return math.floor(value) end
+  if type(value) == "string" then
+    local hex = value:gsub("#", "")
+    local parsed = tonumber(hex, 16)
+    if parsed then return 0xFF000000 + (parsed % 0x1000000) end
+  end
+  if type(value) == "table" then
+    local r, g, b = tonumber(value.r or value.x or value[1]) or 1, tonumber(value.g or value.y or value[2]) or 1, tonumber(value.b or value.z or value[3]) or 1
+    return 0xFF000000 + math.floor(math.max(0, math.min(1, r)) * 255) * 0x10000 + math.floor(math.max(0, math.min(1, g)) * 255) * 0x100 + math.floor(math.max(0, math.min(1, b)) * 255)
+  end
+  return 0xFFFFFFFF
+end
 function avatar.nameplate.configure(options)
   options = options or {}
-  _avatar_nameplate_set(options.text or "", options.visible == nil or bool(options.visible))
+  _avatar_nameplate_set(options.text or "", options.visible == nil or bool(options.visible), options.badge or "", nameplate_color(options.color), bool(options.bold), bool(options.italic))
 end
 
 function avatar.texture.sync(mode) _avatar_texture_sync(mode or "manifest") end

@@ -31,6 +31,13 @@ public final class ShyneClientNetworking {
     private ShyneClientNetworking() {}
 
     public static void init() {
+        seashyne.shynecore.client.avatar.bridge.AvatarChannelBridge.PACKET_SENDER = packet -> {
+            if (serverSupports(ShyneNetwork.CAP_AVATAR_CHANNELS) && canSend(ShyneNetwork.AVATAR_CHANNEL)) {
+                ClientPacketDistributor.sendToServer(new ShyneNetwork.AvatarChannelPayload(packet.senderId(), packet.channel(), packet.payloadJson()));
+            } else {
+                seashyne.shynecore.client.avatar.AvatarRuntime.channelPacket("local", packet.channel(), packet.payloadJson());
+            }
+        };
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, event -> sendProtocolHello());
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, event -> {
             protocolReady = false;
@@ -38,6 +45,15 @@ public final class ShyneClientNetworking {
             ClientAnimationState.clearRemoteSession();
             ShyneTabStatusIcons.clear();
             seashyne.shynecore.client.state.ClientPowerConfig.reset();
+        });
+    }
+
+    public static void handleAvatarChannelPayload(ShyneNetwork.AvatarChannelPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (payload == null) return;
+            seashyne.shynecore.client.avatar.bridge.AvatarChannelBridge.onPacketReceived(
+                payload.senderId(), payload.channel(), payload.payloadJson()
+            );
         });
     }
 

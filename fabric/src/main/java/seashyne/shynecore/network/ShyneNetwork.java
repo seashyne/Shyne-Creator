@@ -52,7 +52,7 @@ import static seashyne.shynecore.network.ShyneNetworkValidator.*;
 public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.Listener, AttachmentRuntime.Listener,
     PowerStateMachine.Listener, SkillRegistry.Listener, PlayerProfileRuntime.Listener, EquipmentRuntime.Listener, ShyneItemRuntime.Listener {
 
-    public static final int PROTOCOL_VERSION = 18;
+    public static final int PROTOCOL_VERSION = 19;
     public static final String CAP_SERVER_AUTHORITATIVE_GAMEPLAY = "gameplay.server_authoritative";
     public static final String CAP_DYNAMIC_ACTION_DECK = "gameplay.dynamic_action_deck_v1";
     public static final String CAP_SKILL_ICON_ASSETS = "content.skill_icon_assets_v1";
@@ -67,6 +67,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public static final String CAP_AVATAR_RECIPIENT_SUBSCRIPTIONS = "avatar.recipient_subscriptions_v1";
     public static final String CAP_AVATAR_BONE_PHYSICS = "avatar.bone_physics_v1";
     public static final String CAP_PACKET_COMPRESSION = "network.compression_v1";
+    public static final String CAP_AVATAR_CHANNELS = "avatar.channels_v1";
     public static final List<String> SERVER_CAPABILITIES = List.of(
         CAP_SERVER_AUTHORITATIVE_GAMEPLAY,
         CAP_DYNAMIC_ACTION_DECK,
@@ -79,7 +80,8 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         CAP_AVATAR_SNAPSHOT_REQUEST,
         CAP_AVATAR_RECIPIENT_SUBSCRIPTIONS,
         CAP_AVATAR_BONE_PHYSICS,
-        CAP_PACKET_COMPRESSION
+        CAP_PACKET_COMPRESSION,
+        CAP_AVATAR_CHANNELS
     );
     public static final Identifier PROTOCOL_HELLO = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "protocol_hello");
     public static final Identifier PROTOCOL_STATUS = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "protocol_status");
@@ -103,6 +105,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public static final Identifier AVATAR_SYNC_REQUEST = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "avatar_sync_request");
     public static final Identifier EQUIP_SKILL = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "equip_skill");
     public static final Identifier SYNC_POWER_CONFIG = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "sync_power_config");
+    public static final Identifier AVATAR_CHANNEL = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "avatar_channel");
 
     public static final CustomPacketPayload.Type<ProtocolHelloPayload> PROTOCOL_HELLO_PAYLOAD = new CustomPacketPayload.Type<>(PROTOCOL_HELLO);
     public static final CustomPacketPayload.Type<JsonPayload> PROTOCOL_STATUS_PAYLOAD = new CustomPacketPayload.Type<>(PROTOCOL_STATUS);
@@ -126,6 +129,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public static final CustomPacketPayload.Type<AvatarSyncRequestPayload> AVATAR_SYNC_REQUEST_PAYLOAD = new CustomPacketPayload.Type<>(AVATAR_SYNC_REQUEST);
     public static final CustomPacketPayload.Type<JsonPayload> EQUIP_SKILL_PAYLOAD = new CustomPacketPayload.Type<>(EQUIP_SKILL);
     public static final CustomPacketPayload.Type<JsonPayload> SYNC_POWER_CONFIG_PAYLOAD = new CustomPacketPayload.Type<>(SYNC_POWER_CONFIG);
+    public static final CustomPacketPayload.Type<AvatarChannelPayload> AVATAR_CHANNEL_PAYLOAD = new CustomPacketPayload.Type<>(AVATAR_CHANNEL);
 
     public static final Gson GSON = new GsonBuilder().serializeNulls().create();
     public static final double MAX_AVATAR_TRACKING_DISTANCE = 160.0;
@@ -185,6 +189,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     private final Map<UUID, ByteRateLimiter> avatarRequestBytes = new HashMap<>();
     private final Map<UUID, ByteRateLimiter> avatarRequestResponseBytes = new HashMap<>();
     private final Map<UUID, ByteRateLimiter> avatarOutboundBytes = new HashMap<>();
+    private final Map<UUID, ByteRateLimiter> avatarChannelBytes = new HashMap<>();
     private final Map<UUID, AvatarSubscriptions> avatarSubscriptions = new HashMap<>();
     private final Set<UUID> compatibleClients = new HashSet<>();
     private final Map<UUID, Integer> pendingHandshakes = new HashMap<>();
@@ -221,6 +226,8 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         PayloadTypeRegistry.serverboundPlay().register(AVATAR_VAR_SET_PAYLOAD, AvatarVarSetPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(AVATAR_SNAPSHOT_PAYLOAD, JsonPayload.codec(AVATAR_SNAPSHOT_PAYLOAD));
         PayloadTypeRegistry.serverboundPlay().register(AVATAR_SYNC_REQUEST_PAYLOAD, AvatarSyncRequestPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(AVATAR_CHANNEL_PAYLOAD, AvatarChannelPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(AVATAR_CHANNEL_PAYLOAD, AvatarChannelPayload.CODEC);
         payloadsRegistered = true;
     }
 
@@ -327,13 +334,16 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
             latestAvatarSnapshots.put(playerId, normalized);
             NetAvatarSnapshot outgoing = snapshotPayload.avatars().get(0).model() == null
                 ? new NetAvatarSnapshot(normalized.playerId(), normalized.avatarId(), normalized.modelId(), normalized.replaceVanilla(), true, null,
-                    normalized.parts(), normalized.vanillaVisibility(), normalized.syncedVars(), normalized.currentAnimation(), normalized.animationStartedAtMillis(), normalized.animationLayers(), normalized.animationParameters(), normalized.nameplateText(), normalized.nameplateVisible())
+                    normalized.parts(), normalized.vanillaVisibility(), normalized.syncedVars(), normalized.currentAnimation(), normalized.animationStartedAtMillis(), normalized.animationLayers(), normalized.animationParameters(), normalized.nameplateText(), normalized.nameplateVisible(), normalized.nameplateBadge(), normalized.nameplateColorArgb(), normalized.nameplateBold(), normalized.nameplateItalic())
                 : normalized;
             broadcastAvatarSnapshot(playerId, outgoing, snapshotPayload.revision());
             broadcastPlayerPresence();
         }));
         ServerPlayNetworking.registerGlobalReceiver(AVATAR_SYNC_REQUEST_PAYLOAD, (payload, context) ->
             context.server().execute(() -> handleAvatarSyncRequest(context.player(), payload))
+        );
+        ServerPlayNetworking.registerGlobalReceiver(AVATAR_CHANNEL_PAYLOAD, (payload, context) ->
+            context.server().execute(() -> handleAvatarChannel(context.player(), payload))
         );
     }
 
@@ -538,6 +548,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         if (incoming.animationLayers() != null && (incoming.animationLayers().size() > 64 || incoming.animationLayers().stream().anyMatch(layer -> !isSafeAnimationLayer(layer)))) return null;
         if (!isSafeAnimationParameters(incoming.animationParameters())) return null;
         if (incoming.nameplateText() != null && incoming.nameplateText().length() > 128) return null;
+        if (incoming.nameplateBadge() != null && incoming.nameplateBadge().length() > 24) return null;
 
         NetAvatarSnapshot previous = latestAvatarSnapshots.get(player.getUUID());
         String modelId = "remote:" + player.getStringUUID() + ":" + incoming.avatarId();
@@ -567,7 +578,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
             currentAnimation, currentAnimation.isBlank() ? 0L : AvatarAnimationClock.decodeAge(nowMillis, incoming.animationStartedAtMillis()),
             animationLayers,
             incoming.animationParameters() == null ? Map.of() : Map.copyOf(incoming.animationParameters()),
-            incoming.nameplateText() == null ? "" : incoming.nameplateText(), incoming.nameplateVisible()
+            incoming.nameplateText() == null ? "" : incoming.nameplateText(), incoming.nameplateVisible(), incoming.nameplateBadge(), incoming.nameplateColorArgb(), incoming.nameplateBold(), incoming.nameplateItalic()
         );
     }
 
@@ -584,7 +595,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
             snapshot.playerId(), snapshot.avatarId(), snapshot.modelId(), snapshot.replaceVanilla(), snapshot.onlineSync(), snapshot.model(),
             snapshot.parts(), snapshot.vanillaVisibility(), snapshot.syncedVars(), currentAnimation,
             currentAnimation.isBlank() ? 0L : AvatarAnimationClock.encodeAge(nowMillis, snapshot.animationStartedAtMillis()),
-            layers, snapshot.animationParameters(), snapshot.nameplateText(), snapshot.nameplateVisible()
+            layers, snapshot.animationParameters(), snapshot.nameplateText(), snapshot.nameplateVisible(), snapshot.nameplateBadge(), snapshot.nameplateColorArgb(), snapshot.nameplateBold(), snapshot.nameplateItalic()
         );
     }
 
@@ -599,7 +610,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     private static NetAvatarSnapshot withSyncedVars(NetAvatarSnapshot snapshot, Map<String, Object> values) {
         return new NetAvatarSnapshot(snapshot.playerId(), snapshot.avatarId(), snapshot.modelId(), snapshot.replaceVanilla(), snapshot.onlineSync(), snapshot.model(),
             snapshot.parts(), snapshot.vanillaVisibility(), values, snapshot.currentAnimation(), snapshot.animationStartedAtMillis(), snapshot.animationLayers(),
-            snapshot.animationParameters(), snapshot.nameplateText(), snapshot.nameplateVisible());
+            snapshot.animationParameters(), snapshot.nameplateText(), snapshot.nameplateVisible(), snapshot.nameplateBadge(), snapshot.nameplateColorArgb(), snapshot.nameplateBold(), snapshot.nameplateItalic());
     }
 
     private void completeHandshake(ServerPlayer player, ProtocolHelloPayload hello) {
@@ -750,7 +761,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     private static NetAvatarSnapshot withoutModel(NetAvatarSnapshot snapshot) {
         return new NetAvatarSnapshot(snapshot.playerId(), snapshot.avatarId(), snapshot.modelId(), snapshot.replaceVanilla(), snapshot.onlineSync(), null,
             snapshot.parts(), snapshot.vanillaVisibility(), snapshot.syncedVars(), snapshot.currentAnimation(), snapshot.animationStartedAtMillis(),
-            snapshot.animationLayers(), snapshot.animationParameters(), snapshot.nameplateText(), snapshot.nameplateVisible());
+            snapshot.animationLayers(), snapshot.animationParameters(), snapshot.nameplateText(), snapshot.nameplateVisible(), snapshot.nameplateBadge(), snapshot.nameplateColorArgb(), snapshot.nameplateBold(), snapshot.nameplateItalic());
     }
 
     private static int utf8Length(String value) {
@@ -760,6 +771,34 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     private static ByteRateLimiter limiter(Map<UUID, ByteRateLimiter> limiters, UUID playerId,
                                            long capacityBytes, long refillBytesPerSecond, long nowNanos) {
         return limiters.computeIfAbsent(playerId, ignored -> new ByteRateLimiter(capacityBytes, refillBytesPerSecond, nowNanos));
+    }
+
+    public void handleAvatarChannel(ServerPlayer sender, AvatarChannelPayload payload) {
+        if (!compatibleClients.contains(sender.getUUID())) return;
+        if (payload == null || payload.channel() == null || payload.payloadJson() == null) return;
+        String channel = payload.channel().trim().toLowerCase(Locale.ROOT);
+        if (!seashyne.shynecore.avatar.AvatarChannelConstants.isValidChannel(channel)) return;
+        int payloadBytes = utf8Length(payload.payloadJson());
+        if (payloadBytes > seashyne.shynecore.avatar.AvatarChannelConstants.MAX_PAYLOAD_CHARS) return;
+        long nowNanos = System.nanoTime();
+        if (!limiter(avatarChannelBytes, sender.getUUID(),
+            seashyne.shynecore.avatar.AvatarChannelConstants.MAX_PAYLOAD_CHARS * 4L,
+            seashyne.shynecore.avatar.AvatarChannelConstants.MAX_PAYLOAD_CHARS * 2L,
+            nowNanos).tryConsume(payloadBytes, nowNanos)) return;
+
+        for (ServerPlayer recipient : server.getPlayerList().getPlayers()) {
+            if (recipient.getUUID().equals(sender.getUUID())) continue;
+            if (!compatibleClients.contains(recipient.getUUID())) continue;
+            if (recipient.level() != sender.level()) continue;
+            if (recipient.distanceToSqr(sender) > MAX_AVATAR_TRACKING_DISTANCE_SQR) continue;
+            sendAvatarChannel(recipient, new AvatarChannelPayload(sender.getStringUUID(), channel, payload.payloadJson()));
+        }
+    }
+
+    public void sendAvatarChannel(ServerPlayer player, AvatarChannelPayload payload) {
+        if (ServerPlayNetworking.canSend(player, AVATAR_CHANNEL_PAYLOAD)) {
+            ServerPlayNetworking.send(player, payload);
+        }
     }
 
     private void forgetClient(UUID playerId) {
@@ -773,6 +812,7 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         avatarRequestBytes.remove(playerId);
         avatarRequestResponseBytes.remove(playerId);
         avatarOutboundBytes.remove(playerId);
+        avatarChannelBytes.remove(playerId);
         avatarSubscriptions.remove(playerId);
         for (AvatarSubscriptions subscriptions : avatarSubscriptions.values()) subscriptions.forget(playerId);
         compatibleClients.remove(playerId);
@@ -899,9 +939,16 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
         String vanillaParent, boolean vanillaParentControlled, String vanillaAttachmentMode
     ) {}
     public record NetAvatarAnimation(String name, long startedAtMillis, double lengthSeconds, boolean looping, double speed, double weight, int priority, int fadeInTicks, int fadeOutTicks, List<String> mask, boolean additive, long stoppingAtMillis) {}
-    public record NetAvatarSnapshot(String playerId, String avatarId, String modelId, boolean replaceVanilla, boolean onlineSync, NetModelDefinition model, List<NetAvatarPart> parts, Map<String, Boolean> vanillaVisibility, Map<String, Object> syncedVars, String currentAnimation, long animationStartedAtMillis, List<NetAvatarAnimation> animationLayers, Map<String, Double> animationParameters, String nameplateText, boolean nameplateVisible) {
+    public record NetAvatarSnapshot(String playerId, String avatarId, String modelId, boolean replaceVanilla, boolean onlineSync, NetModelDefinition model, List<NetAvatarPart> parts, Map<String, Boolean> vanillaVisibility, Map<String, Object> syncedVars, String currentAnimation, long animationStartedAtMillis, List<NetAvatarAnimation> animationLayers, Map<String, Double> animationParameters, String nameplateText, boolean nameplateVisible, String nameplateBadge, int nameplateColorArgb, boolean nameplateBold, boolean nameplateItalic) {
+        public NetAvatarSnapshot {
+            nameplateBadge = nameplateBadge == null ? "" : nameplateBadge.substring(0, Math.min(24, nameplateBadge.length()));
+            nameplateColorArgb = 0xFF000000 | (nameplateColorArgb & 0x00FFFFFF);
+        }
+        public NetAvatarSnapshot(String playerId, String avatarId, String modelId, boolean replaceVanilla, boolean onlineSync, NetModelDefinition model, List<NetAvatarPart> parts, Map<String, Boolean> vanillaVisibility, Map<String, Object> syncedVars, String currentAnimation, long animationStartedAtMillis, List<NetAvatarAnimation> animationLayers, Map<String, Double> animationParameters, String nameplateText, boolean nameplateVisible) {
+            this(playerId, avatarId, modelId, replaceVanilla, onlineSync, model, parts, vanillaVisibility, syncedVars, currentAnimation, animationStartedAtMillis, animationLayers, animationParameters, nameplateText, nameplateVisible, "", 0xFFFFFFFF, false, false);
+        }
         public NetAvatarSnapshot(String playerId, String avatarId, String modelId, boolean replaceVanilla, boolean onlineSync, NetModelDefinition model, List<NetAvatarPart> parts, Map<String, Boolean> vanillaVisibility, Map<String, Object> syncedVars, String currentAnimation, long animationStartedAtMillis, List<NetAvatarAnimation> animationLayers, String nameplateText, boolean nameplateVisible) {
-            this(playerId, avatarId, modelId, replaceVanilla, onlineSync, model, parts, vanillaVisibility, syncedVars, currentAnimation, animationStartedAtMillis, animationLayers, Map.of(), nameplateText, nameplateVisible);
+            this(playerId, avatarId, modelId, replaceVanilla, onlineSync, model, parts, vanillaVisibility, syncedVars, currentAnimation, animationStartedAtMillis, animationLayers, Map.of(), nameplateText, nameplateVisible, "", 0xFFFFFFFF, false, false);
         }
     }
     public record NetPlayerPresence(String playerId, boolean avatarAvailable) {}
@@ -1023,5 +1070,14 @@ public class ShyneNetwork implements BbModelRegistry.Listener, AnimationRuntime.
     public record SkillKeyPayload(String skill, int slot) implements CustomPacketPayload {
         public static final StreamCodec<RegistryFriendlyByteBuf, SkillKeyPayload> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, SkillKeyPayload::skill, ByteBufCodecs.INT, SkillKeyPayload::slot, SkillKeyPayload::new).cast();
         @Override public CustomPacketPayload.Type<SkillKeyPayload> type() { return SKILL_KEY_PAYLOAD; }
+    }
+    public record AvatarChannelPayload(String senderId, String channel, String payloadJson) implements CustomPacketPayload {
+        public static final StreamCodec<RegistryFriendlyByteBuf, AvatarChannelPayload> CODEC = StreamCodec.composite(
+            ByteBufCodecs.STRING_UTF8, AvatarChannelPayload::senderId,
+            ByteBufCodecs.STRING_UTF8, AvatarChannelPayload::channel,
+            ByteBufCodecs.STRING_UTF8, AvatarChannelPayload::payloadJson,
+            AvatarChannelPayload::new
+        ).cast();
+        @Override public CustomPacketPayload.Type<AvatarChannelPayload> type() { return AVATAR_CHANNEL_PAYLOAD; }
     }
 }

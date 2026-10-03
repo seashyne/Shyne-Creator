@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.12.9`
+- Shyne Creator: `2.13.0`
 - Minecraft: `26.3`
 - Java: `25`
 - Fabric Loader: `0.19.3+`
@@ -143,7 +143,7 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 - รองรับ Avatar แบบ Overlay สำหรับหู หาง ปีก และของเสริมด้วย `replace_vanilla: false`
 - เพิ่ม target/raycast detail สำหรับ block และ entity ใน Shyne Lua API
 - เพิ่ม `shyne_role` / `shyne_tags` และ API `model.role()` / `model.tag()` โดย path ของโมเดลยังเป็น API หลักสำหรับ rig ซับซ้อน
-- รุ่น 2.7.44 ใช้ network protocol `9`; รุ่นปัจจุบันใช้ protocol `18` และ client/server ต้องใช้รุ่นเดียวกัน
+- รุ่น 2.7.44 ใช้ network protocol `9`; รุ่นปัจจุบันใช้ protocol `19` และ client/server ต้องใช้รุ่นเดียวกัน
 
 Creator quick start, Render Task API และ Profiler: [CREATOR_QUICKSTART_TH.md](CREATOR_QUICKSTART_TH.md)
 

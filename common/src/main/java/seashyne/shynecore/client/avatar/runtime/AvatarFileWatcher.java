@@ -59,7 +59,9 @@ public final class AvatarFileWatcher {
                 if (success) {
                     client.player.sendSystemMessage(Component.literal("§b[Shyne Watcher] §fFile changes detected. Auto-reloaded in §a" + elapsed + " ms§f!§r"));
                 } else {
-                    client.player.sendSystemMessage(Component.literal("§c[Shyne Watcher] Auto-reload failed. Check console for details.§r"));
+                    var lastResult = AvatarRuntime.lastActivation();
+                    String errText = lastResult != null ? lastResult.formattedError() : "Auto-reload failed";
+                    client.player.sendSystemMessage(Component.literal("§c[Shyne Watcher] " + errText + "§r"));
                 }
             }
         }

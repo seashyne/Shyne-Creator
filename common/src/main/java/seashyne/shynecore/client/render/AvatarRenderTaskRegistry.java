@@ -27,6 +27,7 @@ import seashyne.shynecore.client.profiler.AvatarProfiler;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -63,30 +64,55 @@ public final class AvatarRenderTaskRegistry {
         String safeId = safe(id);
         if (safeAvatar.isBlank() || safeId.isBlank()) return false;
         String stableId = safeAvatar + "." + safeId;
+        if (!TASKS.containsKey(stableId)) {
+            int currentTasks = 0;
+            for (Entry e : TASKS.values()) {
+                if (e.avatarId.equals(safeAvatar)) currentTasks++;
+            }
+            if (currentTasks >= MAX_TASKS_PER_AVATAR) return false;
+            seashyne.shynecore.client.avatar.AvatarQuotaManager.get(safeAvatar).setRenderTaskCount(currentTasks + 1);
+        }
         Entry entry = TASKS.computeIfAbsent(stableId, ignored -> new Entry(stableId, safeAvatar, safeId));
         entry.specs.put(owner, sanitize(spec));
         return true;
     }
 
     public static synchronized boolean remove(Object owner, String avatarId, String id) {
-        String stableId = safe(avatarId) + "." + safe(id);
+        String safeAvatar = safe(avatarId);
+        String stableId = safeAvatar + "." + safe(id);
         Entry entry = TASKS.get(stableId);
         if (entry == null) return false;
         entry.specs.remove(owner);
         if (entry.specs.isEmpty()) {
             TASKS.remove(stableId);
             WARNED_TASKS.remove(stableId);
+            int currentTasks = 0;
+            for (Entry e : TASKS.values()) {
+                if (e.avatarId.equals(safeAvatar)) currentTasks++;
+            }
+            seashyne.shynecore.client.avatar.AvatarQuotaManager.get(safeAvatar).setRenderTaskCount(currentTasks);
         }
         return true;
     }
 
     public static synchronized void clearOwner(Object owner) {
+        Set<String> affectedAvatars = new HashSet<>();
         TASKS.values().removeIf(entry -> {
             entry.specs.remove(owner);
             boolean empty = entry.specs.isEmpty();
-            if (empty) WARNED_TASKS.remove(entry.stableId);
+            if (empty) {
+                WARNED_TASKS.remove(entry.stableId);
+                affectedAvatars.add(entry.avatarId);
+            }
             return empty;
         });
+        for (String av : affectedAvatars) {
+            int currentTasks = 0;
+            for (Entry e : TASKS.values()) {
+                if (e.avatarId.equals(av)) currentTasks++;
+            }
+            seashyne.shynecore.client.avatar.AvatarQuotaManager.get(av).setRenderTaskCount(currentTasks);
+        }
     }
 
     public static synchronized List<Snapshot> snapshots() {

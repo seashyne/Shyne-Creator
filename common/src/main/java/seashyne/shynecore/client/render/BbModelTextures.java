@@ -67,6 +67,11 @@ public final class BbModelTextures {
         }
     }
 
+    public static Identifier resolveLocalAvatar(BbModelDefinition model, int textureIndex) {
+        Identifier runtime = AvatarDynamicTextureRegistry.resolveModelTexture(model, textureIndex);
+        return runtime == null ? resolve(model, textureIndex) : runtime;
+    }
+
     public static byte[] installOutfit(BbModelDefinition model, AvatarOutfit outfit) throws IOException {
         if (model == null || outfit == null) throw new IOException("model and outfit are required");
         BbTextureDefinition texture = model.texture(0);

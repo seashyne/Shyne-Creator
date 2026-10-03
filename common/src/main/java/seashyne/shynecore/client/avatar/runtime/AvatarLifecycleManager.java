@@ -112,6 +112,10 @@ public final class AvatarLifecycleManager {
                 }
                 try {
                     return activate(entry.root(), client, snapshotSync, networkSender, cloudDelegate);
+                } catch (AvatarScriptLoadException e) {
+                    ShyneCore.LOGGER.error("[AvatarRuntime] Could not activate avatar {}: {}", avatarId, e.getMessage(), e);
+                    lastActivation = AvatarActivationResult.failure(entry.id(), e.formatted(), e.file(), e.line(), e.cleanMessage());
+                    return lastActivation;
                 } catch (Exception e) {
                     ShyneCore.LOGGER.error("[AvatarRuntime] Could not activate avatar {}: {}", avatarId, e.getMessage(), e);
                     lastActivation = AvatarActivationResult.failure(entry.id(), safeMessage(e));
@@ -134,6 +138,10 @@ public final class AvatarLifecycleManager {
         }
         try {
             return activate(entry.root(), client, snapshotSync, networkSender, cloudDelegate);
+        } catch (AvatarScriptLoadException e) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] Could not activate avatar {}: {}", entry.id(), e.getMessage(), e);
+            lastActivation = AvatarActivationResult.failure(entry.id(), e.formatted(), e.file(), e.line(), e.cleanMessage());
+            return lastActivation;
         } catch (Exception error) {
             ShyneCore.LOGGER.error("[AvatarRuntime] Could not activate avatar {}: {}", entry.id(), error.getMessage(), error);
             lastActivation = AvatarActivationResult.failure(entry.id(), safeMessage(error));
@@ -148,6 +156,10 @@ public final class AvatarLifecycleManager {
         }
         try {
             return activate(active.rootDir(), client, snapshotSync, networkSender, cloudDelegate).success();
+        } catch (AvatarScriptLoadException e) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] Could not reload active avatar {}: {}", active.avatarId(), e.getMessage(), e);
+            lastActivation = AvatarActivationResult.failure(active.avatarId(), e.formatted(), e.file(), e.line(), e.cleanMessage());
+            return false;
         } catch (Exception e) {
             ShyneCore.LOGGER.error("[AvatarRuntime] Could not reload active avatar {}: {}", active.avatarId(), e.getMessage(), e);
             lastActivation = AvatarActivationResult.failure(active.avatarId(), safeMessage(e));
@@ -173,7 +185,7 @@ public final class AvatarLifecycleManager {
             }
             grantedPermissions = runtimePermissions.approved();
         } else {
-            grantedPermissions = manifest.permissions();
+            grantedPermissions = ShyneClientSettings.approvedAvatarPermissions(manifest.id(), manifest.permissions());
         }
 
         AvatarState nextState = new AvatarState(manifest.id(), modelId, root, manifest.replaceVanilla(), manifest.permissions(), grantedPermissions);
@@ -191,7 +203,11 @@ public final class AvatarLifecycleManager {
         if (scriptPath != null) {
             nextScript = new ClientLuaAvatarRuntime(nextState, model, scriptPath);
             if (!nextScript.load()) {
+                var err = nextScript.lastLoadError();
                 nextScript.dispose();
+                if (err != null) {
+                    throw new AvatarScriptLoadException(err.file(), err.line(), err.cleanMessage(), err.formatted());
+                }
                 throw new IOException("Lua script failed to load; previous avatar was kept");
             }
         }
@@ -350,6 +366,36 @@ public final class AvatarLifecycleManager {
         script.microphone(current);
         lastMicrophoneSnapshot = current;
         lastMicrophoneEventNanos = now;
+    }
+
+    public void dispatchInputEvent(String type, int key, int scanCode, int action, int modifiers, double horizontal, double vertical, String characters) {
+        if (script == null) return;
+        script.input(type, key, scanCode, action, modifiers, horizontal, vertical, characters);
+    }
+
+    public void dispatchItemUseEvent(String itemId, String hand, String action, int particleCount) {
+        if (script == null) return;
+        script.itemUse(itemId, hand, action, particleCount);
+    }
+
+    public void dispatchChatReceiveEvent(String text, String json, String senderUuid, String senderName) {
+        if (script == null) return;
+        script.chatReceive(text, json, senderUuid, senderName);
+    }
+
+    public void dispatchEntityDamageEvent(float amount, String sourceType, String attackerId, boolean isLocalPlayer) {
+        if (script == null) return;
+        script.damage(amount, sourceType, attackerId, isLocalPlayer);
+    }
+
+    public void dispatchTotemPopEvent(String entityId, boolean isLocalPlayer) {
+        if (script == null) return;
+        script.totem(entityId, isLocalPlayer);
+    }
+
+    public void channelPacket(String senderUuid, String channel, String payloadJson) {
+        if (script == null) return;
+        script.channelPacket(senderUuid, channel, payloadJson);
     }
 
     public static void validateModel(BbModelDefinition model, Path avatarRoot) throws IOException {

@@ -273,6 +273,11 @@ function texture_mt:apply()
   return self
 end
 
+function texture_mt:bindToModel(target)
+  return _avatar_dynamic_texture_bind_model(self._name, tostring(target or "0"))
+end
+function texture_mt:bind(target) return self:bindToModel(target) end
+
 function textures:newTexture(name, width, height)
   local native = _avatar_dynamic_texture_create(tostring(name or "custom_tex"), math.floor(tonumber(width) or 64), math.floor(tonumber(height) or 64))
   if native == nil then return nil end
@@ -291,6 +296,11 @@ end
 
 function textures:getTexture(name)
   return _active_textures[tostring(name)]
+end
+
+function textures:bindToModel(texture, target)
+  if type(texture) == "table" and texture.bindToModel then return texture:bindToModel(target) end
+  return _avatar_dynamic_texture_bind_model(tostring(texture or ""), tostring(target or "0"))
 end
 
 function textures:fromVanilla(_) return nil end

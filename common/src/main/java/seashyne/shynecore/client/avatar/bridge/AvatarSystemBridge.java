@@ -18,6 +18,7 @@ import org.luaj.vm2.lib.ZeroArgFunction;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.avatar.AvatarLoader;
 import seashyne.shynecore.client.avatar.AvatarPermission;
+import seashyne.shynecore.client.avatar.AvatarQuotaManager;
 import seashyne.shynecore.client.avatar.AvatarState;
 import seashyne.shynecore.client.avatar.ShyneApiStandard;
 import seashyne.shynecore.client.input.DynamicAvatarInputRegistry;
@@ -79,21 +80,22 @@ public final class AvatarSystemBridge {
                     lastPrintResetNanos = now;
                     printCountThisSecond = 0;
                 }
-                printCountThisSecond++;
-                if (printCountThisSecond <= MAX_PRINTS_PER_SECOND) {
-                    client.execute(() -> {
-                        if (client.player != null) {
-                            client.player.sendSystemMessage(Component.literal(message));
-                        }
-                    });
-                } else if (printCountThisSecond == MAX_PRINTS_PER_SECOND + 1) {
-                    client.execute(() -> {
-                        if (client.player != null) {
-                            client.player.sendSystemMessage(
-                                Component.literal("§c[Avatar:" + state.avatarId() + "] Chat print rate limit exceeded (max " + MAX_PRINTS_PER_SECOND + "/sec)§r")
-                            );
-                        }
-                    });
+                if (client != null) {
+                    if (printCountThisSecond <= MAX_PRINTS_PER_SECOND) {
+                        client.execute(() -> {
+                            if (client.player != null) {
+                                client.player.sendSystemMessage(Component.literal(message));
+                            }
+                        });
+                    } else if (printCountThisSecond == MAX_PRINTS_PER_SECOND + 1) {
+                        client.execute(() -> {
+                            if (client.player != null) {
+                                client.player.sendSystemMessage(
+                                    Component.literal("§c[Avatar:" + state.avatarId() + "] Chat print rate limit exceeded (max " + MAX_PRINTS_PER_SECOND + "/sec)§r")
+                                );
+                            }
+                        });
+                    }
                 }
 
                 ShyneCore.LOGGER.info("[Avatar:{}] {}", state.avatarId(), message);
@@ -159,6 +161,7 @@ public final class AvatarSystemBridge {
         globals.set("_shyne_sound_play", new VarArgFunction() {
             @Override public Varargs invoke(Varargs args) {
                 if (!state.permissionAllowed(AvatarPermission.SOUND)) return LuaValue.FALSE;
+                if (!AvatarQuotaManager.get(state.avatarId()).tryPlaySound()) return LuaValue.FALSE;
                 Minecraft client = Minecraft.getInstance();
                 if (client.player == null) return LuaValue.FALSE;
                 String soundName = args.arg(1).optjstring("");
@@ -192,6 +195,7 @@ public final class AvatarSystemBridge {
         globals.set("_shyne_particle_spawn", new VarArgFunction() {
             @Override public Varargs invoke(Varargs args) {
                 if (!state.permissionAllowed(AvatarPermission.PARTICLE)) return LuaValue.FALSE;
+                if (!AvatarQuotaManager.get(state.avatarId()).trySpawnParticle()) return LuaValue.FALSE;
                 Minecraft client = Minecraft.getInstance();
                 if (client.level == null || particlesThisTick >= 256) return LuaValue.FALSE;
                 String rawId = args.arg(1).optjstring("");
@@ -341,6 +345,26 @@ public final class AvatarSystemBridge {
                 reportRuntimeError(args.arg(1).optjstring("runtime"), args.arg(2).optjstring("unknown"),
                     args.arg(3).optjstring("unknown error"));
                 return LuaValue.NIL;
+            }
+        });
+
+        globals.set("_avatar_quota_stats", new ZeroArgFunction() {
+            @Override public LuaValue call() {
+                var snap = AvatarQuotaManager.get(state.avatarId()).snapshot();
+                LuaTable t = new LuaTable();
+                t.set("dynamic_textures", LuaValue.valueOf(snap.dynamicTextures()));
+                t.set("max_dynamic_textures", LuaValue.valueOf(snap.maxDynamicTextures()));
+                t.set("dynamic_texture_bytes", LuaValue.valueOf(snap.dynamicTextureBytes()));
+                t.set("max_dynamic_texture_bytes", LuaValue.valueOf(snap.maxDynamicTextureBytes()));
+                t.set("active_render_tasks", LuaValue.valueOf(snap.activeRenderTasks()));
+                t.set("max_render_tasks", LuaValue.valueOf(snap.maxRenderTasks()));
+                t.set("particles_per_sec", LuaValue.valueOf(snap.particlesPerSecond()));
+                t.set("particles_dropped", LuaValue.valueOf(snap.particlesDroppedPerSecond()));
+                t.set("max_particles_per_sec", LuaValue.valueOf(snap.maxParticlesPerSecond()));
+                t.set("sounds_per_sec", LuaValue.valueOf(snap.soundsPerSecond()));
+                t.set("sounds_dropped", LuaValue.valueOf(snap.soundsDroppedPerSecond()));
+                t.set("max_sounds_per_sec", LuaValue.valueOf(snap.maxSoundsPerSecond()));
+                return t;
             }
         });
     }

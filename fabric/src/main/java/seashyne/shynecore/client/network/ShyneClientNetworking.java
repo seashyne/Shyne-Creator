@@ -43,6 +43,16 @@ public final class ShyneClientNetworking {
         ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_AVATAR_SNAPSHOTS_PAYLOAD, (payload, context) -> context.client().execute(() -> ClientAnimationState.handleAvatarSnapshotSync(payload.json())));
         ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_PLAYER_PRESENCE_PAYLOAD, (payload, context) -> context.client().execute(() -> ShyneTabStatusIcons.handlePresenceSync(payload.json())));
         ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.SYNC_POWER_CONFIG_PAYLOAD, (payload, context) -> context.client().execute(() -> seashyne.shynecore.client.state.ClientPowerConfig.handleSync(payload.json())));
+        ClientPlayNetworking.registerGlobalReceiver(ShyneNetwork.AVATAR_CHANNEL_PAYLOAD, (payload, context) ->
+            context.client().execute(() -> handleAvatarChannel(payload))
+        );
+        seashyne.shynecore.client.avatar.bridge.AvatarChannelBridge.PACKET_SENDER = packet -> {
+            if (serverSupports(ShyneNetwork.CAP_AVATAR_CHANNELS) && ClientPlayNetworking.canSend(ShyneNetwork.AVATAR_CHANNEL_PAYLOAD)) {
+                ClientPlayNetworking.send(new ShyneNetwork.AvatarChannelPayload(packet.senderId(), packet.channel(), packet.payloadJson()));
+            } else {
+                seashyne.shynecore.client.avatar.AvatarRuntime.channelPacket("local", packet.channel(), packet.payloadJson());
+            }
+        };
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> sendProtocolHello());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             protocolReady = false;
@@ -51,6 +61,13 @@ public final class ShyneClientNetworking {
             ShyneTabStatusIcons.clear();
             seashyne.shynecore.client.state.ClientPowerConfig.reset();
         });
+    }
+
+    public static void handleAvatarChannel(ShyneNetwork.AvatarChannelPayload payload) {
+        if (payload == null) return;
+        seashyne.shynecore.client.avatar.bridge.AvatarChannelBridge.onPacketReceived(
+            payload.senderId(), payload.channel(), payload.payloadJson()
+        );
     }
 
     private static void sendProtocolHello() {

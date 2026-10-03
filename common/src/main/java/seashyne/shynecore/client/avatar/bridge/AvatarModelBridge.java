@@ -258,6 +258,7 @@ public final class AvatarModelBridge {
         globals.set("_avatar_nameplate_set", new VarArgFunction() {
             @Override public Varargs invoke(Varargs args) {
                 state.setNameplate(args.arg(1).optjstring(""), args.arg(2).optboolean(true));
+                state.setNameplateStyle(args.arg(3).optjstring(""), (int) args.arg(4).optlong(0xFFFFFFFFL), args.arg(5).optboolean(false), args.arg(6).optboolean(false));
                 return LuaValue.NIL;
             }
         });

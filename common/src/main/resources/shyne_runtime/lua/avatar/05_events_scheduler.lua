@@ -16,6 +16,9 @@ events = {
     FIRST_PERSON = "FIRST_PERSON",
     RENDER = "RENDER",
     WORLD = "WORLD",
+    PORTRAIT = "PORTRAIT",
+    SKULL = "SKULL",
+    HELD_ITEM = "HELD_ITEM",
     OTHER = "OTHER"
   }
 }
@@ -172,3 +175,11 @@ end)
 -- Unload hook for clearing scheduled tasks
 events._internal.avatar_unload = events._internal.avatar_unload or {}
 table.insert(events._internal.avatar_unload, function() task.clear() end)
+
+-- Render hook for forwarding skull context to skull_render
+events._internal.render = events._internal.render or {}
+table.insert(events._internal.render, function(payload)
+  if payload and (payload.context == "SKULL" or payload.is_skull) then
+    events._dispatch("skull_render", payload)
+  end
+end)

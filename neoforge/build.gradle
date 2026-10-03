@@ -104,6 +104,7 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.named('test', Test).configure {
     useJUnitPlatform()
+    classpath += sourceSets.main.compileClasspath
 }
 
 tasks.register('luaContentCheck') {

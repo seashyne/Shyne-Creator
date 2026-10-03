@@ -47,6 +47,7 @@ public class AsyncTextureLoaderTest {
     @Test
     public void testDeduplicationOfSameHash() throws InterruptedException {
         CountDownLatch blockLatch = new CountDownLatch(1);
+        CountDownLatch allBlocksLatch = new CountDownLatch(4);
         CountDownLatch callbackLatch = new CountDownLatch(1);
         AtomicInteger callbackInvocations = new AtomicInteger(0);
 
@@ -56,11 +57,13 @@ public class AsyncTextureLoaderTest {
                 @Override
                 public void onTextureReady(AsyncTextureLoader.DecodedTexture texture) {
                     try { blockLatch.await(5, TimeUnit.SECONDS); } catch (InterruptedException ignored) {}
+                    finally { allBlocksLatch.countDown(); }
                 }
 
                 @Override
                 public void onTextureError(String modelId, int textureIndex, String error) {
                     try { blockLatch.await(5, TimeUnit.SECONDS); } catch (InterruptedException ignored) {}
+                    finally { allBlocksLatch.countDown(); }
                 }
             });
         }
@@ -88,7 +91,8 @@ public class AsyncTextureLoaderTest {
 
         // Wait for callbacks to complete
         assertTrue(callbackLatch.await(3, TimeUnit.SECONDS), "Callback should have been invoked");
-        Thread.sleep(100); // Give a little time in case second callback incorrectly fires
+        assertTrue(allBlocksLatch.await(3, TimeUnit.SECONDS), "All block workers should finish");
+        Thread.sleep(50); // Give a little time in case second callback incorrectly fires
 
         // Only one callback should have been invoked because of deduplication
         assertEquals(1, callbackInvocations.get(), "Only the first decode request should fire a callback");

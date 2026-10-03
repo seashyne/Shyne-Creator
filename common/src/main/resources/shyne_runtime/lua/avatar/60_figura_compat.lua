@@ -26,32 +26,65 @@ figura = figura or {
 --- Creates a Figura-compatible event emitter proxy wrapping Shyne's event bus.
 ---@param event_name string
 ---@return table Emitter object with register, remove, and clear methods
-local function make_figura_event_emitter(event_name)
+local function make_figura_event_emitter(...)
+  local names = { ... }
+  local primary = names[1]
   local emitter = {}
   local registered = {}
   function emitter:register(fn, name)
     if type(fn) ~= "function" then return fn end
     name = name or tostring(fn)
     if registered[name] then
-      events.off(event_name, registered[name])
+      for _, n in ipairs(names) do events.off(n, registered[name]) end
     end
-    registered[name] = fn
-    events.on(event_name, function(payload)
+    local listener = function(payload)
+      if primary == "key_press" or primary == "key_release" or primary == "key_repeat"
+        or primary == "mouse_press" or primary == "mouse_release" then
+        return fn(payload and payload.key or 0, payload and payload.scan_code or 0, payload and payload.modifiers or 0, payload)
+      end
+      if primary == "mouse_scroll" then
+        return fn(payload and payload.horizontal or 0, payload and payload.vertical or 0, payload)
+      end
+      if primary == "mouse_move" then
+        return fn(payload and payload.x or 0, payload and payload.y or 0, payload and payload.dx or 0, payload and payload.dy or 0, payload)
+      end
+      if primary == "char_typed" then
+        return fn(payload and payload.characters or "", payload and payload.modifiers or 0, payload)
+      end
+      if primary == "item_use" or primary == "use_item" then
+        return fn(payload and payload.item or "", payload and payload.action or "use", payload and (payload.count or payload.particle_count) or 0, payload)
+      end
+      if primary == "chat_receive" or primary == "chat_receive_message" then
+        return fn(payload and payload.raw or "", payload and payload.text or "", payload and payload.sender_uuid or "", payload and payload.sender_name or "", payload)
+      end
+      if primary == "damage" then
+        return fn(payload and payload.amount or 0, payload and payload.source or "", payload and payload.attacker or "", payload)
+      end
+      if primary == "totem" then
+        return fn(payload)
+      end
+      if primary == "skull_render" then
+        local delta = payload and (payload.delta or payload.partial_tick) or 0
+        local context = payload and payload.context or "SKULL"
+        return fn(delta, context, payload)
+      end
       local delta = payload and (payload.delta or payload.partial_tick) or 0
       local context = payload and payload.context or "render"
       return fn(delta, context)
-    end)
+    end
+    registered[name] = listener
+    for _, n in ipairs(names) do events.on(n, listener) end
     return fn
   end
   function emitter:remove(name)
     if registered[name] then
-      events.off(event_name, registered[name])
+      for _, n in ipairs(names) do events.off(n, registered[name]) end
       registered[name] = nil
     end
   end
   function emitter:clear()
     for _, fn in pairs(registered) do
-      events.off(event_name, fn)
+      for _, n in ipairs(names) do events.off(n, fn) end
     end
     registered = {}
   end
@@ -66,6 +99,22 @@ events.POST_WORLD_RENDER = make_figura_event_emitter("post_world_render")
 events.ENTITY_INIT = make_figura_event_emitter("entity_init")
 events.DAMAGE = make_figura_event_emitter("damage")
 events.CHAT_SEND_MESSAGE = make_figura_event_emitter("chat_send_message")
+events.CHAT_RECEIVE_MESSAGE = make_figura_event_emitter("chat_receive", "chat_receive_message")
+events.KEY_PRESS = make_figura_event_emitter("key_press")
+events.KEY_RELEASE = make_figura_event_emitter("key_release")
+events.KEY_REPEAT = make_figura_event_emitter("key_repeat")
+events.MOUSE_PRESS = make_figura_event_emitter("mouse_press")
+events.MOUSE_RELEASE = make_figura_event_emitter("mouse_release")
+events.MOUSE_SCROLL = make_figura_event_emitter("mouse_scroll")
+events.MOUSE_MOVE = make_figura_event_emitter("mouse_move")
+events.CHAR_TYPED = make_figura_event_emitter("char_typed")
+events.USE_ITEM = make_figura_event_emitter("item_use", "use_item")
+events.ITEM_USE = events.USE_ITEM
+events.TOTEM = make_figura_event_emitter("totem")
+events.TOTEM_POP = events.TOTEM
+events.ENTITY_DAMAGE = events.DAMAGE
+events.CHAT_RECEIVE = events.CHAT_RECEIVE_MESSAGE
+events.SKULL_RENDER = make_figura_event_emitter("skull_render")
 
 -- Action Wheel is implemented in 63_figura_action_wheel.lua
 
@@ -76,10 +125,64 @@ events.CHAT_SEND_MESSAGE = make_figura_event_emitter("chat_send_message")
 ---@class FiguraPings
 pings = pings or {}
 local _ping_handlers = {}
+local _ping_schemas = {}
 local _ping_sequence = 0
 local _ping_last_received = 0
 local _ping_capacity = 64
 local _ping_outbox = { first = 1, events = {} }
+
+local function _sanitize_ping_value(val, depth)
+  local t = type(val)
+  if t == "number" then
+    if val ~= val or val == math.huge or val == -math.huge then return 0 end
+    return val
+  elseif t == "string" then
+    if #val > 2048 then return string.sub(val, 1, 2048) end
+    return val
+  elseif t == "boolean" then
+    return val
+  elseif t == "nil" then
+    return nil
+  elseif t == "table" then
+    if (depth or 1) > 3 then return nil end
+    local clean = {}
+    local count = 0
+    for k, v in pairs(val) do
+      count = count + 1
+      if count > 64 then break end
+      local clean_k = _sanitize_ping_value(k, (depth or 1) + 1)
+      local clean_v = _sanitize_ping_value(v, (depth or 1) + 1)
+      if clean_k ~= nil and clean_v ~= nil then
+        clean[clean_k] = clean_v
+      end
+    end
+    return clean
+  end
+  return nil
+end
+
+local function _validate_and_sanitize_ping_args(name, raw_args)
+  local sanitized = {}
+  local schema = _ping_schemas[name]
+  local n = math.min(16, #raw_args)
+  for i = 1, n do
+    local arg = raw_args[i]
+    local val = _sanitize_ping_value(arg, 1)
+    if schema and schema[i] then
+      local expected = schema[i]
+      local actual_type = type(val)
+      if expected == "number" and actual_type ~= "number" then
+        val = tonumber(val) or 0
+      elseif expected == "string" and actual_type ~= "string" then
+        val = tostring(val or "")
+      elseif expected == "boolean" and actual_type ~= "boolean" then
+        val = not not val
+      end
+    end
+    sanitized[i] = val
+  end
+  return sanitized
+end
 
 -- Snapshots are rate-limited, so a single value loses every ping except the
 -- last one when a script calls pings.foo() more than once per tick. Keep a
@@ -96,7 +199,10 @@ end
 local function _dispatch_ping(data)
   if type(data) ~= "table" or type(data.name) ~= "string" then return end
   local handler = _ping_handlers[data.name]
-  if handler then pcall(handler, table.unpack(data.args or {})) end
+  if handler then
+    local args = _validate_and_sanitize_ping_args(data.name, data.args or {})
+    pcall(handler, table.unpack(args))
+  end
 end
 
 local function _receive_ping_queue(queue)
@@ -110,7 +216,8 @@ local function _receive_ping_queue(queue)
   end
 end
 
-local function _enqueue_ping(name, args)
+local function _enqueue_ping(name, raw_args)
+  local args = _validate_and_sanitize_ping_args(name, raw_args)
   _ping_sequence = _ping_sequence + 1
   local events = _ping_outbox.events
   table.insert(events, { name = name, args = args, seq = _ping_sequence })
@@ -121,19 +228,62 @@ local function _enqueue_ping(name, args)
   _publish_ping_queue()
 end
 
+local _ping_builtins = {
+  define = function(self, name, types, func)
+    local target = name
+    local schema_types = types
+    local handler = func
+    if func == nil and type(self) == "string" then
+      target = self
+      schema_types = name
+      handler = types
+    elseif func == nil and type(types) == "function" then
+      target = name
+      schema_types = nil
+      handler = types
+    end
+    if type(schema_types) == "table" then _ping_schemas[target] = schema_types end
+    if type(handler) == "function" then _ping_handlers[target] = handler end
+  end,
+  schema = function(self, name, types)
+    local target = (types ~= nil or type(name) ~= "table") and name or self
+    local schema_types = (types ~= nil) and types or name
+    if type(schema_types) == "table" then _ping_schemas[target] = schema_types end
+    return _ping_schemas[target]
+  end,
+  get_schema = function(self, name)
+    local target = (name ~= nil) and name or self
+    return _ping_schemas[target]
+  end,
+  is_valid_type = function(self, val)
+    local t = type(val)
+    if t == "number" then return val == val and val ~= math.huge and val ~= -math.huge end
+    if t == "string" then return #val <= 2048 end
+    if t == "boolean" or t == "nil" then return true end
+    if t == "table" then return true end
+    return false
+  end
+}
+
 setmetatable(pings, {
   __newindex = function(_, name, func)
+    if _ping_builtins[name] then
+      error("Cannot override reserved ping method: " .. tostring(name))
+    end
     if type(func) == "function" then
       _ping_handlers[name] = func
     end
   end,
   __index = function(_, name)
+    if _ping_builtins[name] then
+      return _ping_builtins[name]
+    end
     return function(...)
-      local args = { ... }
+      local safe_args = _validate_and_sanitize_ping_args(name, { ... })
       if _ping_handlers[name] then
-        pcall(_ping_handlers[name], table.unpack(args))
+        pcall(_ping_handlers[name], table.unpack(safe_args))
       end
-      _enqueue_ping(name, args)
+      _enqueue_ping(name, safe_args)
     end
   end
 })

@@ -15,7 +15,12 @@ public enum AvatarPermission {
     COMMAND("command", true),
     HUD_RENDER("hud_render", true),
     WORLD_RENDER("world_render", true),
-    AUDIO_STREAM("audio_stream", true);
+    AUDIO_STREAM("audio_stream", true),
+    NAMEPLATE("nameplate", false),
+    CHAT_NAMEPLATE("chat_nameplate", true),
+    TAB_LIST_NAMEPLATE("tab_list_nameplate", true),
+    DATA_STORAGE("data_storage", false),
+    NETWORK("network", false);
 
     private final String id;
     private final boolean dangerous;
@@ -44,6 +49,9 @@ public enum AvatarPermission {
     public static Optional<AvatarPermission> fromId(String value) {
         if (value == null) return Optional.empty();
         String normalized = value.trim().toLowerCase(Locale.ROOT);
+        if ("data".equals(normalized)) return Optional.of(DATA_STORAGE);
+        if ("sounds".equals(normalized) || "custom_sounds".equals(normalized)) return Optional.of(SOUND);
+        if ("local_camera".equals(normalized)) return Optional.of(CAMERA);
         for (AvatarPermission permission : values()) {
             if (permission.id.equals(normalized)) return Optional.of(permission);
         }

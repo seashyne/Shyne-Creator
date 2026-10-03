@@ -57,6 +57,13 @@ public final class AvatarDynamicTextureBridge {
                 return LuaValue.valueOf(visualPermissionAllowed() && AvatarDynamicTextureRegistry.apply(textureOwner, state.avatarId(), arg.optjstring("texture")));
             }
         });
+        globals.set("_avatar_dynamic_texture_bind_model", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                return LuaValue.valueOf(visualPermissionAllowed() && AvatarDynamicTextureRegistry.bindModelTexture(
+                    textureOwner, state.avatarId(), state.modelId(), args.arg(1).optjstring("texture"), args.arg(2).optjstring("0")
+                ));
+            }
+        });
     }
 
     /**

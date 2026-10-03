@@ -67,7 +67,7 @@ public static boolean renderArm(PoseStack poseStack, SubmitNodeCollector collect
         BbTextureDefinition definition = model.texture(textureIndex);
         int uvWidth = definition == null ? model.textureWidth() : definition.width();
         int uvHeight = definition == null ? model.textureHeight() : definition.height();
-        Identifier texture = BbModelTextures.resolve(model, textureIndex);
+        Identifier texture = BbModelTextures.resolveLocalAvatar(model, textureIndex);
         boolean emissive = definition != null && BbModelEntityRenderer.isEmissiveTexture(definition.name());
         int passLight = emissive ? 0x00F000F0 : lightCoords;
         int passTextureIndex = textureIndex;

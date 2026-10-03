@@ -33,7 +33,9 @@ final class FiguraTierOneCompatibilityTest {
         "/shyne_runtime/lua/avatar/60_figura_compat.lua",
         "/shyne_runtime/lua/avatar/61_figura_client_renderer.lua",
         "/shyne_runtime/lua/avatar/62_figura_items_world.lua",
-        "/shyne_runtime/lua/avatar/63_figura_action_wheel.lua"
+        "/shyne_runtime/lua/avatar/63_figura_action_wheel.lua",
+        "/shyne_runtime/lua/avatar/64_figura_data_nameplate.lua",
+        "/shyne_runtime/lua/avatar/65_figura_network.lua"
     );
 
     @Test
@@ -133,6 +135,26 @@ final class FiguraTierOneCompatibilityTest {
     }
 
     @Test
+    void figuraInputEventsAndModelTextureBindingForwardNativeData() throws Exception {
+        LuaSandbox.Environment environment = LuaSandbox.create();
+        Globals globals = environment.globals();
+        installBootstrapMocks(environment, new LuaTable());
+        runBootstrap(environment);
+
+        LuaValue result = globals.load("""
+            local key, scan, modifiers, payload = 0, 0, 0, nil
+            events.KEY_PRESS:register(function(k, s, m, event) key, scan, modifiers, payload = k, s, m, event end)
+            events._dispatch("key_press", { key = 71, scan_code = 7, modifiers = 2 })
+            local texture = textures:newTexture("model_meter", 4, 4)
+            local bound = texture:bindToModel("skin.png")
+            return key == 71 and scan == 7 and modifiers == 2 and payload.key == 71
+              and bound and texture_writes.model_target == "skin.png"
+            """, "figura-tier-one-input-material-test").call();
+
+        assertTrue(result.toboolean(), "Figura input events and dynamic model material binding must forward native data");
+    }
+
+    @Test
     void keybindFacadeUsesTheNativeInputBridgeAndPreservesFiguraControls() throws Exception {
         LuaSandbox.Environment environment = LuaSandbox.create();
         Globals globals = environment.globals();
@@ -155,6 +177,191 @@ final class FiguraTierOneCompatibilityTest {
             """, "figura-tier-one-keybind-test").call();
 
         assertTrue(result.toboolean(), "Figura keybind facade must use native bindings and expose key, GUI, enable, reset, and vanilla controls");
+    }
+
+    @Test
+    void extendedEventsParityDispatchesCorrectly() throws Exception {
+        LuaSandbox.Environment environment = LuaSandbox.create();
+        Globals globals = environment.globals();
+        installBootstrapMocks(environment, new LuaTable());
+        runBootstrap(environment);
+
+        LuaValue result = globals.load("""
+            local mouse_ok, use_ok, chat_ok, dmg_ok, totem_ok, skull_ok = false, false, false, false, false, false
+
+            events.MOUSE_MOVE:register(function(x, y, dx, dy, ev)
+                if x == 100 and y == 200 and dx == 5 and dy == -3 and ev.x == 100 then
+                    mouse_ok = true
+                end
+            end)
+            events._dispatch("mouse_move", { x = 100, y = 200, dx = 5, dy = -3 })
+
+            events.USE_ITEM:register(function(item, action, count, ev)
+                if item == "minecraft:apple" and action == "EAT" and count == 32 then
+                    use_ok = true
+                end
+            end)
+            events._dispatch("item_use", { item = "minecraft:apple", action = "EAT", count = 32 })
+
+            events.CHAT_RECEIVE_MESSAGE:register(function(raw, text, sender_uuid, sender_name, ev)
+                if raw == "hello" and text == "hello" and sender_uuid == "123" and sender_name == "Player" then
+                    chat_ok = true
+                end
+            end)
+            events._dispatch("chat_receive", { raw = "hello", text = "hello", sender_uuid = "123", sender_name = "Player" })
+
+            events.DAMAGE:register(function(amount, source, ev)
+                if amount == 4.5 and source == "generic" then
+                    dmg_ok = true
+                end
+            end)
+            events._dispatch("damage", { amount = 4.5, source = "generic" })
+
+            events.TOTEM:register(function(ev)
+                if ev.entity == "player" then
+                    totem_ok = true
+                end
+            end)
+            events._dispatch("totem", { entity = "player" })
+
+            events.SKULL_RENDER:register(function(delta, ctx, ev)
+                if delta == 0.5 and ctx == "SKULL" and ev.is_skull == true then
+                    skull_ok = true
+                end
+            end)
+            events._dispatch("render", { delta = 0.5, context = "SKULL", is_skull = true })
+
+            return mouse_ok and use_ok and chat_ok and dmg_ok and totem_ok and skull_ok
+            """, "figura-extended-events-parity-test").call();
+
+        assertTrue(result.toboolean(), "All extended Figura events must dispatch and map payload correctly");
+    }
+
+    @Test
+    void nameplateDataJsonAndResourcesFacadesOperateSafely() throws Exception {
+        LuaSandbox.Environment environment = LuaSandbox.create();
+        Globals globals = environment.globals();
+        installBootstrapMocks(environment, new LuaTable());
+        runBootstrap(environment);
+
+        LuaValue result = globals.load("""
+            -- 1. Nameplate 2.0
+            nameplate.ENTITY:setText("Hero"):setColor("#55FFFF"):setBadge("★"):setVisible(true)
+            nameplate.CHAT:setText("ChatHero"):setBadge("VIP"):setColor(0xFFFF55)
+            nameplate.LIST:setText("TabHero"):setBadge("[PRO]")
+            nameplate.ENTITY:setPos(1, 2, 3):setScale(2, 2, 2):setPivot(0.5, 0.5, 0.5)
+
+            local np_ok = nameplate.ENTITY:getText() == "Hero"
+              and nameplate.ENTITY:getBadge() == "★"
+              and nameplate.ENTITY:isVisible() == true
+              and nameplate.CHAT:getText() == "ChatHero"
+              and nameplate.CHAT:getBadge() == "VIP"
+              and nameplate.LIST:getText() == "TabHero"
+              and nameplate.LIST:getBadge() == "[PRO]"
+              and nameplate.ENTITY:getPos().x == 1
+              and nameplate.ENTITY:getScale().x == 2
+              and nameplate.ENTITY:getPivot().x == 0.5
+
+            -- 2. Data persistence
+            data:setName("profile")
+            data:save("rank", "Grandmaster")
+            data["level"] = 99
+            local data_ok = data:load("rank") == "Grandmaster"
+              and data["level"] == 99
+              and data:has("rank") == true
+
+            -- 3. JSON encode/decode
+            local encoded = json:encode({ id = "shyne", count = 42 })
+            local decoded = json:decode(encoded)
+            local json_ok = decoded ~= nil and decoded.id == "shyne" and decoded.count == 42
+
+            -- 4. Resources
+            local res_has = resources:has("avatar.json")
+            local res_text = resources:getText("avatar.json")
+            local res_ok = res_has == true and res_text == '{"name":"TestAvatar"}'
+
+            return np_ok and data_ok and json_ok and res_ok
+            """, "figura-nameplate-data-json-test").call();
+
+        assertTrue(result.toboolean(), "Nameplate 2.0, Data, JSON, and Resources facades must function safely");
+    }
+
+    @Test
+    void typedPingsEnforceSchemasAndPayloadSanitization() throws Exception {
+        LuaSandbox.Environment environment = LuaSandbox.create();
+        Globals globals = environment.globals();
+        installBootstrapMocks(environment, new LuaTable());
+        runBootstrap(environment);
+
+        LuaValue result = globals.load("""
+            local received_power = nil
+            local received_element = nil
+            pings:define("cast_ability", {"string", "number"}, function(elem, power)
+                received_element = elem
+                received_power = power
+            end)
+
+            pings.cast_ability("ice", 50)
+            local queue = synced_writes["__figura_ping_queue"]
+            local queued_entry = queue and queue.events and queue.events[1]
+            local valid_args = queued_entry and queued_entry.name == "cast_ability"
+              and queued_entry.args and queued_entry.args[1] == "ice" and queued_entry.args[2] == 50
+
+            -- Verify schema introspection
+            local schema = pings:get_schema("cast_ability")
+            local schema_ok = schema ~= nil and schema[1] == "string" and schema[2] == "number"
+
+            -- Test invalid type handling: 12345 coerces to "12345", "invalid_num" coerces to 0
+            pings.cast_ability(12345, "invalid_num")
+            local queue_after = synced_writes["__figura_ping_queue"]
+            local second_entry = queue_after and queue_after.events and queue_after.events[2]
+            local sanitized_ok = second_entry and type(second_entry.args[1]) == "string"
+              and second_entry.args[1] == "12345"
+              and type(second_entry.args[2]) == "number"
+              and second_entry.args[2] == 0
+
+            return valid_args and schema_ok and sanitized_ok
+            """, "figura-typed-pings-test").call();
+
+        assertTrue(result.toboolean(), "Typed pings must enforce schemas and argument sanitization");
+    }
+
+    @Test
+    void networkChannelsEnforcePermissionsAndLoopback() throws Exception {
+        LuaSandbox.Environment environment = LuaSandbox.create();
+        Globals globals = environment.globals();
+        installBootstrapMocks(environment, new LuaTable());
+        runBootstrap(environment);
+
+        LuaValue result = globals.load("""
+            -- Default shyne: channel should be allowed
+            local shyne_send = network.send("shyne:sync", { count = 1 })
+
+            -- Unregistered custom channel should be denied initially
+            local unreg_send = network.send("custom:packet", { data = "test" })
+
+            -- Requesting permission for custom channel
+            local allow_ok = network.allow_channel("custom:packet")
+            local is_allowed = network.is_allowed("custom:packet")
+            local reg_send = network.send("custom:packet", { data = "test" })
+
+            -- Shims
+            local net_send = net.send("shyne:sync", "shim_test")
+            local srv_send = server_packets.send("shyne:sync", "srv_test")
+
+            local connected = network.is_connected()
+
+            return shyne_send == true
+              and unreg_send == false
+              and allow_ok == true
+              and is_allowed == true
+              and reg_send == true
+              and net_send == true
+              and srv_send == true
+              and connected == true
+            """, "figura-network-channels-test").call();
+
+        assertTrue(result.toboolean(), "Network channel and Figura shims must enforce allowed channels");
     }
 
     /** Installs only the native callbacks needed to load and observe the compatibility facade. */
@@ -252,6 +459,116 @@ final class FiguraTierOneCompatibilityTest {
                 textureWrites.set("applied", LuaValue.valueOf(textureWrites.get("applied").optint(0) + 1));
                 return LuaValue.TRUE;
             }
+        });
+        globals.set("_avatar_dynamic_texture_bind_model", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                textureWrites.set("model_texture", args.arg(1));
+                textureWrites.set("model_target", args.arg(2));
+                return LuaValue.TRUE;
+            }
+        });
+
+        // Mocks for Nameplate 2.0, Data, JSON, Resources
+        LuaTable nameplateWrites = new LuaTable();
+        globals.set("nameplate_writes", nameplateWrites);
+        globals.set("_avatar_nameplate_target_set", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                LuaTable target = new LuaTable();
+                target.set("text", args.arg(2));
+                target.set("visible", args.arg(3));
+                target.set("badge", args.arg(4));
+                target.set("color", args.arg(5));
+                target.set("bold", args.arg(6));
+                target.set("italic", args.arg(7));
+                nameplateWrites.set(args.arg(1).optjstring("entity"), target);
+                return LuaValue.TRUE;
+            }
+        });
+        globals.set("_avatar_nameplate_transform_set", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                nameplateWrites.set("posX", args.arg(1));
+                nameplateWrites.set("scaleX", args.arg(4));
+                nameplateWrites.set("pivotX", args.arg(7));
+                return LuaValue.TRUE;
+            }
+        });
+        globals.set("_avatar_json_encode", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                Object obj = LuaValueCodec.toJava(arg);
+                return LuaValue.valueOf(new com.google.gson.Gson().toJson(obj));
+            }
+        });
+        globals.set("_avatar_json_decode", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                Object obj = new com.google.gson.Gson().fromJson(arg.optjstring(""), Object.class);
+                return LuaValueCodec.toLua(obj);
+            }
+        });
+
+        java.util.Map<String, java.util.Map<String, Object>> mockStorage = new java.util.HashMap<>();
+        globals.set("_avatar_data_save", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                String ns = args.arg(1).optjstring("default");
+                String key = args.arg(2).optjstring("");
+                mockStorage.computeIfAbsent(ns, k -> new java.util.HashMap<>()).put(key, LuaValueCodec.toJava(args.arg(3)));
+                return LuaValue.TRUE;
+            }
+        });
+        globals.set("_avatar_data_load", new org.luaj.vm2.lib.TwoArgFunction() {
+            @Override public LuaValue call(LuaValue nsArg, LuaValue keyArg) {
+                var map = mockStorage.get(nsArg.optjstring("default"));
+                if (map == null) return LuaValue.NIL;
+                return LuaValueCodec.toLua(map.get(keyArg.optjstring("")));
+            }
+        });
+        globals.set("_avatar_data_has", new org.luaj.vm2.lib.TwoArgFunction() {
+            @Override public LuaValue call(LuaValue nsArg, LuaValue keyArg) {
+                var map = mockStorage.get(nsArg.optjstring("default"));
+                return LuaValue.valueOf(map != null && map.containsKey(keyArg.optjstring("")));
+            }
+        });
+        globals.set("_avatar_data_clear", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue nsArg) {
+                mockStorage.remove(nsArg.optjstring("default"));
+                return LuaValue.TRUE;
+            }
+        });
+        globals.set("_avatar_resource_has", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue pathArg) {
+                return LuaValue.valueOf("avatar.json".equals(pathArg.optjstring("")));
+            }
+        });
+        globals.set("_avatar_resource_read", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue pathArg) {
+                return "avatar.json".equals(pathArg.optjstring(""))
+                    ? LuaValue.valueOf("{\"name\":\"TestAvatar\"}")
+                    : LuaValue.NIL;
+            }
+        });
+        java.util.Set<String> allowedChannels = new java.util.HashSet<>(java.util.List.of("shyne:sync", "avatar:ping"));
+        globals.set("_avatar_net_send", new org.luaj.vm2.lib.TwoArgFunction() {
+            @Override public LuaValue call(LuaValue chan, LuaValue json) {
+                String c = chan.optjstring("").trim().toLowerCase(java.util.Locale.ROOT);
+                if (allowedChannels.contains(c) || c.startsWith("shyne:") || c.startsWith("avatar:")) {
+                    return LuaValue.TRUE;
+                }
+                return LuaValue.FALSE;
+            }
+        });
+        globals.set("_avatar_net_is_allowed", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue chan) {
+                String c = chan.optjstring("").trim().toLowerCase(java.util.Locale.ROOT);
+                return LuaValue.valueOf(allowedChannels.contains(c) || c.startsWith("shyne:") || c.startsWith("avatar:"));
+            }
+        });
+        globals.set("_avatar_net_allow_channel", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue chan) {
+                allowedChannels.add(chan.optjstring("").trim().toLowerCase(java.util.Locale.ROOT));
+                return LuaValue.TRUE;
+            }
+        });
+        globals.set("_avatar_net_connected", new ZeroArgFunction() {
+            @Override public LuaValue call() { return LuaValue.TRUE; }
         });
         environment.budget().reset(1_000_000);
         globals.load("""

@@ -38,7 +38,7 @@ import java.nio.file.Path;
 @Mod(ShyneCore.MOD_ID)
 public class ShyneCore {
     public static final String MOD_ID = "shyne_creator";
-    public static final String VERSION = "2.12.9";
+    public static final String VERSION = "2.13.0";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     public static ShyneCore INSTANCE;
 

@@ -127,6 +127,72 @@ public final class AvatarRuntime {
     }
     public static String localNameplateText() { return lifecycle.active() == null ? "" : lifecycle.active().nameplateText(); }
     public static boolean localNameplateVisible() { return lifecycle.active() == null || lifecycle.active().nameplateVisible(); }
+    public static AvatarNameplateStyle localNameplateStyle() { return lifecycle.active() == null ? AvatarNameplateStyle.DEFAULT : lifecycle.active().nameplateStyle(); }
+    public static String localChatNameplateText() {
+        var active = lifecycle.active();
+        return active != null && active.permissionAllowed(AvatarPermission.CHAT_NAMEPLATE) ? active.chatNameplateText() : "";
+    }
+    public static boolean localChatNameplateVisible() {
+        var active = lifecycle.active();
+        return active == null || active.chatNameplateVisible();
+    }
+    public static AvatarNameplateStyle localChatNameplateStyle() {
+        var active = lifecycle.active();
+        return active != null && active.permissionAllowed(AvatarPermission.CHAT_NAMEPLATE) ? active.chatNameplateStyle() : AvatarNameplateStyle.DEFAULT;
+    }
+    public static String localListNameplateText() {
+        var active = lifecycle.active();
+        return active != null && active.permissionAllowed(AvatarPermission.TAB_LIST_NAMEPLATE) ? active.listNameplateText() : "";
+    }
+    public static boolean localListNameplateVisible() {
+        var active = lifecycle.active();
+        return active == null || active.listNameplateVisible();
+    }
+    public static AvatarNameplateStyle localListNameplateStyle() {
+        var active = lifecycle.active();
+        return active != null && active.permissionAllowed(AvatarPermission.TAB_LIST_NAMEPLATE) ? active.listNameplateStyle() : AvatarNameplateStyle.DEFAULT;
+    }
+
+    public static void dispatchKeyInput(int key, int scanCode, int action, int modifiers) {
+        String type = action == 0 ? "key_release" : action == 2 ? "key_repeat" : "key_press";
+        lifecycle.dispatchInputEvent(type, key, scanCode, action, modifiers, 0.0, 0.0, "");
+    }
+
+    public static void dispatchCharacterInput(int codePoint, int modifiers) {
+        lifecycle.dispatchInputEvent("char_typed", codePoint, 0, 1, modifiers, 0.0, 0.0, new String(Character.toChars(codePoint)));
+    }
+
+    public static void dispatchMouseButton(int button, int action, int modifiers) {
+        lifecycle.dispatchInputEvent(action == 0 ? "mouse_release" : "mouse_press", button, 0, action, modifiers, 0.0, 0.0, "");
+    }
+
+    public static void dispatchMouseScroll(double horizontal, double vertical) {
+        lifecycle.dispatchInputEvent("mouse_scroll", 0, 0, 0, 0, horizontal, vertical, "");
+    }
+
+    public static void dispatchMouseMove(double xpos, double ypos, double xrel, double yrel) {
+        lifecycle.dispatchInputEvent("mouse_move", 0, 0, 0, 0, xpos, ypos, "");
+    }
+
+    public static void dispatchItemUse(String itemId, String hand, String action, int particleCount) {
+        lifecycle.dispatchItemUseEvent(itemId, hand, action, particleCount);
+    }
+
+    public static void dispatchChatReceive(String text, String json, String senderUuid, String senderName) {
+        lifecycle.dispatchChatReceiveEvent(text, json, senderUuid, senderName);
+    }
+
+    public static void dispatchEntityDamage(float amount, String sourceType, String attackerId, boolean isLocalPlayer) {
+        lifecycle.dispatchEntityDamageEvent(amount, sourceType, attackerId, isLocalPlayer);
+    }
+
+    public static void dispatchTotemPop(String entityId, boolean isLocalPlayer) {
+        lifecycle.dispatchTotemPopEvent(entityId, isLocalPlayer);
+    }
+
+    public static void channelPacket(String senderUuid, String channel, String payloadJson) {
+        lifecycle.channelPacket(senderUuid, channel, payloadJson);
+    }
 
     public static boolean isVanillaPartVisible(String key) { return isVanillaPartVisible(null, key); }
     public static boolean isVanillaPartVisible(UUID playerId, String key) {

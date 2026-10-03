@@ -145,10 +145,11 @@ public final class ShyneSecureAvatar {
     public static boolean isRuntimePath(Path root) {
         if (root == null) return false;
         try {
+            if (FabricLoader.getInstance() == null || FabricLoader.getInstance().getGameDir() == null) return false;
             Path runtimeRoot = FabricLoader.getInstance().getGameDir()
                 .resolve(".shyne-cache").resolve("public-runtime").toAbsolutePath().normalize();
             return root.toAbsolutePath().normalize().startsWith(runtimeRoot);
-        } catch (IllegalStateException unavailableOutsideGameRuntime) {
+        } catch (Throwable unavailableOutsideGameRuntime) {
             return false;
         }
     }

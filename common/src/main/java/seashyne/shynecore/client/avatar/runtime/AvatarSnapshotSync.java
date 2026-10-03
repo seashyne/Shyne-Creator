@@ -167,7 +167,11 @@ public final class AvatarSnapshotSync {
             )).toList(),
             Map.copyOf(active.animationParameters()),
             active.nameplateText(),
-            active.nameplateVisible()
+            active.nameplateVisible(),
+            active.nameplateStyle().badge(),
+            active.nameplateStyle().colorArgb(),
+            active.nameplateStyle().bold(),
+            active.nameplateStyle().italic()
         );
     }
 

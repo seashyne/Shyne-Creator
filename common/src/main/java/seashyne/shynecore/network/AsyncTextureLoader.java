@@ -50,37 +50,35 @@ public final class AsyncTextureLoader {
             return;
         }
 
-        CompletableFuture.supplyAsync(() -> {
+        task.whenComplete((result, error) -> {
+            IN_FLIGHT.remove(contentHash, task);
+            if (error != null) {
+                if (callback != null) {
+                    callback.onTextureError(modelId, textureIndex, error.getCause() != null ? error.getCause().getMessage() : error.getMessage());
+                }
+            } else {
+                if (callback != null) {
+                    callback.onTextureReady(result);
+                }
+            }
+        });
+
+        DECODER_POOL.execute(() -> {
+            if (task.isCancelled()) return;
             try {
                 if (contentBase64 == null || contentBase64.isBlank()) {
                     throw new IllegalArgumentException("Texture base64 content is empty.");
                 }
                 byte[] bytes = Base64.getDecoder().decode(contentBase64);
-                
                 if (bytes.length > MAX_TEXTURE_BYTES) {
                     throw new IllegalArgumentException("Texture exceeds maximum size limit.");
                 }
-                
                 if (!PngTextureValidator.matches(bytes, expectedWidth, expectedHeight)) {
                     throw new IllegalArgumentException("Texture does not match expected dimensions or is invalid PNG.");
                 }
-                
-                return new DecodedTexture(modelId, textureIndex, bytes, expectedWidth, expectedHeight, contentHash);
-            } catch (Exception e) {
-                throw new CompletionException(e);
-            }
-        }, DECODER_POOL).whenComplete((result, error) -> {
-            IN_FLIGHT.remove(contentHash);
-            if (error != null) {
-                task.completeExceptionally(error);
-                if (callback != null) {
-                    callback.onTextureError(modelId, textureIndex, error.getCause() != null ? error.getCause().getMessage() : error.getMessage());
-                }
-            } else {
-                task.complete(result);
-                if (callback != null) {
-                    callback.onTextureReady(result);
-                }
+                task.complete(new DecodedTexture(modelId, textureIndex, bytes, expectedWidth, expectedHeight, contentHash));
+            } catch (Throwable t) {
+                task.completeExceptionally(t);
             }
         });
     }

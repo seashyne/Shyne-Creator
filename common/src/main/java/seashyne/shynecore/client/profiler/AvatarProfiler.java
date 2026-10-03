@@ -93,11 +93,17 @@ public final class AvatarProfiler {
         if (assetBytes + taskBytes > 64L * 1024L * 1024L) warnings.add("avatar_memory");
         if (fps > 0 && fps < 60) warnings.add("low_fps");
 
+        seashyne.shynecore.client.avatar.AvatarQuotaManager.QuotaSnapshot quota =
+            seashyne.shynecore.client.avatar.AvatarQuotaManager.get(avatarId).snapshot();
+        if (quota.particlesDroppedPerSecond() > 0) warnings.add("particle_rate_limit");
+        if (quota.soundsDroppedPerSecond() > 0) warnings.add("sound_rate_limit");
+        if (quota.activeRenderTasks() >= quota.maxRenderTasks()) warnings.add("task_quota_limit");
+
         EnumMap<Category, Metric> metrics = new EnumMap<>(Category.class);
         for (var entry : SERIES.entrySet()) metrics.put(entry.getKey(), entry.getValue().metric());
         return new Snapshot(avatarId, fps, frameMs, avatarFrameMs, estimatedFpsLoss,
             heapUsed, assetBytes + taskBytes, taskCount, bones, cubes, animations,
-            metrics, List.copyOf(warnings));
+            metrics, List.copyOf(warnings), quota);
     }
 
     public static synchronized Path exportSnapshot(int taskCount, long taskBytes, int rendered, int culled) throws IOException {
@@ -138,7 +144,8 @@ public final class AvatarProfiler {
     public record Snapshot(String avatarId, int fps, double frameMs, double avatarFrameMs,
                            double estimatedFpsLoss, long heapBytes, long avatarBytes,
                            int taskCount, int bones, int cubes, int animations,
-                           EnumMap<Category, Metric> metrics, List<String> warnings) {}
+                           EnumMap<Category, Metric> metrics, List<String> warnings,
+                           seashyne.shynecore.client.avatar.AvatarQuotaManager.QuotaSnapshot quota) {}
     private record ExportReport(String format, String exportedAt, int renderedTasks,
                                 int culledTasks, Snapshot snapshot) {}
 

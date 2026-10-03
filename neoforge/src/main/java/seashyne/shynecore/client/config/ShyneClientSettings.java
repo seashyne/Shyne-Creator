@@ -49,6 +49,7 @@ public final class ShyneClientSettings {
     public static Map<String, String> selectedOutfits = new HashMap<>();
     public static Map<String, Map<String, Object>> avatarLocalState = new HashMap<>();
     public static Map<String, Set<String>> publicAvatarPermissionDecisions = new HashMap<>();
+    public static Map<String, Set<String>> avatarPermissionDecisions = new HashMap<>();
     public static Map<String, String> remotePlayerPolicies = new HashMap<>();
     public static boolean hideAllRemoteAvatars = false;
     public static boolean hideUnratedRemoteAvatars = false;
@@ -87,6 +88,7 @@ public final class ShyneClientSettings {
             selectedOutfits = data.selectedOutfits == null ? new HashMap<>() : new HashMap<>(data.selectedOutfits);
             avatarLocalState = data.avatarLocalState == null ? new HashMap<>() : new HashMap<>(data.avatarLocalState);
             publicAvatarPermissionDecisions = sanitizePermissionDecisions(data.publicAvatarPermissionDecisions);
+            avatarPermissionDecisions = sanitizePermissionDecisions(data.avatarPermissionDecisions);
             remotePlayerPolicies = sanitizeRemotePlayerPolicies(data.remotePlayerPolicies);
             hideAllRemoteAvatars = data.hideAllRemoteAvatars;
             hideUnratedRemoteAvatars = data.hideUnratedRemoteAvatars;
@@ -129,6 +131,7 @@ public final class ShyneClientSettings {
         combatHudEnabled = true;
         cloudEnabled = false;
         publicAvatarPermissionDecisions.clear();
+        avatarPermissionDecisions.clear();
         remotePlayerPolicies.clear();
         hideAllRemoteAvatars = false;
         hideUnratedRemoteAvatars = false;
@@ -193,6 +196,40 @@ public final class ShyneClientSettings {
 
     public static void forgetPublicPermissionDecision(String shareId, String packageHash) {
         publicAvatarPermissionDecisions.remove(permissionDecisionKey(shareId, packageHash));
+        save();
+    }
+
+    public static boolean hasAvatarPermissionDecision(String avatarId) {
+        if (avatarId == null) return false;
+        return avatarPermissionDecisions.containsKey(avatarId.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    public static Set<AvatarPermission> approvedAvatarPermissions(String avatarId, Set<AvatarPermission> requested) {
+        if (avatarId == null) return requested == null ? Set.of() : requested;
+        Set<String> stored = avatarPermissionDecisions.get(avatarId.toLowerCase(java.util.Locale.ROOT));
+        if (stored == null) {
+            return requested == null ? Set.of() : requested;
+        }
+        EnumSet<AvatarPermission> approved = EnumSet.noneOf(AvatarPermission.class);
+        for (String id : stored) AvatarPermission.fromId(id).ifPresent(approved::add);
+        if (requested != null) approved.retainAll(requested);
+        return Set.copyOf(approved);
+    }
+
+    public static void decideAvatarPermissions(String avatarId, Set<AvatarPermission> approved) {
+        if (avatarId == null || avatarId.isBlank()) return;
+        String key = avatarId.toLowerCase(java.util.Locale.ROOT);
+        Set<String> ids = new HashSet<>();
+        if (approved != null) {
+            for (AvatarPermission permission : approved) ids.add(permission.id());
+        }
+        avatarPermissionDecisions.put(key, ids);
+        save();
+    }
+
+    public static void resetAvatarPermissions(String avatarId) {
+        if (avatarId == null) return;
+        avatarPermissionDecisions.remove(avatarId.toLowerCase(java.util.Locale.ROOT));
         save();
     }
 
@@ -284,6 +321,7 @@ public final class ShyneClientSettings {
         data.selectedOutfits = new HashMap<>(selectedOutfits);
         data.avatarLocalState = new HashMap<>(avatarLocalState);
         data.publicAvatarPermissionDecisions = copyPermissionDecisions(publicAvatarPermissionDecisions);
+        data.avatarPermissionDecisions = copyPermissionDecisions(avatarPermissionDecisions);
         data.remotePlayerPolicies = new HashMap<>(remotePlayerPolicies);
         data.hideAllRemoteAvatars = hideAllRemoteAvatars;
         data.hideUnratedRemoteAvatars = hideUnratedRemoteAvatars;
@@ -357,6 +395,7 @@ public final class ShyneClientSettings {
         Map<String, String> selectedOutfits = new HashMap<>();
         Map<String, Map<String, Object>> avatarLocalState = new HashMap<>();
         Map<String, Set<String>> publicAvatarPermissionDecisions = new HashMap<>();
+        Map<String, Set<String>> avatarPermissionDecisions = new HashMap<>();
         Map<String, String> remotePlayerPolicies = new HashMap<>();
         boolean hideAllRemoteAvatars = false;
         boolean hideUnratedRemoteAvatars = false;
