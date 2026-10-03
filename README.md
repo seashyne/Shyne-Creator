@@ -70,10 +70,6 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
   - ควบคุมการเล่นสมบูรณ์แบบ: `play()`, `pause()`, `stop(fade)`, ปรับระดับเสียง `setVolume()`, ปรับความเร็วเสียง `setPitch()`, และกำหนดตำแหน่งเสียง 3D ในโลก `setPos(x, y, z)`
   - ตัวชี้วัด Audio-reactive แบบเรียลไทม์: `getLevel()`, `getPeak()`, `isBeat()` สำหรับนำไปผูกกับแสงสี เอฟเฟกต์ และ Visualizer ของโมเดลอวตาร
   - ควบคุมความปลอดภัยผ่าน Server Policy (`audio_streams`) และ Client Permissions
-- **กฎสถาปัตยกรรมและระเบียบโค้ด (`RULES.md`)**:
-  - กำหนดกฎสถาปัตยกรรม Single Responsibility Principle (SRP) แยกโมดูลอย่างเป็นสัดส่วน จำกัดความยาวไฟล์ไม่เกิน 350-400 บรรทัด
-  - บังคับการเขียน Javadoc และ EmmyLua ครบถ้วนทุกคลาสและเมธอด
-  - รักษา 100% MultiLoader parity ระหว่าง Fabric และ NeoForge อย่างเคร่งครัด
 
 ## 2.10.4-alpha Modular Scripting, Direct ZIP, Signature Weapons & Physics Velocity
 

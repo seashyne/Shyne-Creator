@@ -202,7 +202,7 @@
 - **Granular Vanilla Model Replacement (`shyne.replace_vanilla` & `21_vanilla_model.lua`)**:
   - Replace or hide specific vanilla player parts without affecting other limbs (e.g. `shyne.replace_vanilla("arms")`, `shyne.replace_vanilla({ right_arm = true, left_arm = false })`, or `vanilla_model.RIGHT_ARM:hide()`).
   - Supports boolean, string, comma-separated tokens, arrays, and key-value tables.
-- **Strict Codebase Covenant & Architectural Decomposition (`RULES.md`)**:
+- **Strict Codebase Covenant & Architectural Decomposition**:
   - Enforced Single Responsibility Principle with all Java and Lua files strictly under 350-385 lines.
   - Decomposed `AvatarModelBridge` -> `AvatarModelHelper` and `AvatarWorldBridge` -> `AvatarProbeHelper`.
   - Decomposed Lua runtime into clean SRP submodules (`20_avatar_world`, `21_vanilla_model`, `60_figura_compat`, `61_figura_client_renderer`, `62_figura_items_world`, `63_figura_action_wheel`).

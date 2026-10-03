@@ -61,5 +61,5 @@ Blockbench `.bbmodel` format 4.x เก็บแกน animation ในทิศ
 1. เพิ่ม state และ test ใน `common` ก่อน
 2. เพิ่ม bridge ใน Fabric และ NeoForge ให้ parity ผ่าน
 3. เพิ่ม API หลักในโมดูลย่อย `shyne_runtime/lua/avatar/` หรือแยกระบบ optional เป็น `shyne_runtime/lua/shyne_<feature>.lua`; ห้ามทำ index กลับไปเป็นไฟล์ 800+ บรรทัด
-4. เพิ่ม comment ที่อธิบายเหตุผล, transform order, sync และข้อจำกัด—not comment ที่บอกเพียงว่าโค้ดบรรทัดนั้นทำอะไร โดยทุก comment ที่เพิ่มหรือแก้ต้องมีคำอธิบาย **ไทยและอังกฤษ** ที่มีความหมายเท่ากันตาม `RULES.md`
+4. เพิ่ม comment ที่อธิบายเหตุผล, transform order, sync และข้อจำกัด—not comment ที่บอกเพียงว่าโค้ดบรรทัดนั้นทำอะไร โดยทุก comment ที่เพิ่มหรือแก้ต้องมีคำอธิบาย **ไทยและอังกฤษ** ที่มีความหมายเท่ากัน
 5. อัปเดต API standard, schema, docs และ protocol เมื่อ payload เปลี่ยน

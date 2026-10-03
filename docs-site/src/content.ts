@@ -19,7 +19,7 @@ import security from '../../SECURITY.md?raw'
 import multiplayer from '../../MULTIPLAYER_TESTING.md?raw'
 import sdk from '../../CREATOR_SDK_TH.md?raw'
 import architecture from '../../ARCHITECTURE_TH.md?raw'
-import rules from '../../RULES.md?raw'
+import compatMatrix from '../../API_COMPATIBILITY_MATRIX.md?raw'
 import changelog from '../../CHANGELOG.md?raw'
 import zeroLuaExample from '../../tools/examples/zero-lua-avatar/README.md?raw'
 import luaTwoExample from '../../tools/examples/lua-api-2.0-avatar/README.md?raw'
@@ -132,7 +132,7 @@ export const docs: DocItem[] = [
   { slug: 'multiplayer-testing', title: 'Multiplayer Test Matrix', shortTitle: 'ทดสอบ Multiplayer', description: 'รายการตรวจ release และหลักฐานที่ต้องเก็บก่อนเผยแพร่', category: 'เผยแพร่และพัฒนา', icon: 'users', content: multiplayer },
   { slug: 'creator-sdk', title: 'Shyne Creator SDK', shortTitle: 'Creator SDK', description: 'โครงม็อด Gameplay, custom item, Avatar และข้อมูลที่ sync', category: 'เผยแพร่และพัฒนา', icon: 'wrench', content: sdk, api: true },
   { slug: 'architecture', title: 'Shyne Creator Architecture', shortTitle: 'สถาปัตยกรรม', description: 'ขอบเขต common, Fabric, NeoForge และลำดับ renderer', category: 'เผยแพร่และพัฒนา', icon: 'workflow', content: architecture },
-  { slug: 'rules', title: 'ระเบียบสถาปัตยกรรม (Architecture Rules)', shortTitle: 'ระเบียบโค้ด', description: 'ขอบเขตขนาดไฟล์ < 400 บรรทัด, SRP, มาตรฐานคอมเมนต์ และ MultiLoader Parity', category: 'เผยแพร่และพัฒนา', icon: 'shield', content: rules },
+  { slug: 'compatibility-matrix', title: 'API Compatibility Matrix', shortTitle: 'Compatibility Matrix', description: 'ระดับการรองรับ API ของ Shyne Creator เทียบกับ Figura และมาตรฐาน Shyne 2.0', category: 'เผยแพร่และพัฒนา', icon: 'workflow', content: compatMatrix, api: true },
   { slug: 'changelog', title: 'ประวัติการอัปเดต (Changelog)', shortTitle: 'ประวัติการอัปเดต', description: 'รายละเอียดฟีเจอร์และการปรับปรุงในแต่ละเวอร์ชันของ Shyne Creator', category: 'เริ่มต้น', icon: 'book', content: changelog },
 ]
 
@@ -155,5 +155,5 @@ export const fileToSlug: Record<string, string> = {
   'SHYNE_LUA_API_TH.md': 'lua-api', 'CUSTOM_RENDER_API_TH.md': 'render-api', 'SHYNE_GAMEPLAY_API_TH.md': 'gameplay-api', 'POWER_ASSET_PACKAGE_TH.md': 'asset-package', 'SHYNE_API_COMPLETE_TH.md': 'api-reference',
   'AVATAR_CLOUD.md': 'cloud', 'CLOUD_API.md': 'cloud-api', 'SECURITY.md': 'security', 'PUBLIC_SHARE.md': 'public-share',
   'MULTIPLAYER_TESTING.md': 'multiplayer-testing', 'CREATOR_SDK_TH.md': 'creator-sdk', 'ARCHITECTURE_TH.md': 'architecture',
-  'RULES.md': 'rules', 'CHANGELOG.md': 'changelog',
+  'API_COMPATIBILITY_MATRIX.md': 'compatibility-matrix', 'CHANGELOG.md': 'changelog',
 }
