@@ -145,3 +145,44 @@ end
 function world.isThundering()
   return _shyne_read("world.thundering") == true
 end
+
+--- Modifies a block in the world at the given position.
+local function handle_set_block(arg1, arg2, arg3, arg4, arg5)
+  if arg1 == world then
+    return handle_set_block(arg2, arg3, arg4, arg5)
+  end
+  local x, y, z, blockId
+  if type(arg1) == "table" and (type(arg2) == "string" or type(arg2) == "table") then
+    x, y, z = to_coords(arg1)
+    blockId = type(arg2) == "table" and (arg2.id or arg2[1]) or tostring(arg2 or "minecraft:air")
+  elseif type(arg1) == "string" and type(arg2) == "table" then
+    x, y, z = to_coords(arg2)
+    blockId = arg1
+  elseif tonumber(arg1) ~= nil and tonumber(arg2) ~= nil and tonumber(arg3) ~= nil then
+    x = tonumber(arg1)
+    y = tonumber(arg2)
+    z = tonumber(arg3)
+    blockId = type(arg4) == "table" and (arg4.id or arg4[1]) or tostring(arg4 or "minecraft:air")
+  else
+    x, y, z = to_coords(arg1)
+    blockId = tostring(arg2 or "minecraft:air")
+  end
+  return _shyne_world_set_block and _shyne_world_set_block(math.floor(x), math.floor(y), math.floor(z), blockId) or false
+end
+
+world.setBlock = handle_set_block
+
+--- Sets world daytime. Requires 'world_edit' or 'command' permission in avatar.json.
+---@param arg1 any Self or daytime ticks
+---@param arg2 any Daytime ticks if called with colon
+---@return boolean
+local function handle_set_time(arg1, arg2)
+  local time = (arg1 == world) and arg2 or arg1
+  return _shyne_world_set_time and _shyne_world_set_time(tonumber(time) or 0) or false
+end
+
+world.setTime = handle_set_time
+
+if figuraMetatables then
+  figuraMetatables.ItemStack = item_stack_mt
+end

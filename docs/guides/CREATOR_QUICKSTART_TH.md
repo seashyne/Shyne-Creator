@@ -179,10 +179,10 @@ avatars/my-first-avatar/avatar.json
 
 ## ไปต่อทางไหนดี
 
-- อ่าน [Shyne Avatar Standard 2.0](SHYNE_STANDARD_2_TH.md) เมื่อต้องการ `full_body`, behavior หรือ outfit
+- อ่าน [Shyne Avatar Standard 2.0](../standards/SHYNE_STANDARD_2_TH.md) เมื่อต้องการ `full_body`, behavior หรือ outfit
 - อ่าน [Blockbench Animation Standard](BLOCKBENCH_ANIMATION_STANDARD.md) เมื่อต้องการ Animation ซับซ้อน
-- อ่าน [ระบบ Avatar](AVATAR_SYSTEM.md) เมื่อต้องการ first-person arms, palette และ multiplayer
-- อ่าน [Lua API 2.0](SHYNE_LUA_API_TH.md) เมื่อ logic จาก Blockbench ไม่พอ
-- อ่าน [Custom Render API 1.3](CUSTOM_RENDER_API_TH.md) เมื่อต้องการ HUD หรือสิ่งที่วาดในโลก
+- อ่าน [ระบบ Avatar](../architecture/AVATAR_SYSTEM.md) เมื่อต้องการ first-person arms, palette และ multiplayer
+- อ่าน [Lua API 2.0](../api/SHYNE_LUA_API_TH.md) เมื่อ logic จาก Blockbench ไม่พอ
+- อ่าน [Custom Render API 1.3](../api/CUSTOM_RENDER_API_TH.md) เมื่อต้องการ HUD หรือสิ่งที่วาดในโลก
 
 เริ่มจาก Model-first ก่อน แล้วเพิ่ม Lua เฉพาะสิ่งที่จำเป็น จะทำให้ Avatar ดูแลง่ายและทำงานลื่นกว่าครับ

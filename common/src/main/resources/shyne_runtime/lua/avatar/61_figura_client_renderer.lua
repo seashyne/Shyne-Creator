@@ -103,12 +103,22 @@ function renderer:setFOV(fov)
   return self
 end
 
+function renderer:setPostShader(shader)
+  _renderer_set("post_shader", shader)
+  return self
+end
+
+function renderer:getPostShader()
+  return _renderer_get("post_shader")
+end
+
 -- Figura fluent aliases
 renderer.shadowRadius = renderer.setShadowRadius
 renderer.cameraPivot = renderer.setCameraPivot
 renderer.cameraPos = renderer.setCameraPos
 renderer.cameraRot = renderer.setCameraRot
 renderer.fov = renderer.setFOV
+renderer.postShader = renderer.setPostShader
 
 -- ------------------------------------------------------------------------------
 -- 2. GLOBAL OBJECT: client
@@ -155,6 +165,14 @@ end
 
 function client:getCameraRot()
   return renderer:getCameraRot()
+end
+
+function client:setCameraPos(x, y, z)
+  return renderer:setCameraPos(x, y, z)
+end
+
+function client:setCameraRot(x, y, z)
+  return renderer:setCameraRot(x, y, z)
 end
 
 -- ------------------------------------------------------------------------------

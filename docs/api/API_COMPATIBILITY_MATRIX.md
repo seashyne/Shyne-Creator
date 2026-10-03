@@ -44,7 +44,9 @@ This document outlines the exact compatibility and support tiers of the **Shyne 
 | `dynamic_texture` | `dynamic_texture:bindMaterial(mat, tex)` | 🟢 Full | — | Dynamic texture binding | Live programmatic canvas texture |
 | `PORTRAIT context` | `context == 'PORTRAIT'` | 🟢 Full | — | GUI portrait rendering | Invoked when rendering in inventory/HUD portrait |
 | `SKULL context` | `context == 'SKULL'` | 🟢 Full | — | Skull block rendering | Invoked when rendering as placed or held player skull |
-| `HELD_ITEM context` | `context == 'HELD_ITEM'` | 🟢 Full | — | Held item rendering | Invoked when rendering avatar item geometry |
+| `renderer:setPostShader` | `renderer:setPostShader(shader)` | 🟡 Restricted | `hud_render` | Post-processing shader | Applies or clears Minecraft post-processing shader |
+| `figuraMetatables` | `figuraMetatables.<Type>` | 🟢 Full | — | Figura metatable registry | Provides Vector2, Vector3, Vector4, Matrix4, and ItemStack metatables |
+| `client.setCameraPos` | `client:setCameraPos(x, y, z)` | 🟢 Full | `camera` | Set camera position offset | Forwards to camera.setPos and renderer:setCameraPos |
 
 ## P3 Nameplate 2.0
 
@@ -71,8 +73,8 @@ This document outlines the exact compatibility and support tiers of the **Shyne 
 | `data:load` | `data:load()` | 🟡 Restricted | `data` | Reload storage from disk | Reloads persistent storage |
 | `resources:has` | `resources:has(path)` | 🟢 Full | — | Safe asset existence check | Checks file within avatar sandbox |
 | `resources:read` | `resources:read(path)` | 🟢 Full | — | Safe asset text reader | Reads text file within avatar sandbox |
-| `io (raw filesystem)` | `io.open, io.read` | 🔴 Unsupported | — | Raw filesystem I/O | Blocked for security; use safe data/resources |
-| `os (system execution)` | `os.execute, os.getenv` | 🔴 Unsupported | — | System process execution | Blocked for security |
+| `io (sandboxed filesystem)` | `io.open, io.lines, file:read, file:write` | 🟢 Full | `data` | Sandboxed avatar filesystem I/O | Full Lua file I/O strictly sandboxed inside avatar directory |
+| `os (sandboxed environment & time)` | `os.time, os.date, os.clock, os.getenv` | 🟢 Full | — | Safe timers, dates, clocks, and environment | Returns safe system timestamps, formatted dates, and avatar environment variables |
 
 ## P5 Permissions & Quotas
 
@@ -95,7 +97,7 @@ This document outlines the exact compatibility and support tiers of the **Shyne 
 | `network.send` | `network.send(channel, payload)` | 🟡 Restricted | `network` | Managed packet channel | Sends message over server-approved channel |
 | `network.on` | `network.on(channel, fn(payload))` | 🟡 Restricted | `network` | Listen to packet channel | Receives messages from packet channel |
 | `network.allow_channel` | `network.allow_channel(channel)` | 🟡 Restricted | `network` | Whitelist custom channel | Allows channel for communication |
-| `raw server_packets` | `server_packets.raw` | 🔵 Partial | `network` | Raw server packet access | Routed safely through Shyne channel |
+| `raw server_packets` | `server_packets.raw(channel, data)` | 🟢 Full | `network` | Raw server packet access | Dispatches raw payload data safely through Shyne channels |
 
 ## P7 Creator Workflow
 
@@ -124,4 +126,7 @@ This document outlines the exact compatibility and support tiers of the **Shyne 
 | `player:getHealth` | `player:getHealth()` | 🟢 Full | — | Player health points | Returns current health |
 | `player:isSneaking` | `player:isSneaking()` | 🟢 Full | — | Crouch state | Checks if player is sneaking |
 | `world.getTime` | `world.getTime()` | 🟢 Full | — | Day/night time | Read-only world time |
-| `world.setBlock` | `world.setBlock(pos, block)` | 🔴 Unsupported | — | Modify world block | Blocked; client avatars cannot modify blocks |
+| `world.setBlock` | `world.setBlock(pos, block)` | 🟡 Restricted | `world_edit` | Modify world block | Modifies world block via command and client level preview |
+| `world.setTime` | `world.setTime(time)` | 🟡 Restricted | `world_edit` | Set world daytime | Synchronizes daytime ticks via server command |
+| `host:sendChat` | `host:sendChat(message)` | 🟡 Restricted | `command` | Send player chat or command | Executes client player chat message or command |
+

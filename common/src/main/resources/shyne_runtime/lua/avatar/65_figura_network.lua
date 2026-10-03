@@ -81,6 +81,9 @@ net.allow_channel = network.allow_channel
 ---@class FiguraServerPackets
 server_packets = server_packets or {}
 server_packets.send = network.send
+server_packets.raw = function(channel, data)
+  return network.send(channel, data)
+end
 
 -- ------------------------------------------------------------------------------
 -- Event Receiver

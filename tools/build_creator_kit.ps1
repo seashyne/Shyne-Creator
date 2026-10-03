@@ -58,6 +58,12 @@ function Copy-KitFile {
     )
 
     $source = [IO.Path]::GetFullPath((Join-Path $projectRoot $SourceRelative))
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+        $candidates = Get-ChildItem -Path (Join-Path $projectRoot "docs") -Recurse -Filter (Split-Path -Leaf $SourceRelative) -File -ErrorAction SilentlyContinue
+        if ($candidates -and $candidates.Count -gt 0) {
+            $source = $candidates[0].FullName
+        }
+    }
     if (-not $source.StartsWith($sourcePrefix, [StringComparison]::OrdinalIgnoreCase) -or
         -not (Test-Path -LiteralPath $source -PathType Leaf)) {
         throw "Kit source file is missing or outside the project: $SourceRelative"

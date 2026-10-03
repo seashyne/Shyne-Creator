@@ -239,3 +239,10 @@ function mat4_methods:copy()
   m._raw = matrix4.copy(self._raw)
   return m
 end
+
+figuraMetatables = figuraMetatables or {
+  Vector2 = vec2_mt,
+  Vector3 = vec3_mt,
+  Vector4 = vec4_mt,
+  Matrix4 = mat4_mt
+}

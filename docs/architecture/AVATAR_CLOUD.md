@@ -42,4 +42,4 @@ Public Share 2.2 ใช้ ZIP มาตรฐานผ่าน HTTPS โดย
 
 Cloud ล่มแล้ว LAN/Server gameplay ยังทำงานได้ Avatar ที่อยู่ในเครื่องยังใช้งานได้ตามปกติ
 
-รายละเอียด HTTP อยู่ใน [CLOUD_API.md](CLOUD_API.md) และขอบเขต Public ZIP อยู่ใน [PUBLIC_SHARE.md](PUBLIC_SHARE.md)
+รายละเอียด HTTP อยู่ใน [CLOUD_API.md](../api/CLOUD_API.md) และขอบเขต Public ZIP อยู่ใน [PUBLIC_SHARE.md](../guides/PUBLIC_SHARE.md)

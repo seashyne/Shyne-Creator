@@ -31,8 +31,41 @@ public final class AvatarRendererBridge {
     public static void register(Globals globals, AvatarState state) {
         globals.set("_figura_renderer_set", new VarArgFunction() {
             @Override public Varargs invoke(Varargs args) {
-                requireCameraPermission(state);
                 String key = args.arg(1).optjstring("");
+                if ("post_shader".equals(key)) {
+                    if (!state.permissionAllowed(AvatarPermission.HUD_RENDER)) {
+                        throw new LuaError("renderer:setPostShader requires 'hud_render' permission in avatar.json");
+                    }
+                    String shader = args.arg(2).optjstring(null);
+                    state.setPostShader(shader);
+                    net.minecraft.client.Minecraft client = null;
+                    try {
+                        client = net.minecraft.client.Minecraft.getInstance();
+                    } catch (Throwable ignored) {}
+                    if (client != null) {
+                        final net.minecraft.client.Minecraft finalClient = client;
+                        client.execute(() -> {
+                            try {
+                                if (finalClient.gameRenderer == null) return;
+                                var requested = finalClient.gameRenderer.getRequestedPostEffects();
+                                if (shader == null || shader.isBlank() || shader.equals("nil") || shader.equals("none")) {
+                                    if (requested != null) requested.clear();
+                                    finalClient.gameRenderer.clearSpectatedEntityPostEffect();
+                                } else {
+                                    var loc = net.minecraft.resources.Identifier.tryParse(shader);
+                                    if (loc != null && requested != null) {
+                                        if (!requested.contains(loc)) {
+                                            requested.add(loc);
+                                        }
+                                    }
+                                }
+                            } catch (Throwable ignored) {}
+                        });
+                    }
+                    return LuaValue.NIL;
+                }
+
+                requireCameraPermission(state);
                 switch (key) {
                     case "shadow_radius" -> {
                         if (args.arg(2).isnil()) state.setShadowRadius(-1f);
@@ -66,6 +99,8 @@ public final class AvatarRendererBridge {
                         ? vec3(state.cameraAbsoluteRotationX(), state.cameraAbsoluteRotationY(), state.cameraAbsoluteRotationZ()) : LuaValue.NIL;
                     case "fov" -> Float.isFinite(state.cameraFovMultiplier())
                         ? LuaValue.valueOf(state.cameraFovMultiplier()) : LuaValue.NIL;
+                    case "post_shader" -> state.postShader() != null
+                        ? LuaValue.valueOf(state.postShader()) : LuaValue.NIL;
                     default -> LuaValue.NIL;
                 };
             }

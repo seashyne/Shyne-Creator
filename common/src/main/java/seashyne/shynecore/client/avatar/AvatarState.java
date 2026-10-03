@@ -428,4 +428,8 @@ public final class AvatarState {
         }
         return pages;
     }
+
+    private volatile String postShader;
+    public String postShader() { return postShader; }
+    public void setPostShader(String postShader) { this.postShader = postShader; }
 }

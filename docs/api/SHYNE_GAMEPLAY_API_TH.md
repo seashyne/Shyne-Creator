@@ -20,7 +20,7 @@ shyne-mods/<pack-id>/
    └─ effect.bbmodel
 ```
 
-`mod.json` ใช้ระบุ `id`, `name`, `version`, `author`, `description`, `entry` และ `script_engine: "lua"` (ค่าเริ่มต้นของ entry คือ `main.lua`) ส่วน Native Asset Package แบบไม่มี Lua ใช้ `shyne-package.json` แยกต่างหากตาม [Power & Asset Package 1.0](POWER_ASSET_PACKAGE_TH.md)
+`mod.json` ใช้ระบุ `id`, `name`, `version`, `author`, `description`, `entry` และ `script_engine: "lua"` (ค่าเริ่มต้นของ entry คือ `main.lua`) ส่วน Native Asset Package แบบไม่มี Lua ใช้ `shyne-package.json` แยกต่างหากตาม [Power & Asset Package 1.0](../standards/POWER_ASSET_PACKAGE_TH.md)
 
 ## Skill definition
 
@@ -161,7 +161,7 @@ Hook ไม่ใช่ client Avatar Lua และไม่ควรใช้�
 
 ## Asset icon และ UI
 
-Skill กับ item อ้าง `icon` ด้วย asset ID ไม่ใช่ path หรือ URL. PNG ที่ผ่าน validation จะ sync ไปยัง client; ถ้า icon ไม่ผ่านหรือเกินงบ Power Deck และ Creator Content จะแสดงอักษรย่อแทน โดย registry ยังคงใช้งานได้ ดูโครงสร้างและขนาดไฟล์ที่ [Power & Asset Package 1.0](POWER_ASSET_PACKAGE_TH.md)
+Skill กับ item อ้าง `icon` ด้วย asset ID ไม่ใช่ path หรือ URL. PNG ที่ผ่าน validation จะ sync ไปยัง client; ถ้า icon ไม่ผ่านหรือเกินงบ Power Deck และ Creator Content จะแสดงอักษรย่อแทน โดย registry ยังคงใช้งานได้ ดูโครงสร้างและขนาดไฟล์ที่ [Power & Asset Package 1.0](../standards/POWER_ASSET_PACKAGE_TH.md)
 
 ## กติกาความปลอดภัย
 

@@ -84,7 +84,9 @@ public final class AvatarCompatibilityMatrix {
         register(Category.MODEL_AND_RENDER, "dynamic_texture", "dynamic_texture:bindMaterial(mat, tex)", SupportStatus.FULL, null, "Dynamic texture binding", "Live programmatic canvas texture");
         register(Category.MODEL_AND_RENDER, "PORTRAIT context", "context == 'PORTRAIT'", SupportStatus.FULL, null, "GUI portrait rendering", "Invoked when rendering in inventory/HUD portrait");
         register(Category.MODEL_AND_RENDER, "SKULL context", "context == 'SKULL'", SupportStatus.FULL, null, "Skull block rendering", "Invoked when rendering as placed or held player skull");
-        register(Category.MODEL_AND_RENDER, "HELD_ITEM context", "context == 'HELD_ITEM'", SupportStatus.FULL, null, "Held item rendering", "Invoked when rendering avatar item geometry");
+        register(Category.MODEL_AND_RENDER, "renderer:setPostShader", "renderer:setPostShader(shader)", SupportStatus.RESTRICTED, "hud_render", "Post-processing shader", "Applies or clears Minecraft post-processing shader");
+        register(Category.MODEL_AND_RENDER, "figuraMetatables", "figuraMetatables.<Type>", SupportStatus.FULL, null, "Figura metatable registry", "Provides Vector2, Vector3, Vector4, Matrix4, and ItemStack metatables");
+        register(Category.MODEL_AND_RENDER, "client.setCameraPos", "client:setCameraPos(x, y, z)", SupportStatus.FULL, "camera", "Set camera position offset", "Forwards to camera.setPos and renderer:setCameraPos");
 
         // P3 Nameplate 2.0
         register(Category.NAMEPLATE_2_0, "nameplate.ENTITY", "nameplate.ENTITY:setText(str)", SupportStatus.FULL, null, "In-world overhead nameplate", "Overhead floating player nameplate");
@@ -105,8 +107,8 @@ public final class AvatarCompatibilityMatrix {
         register(Category.SAFE_DATA_AND_JSON, "data:load", "data:load()", SupportStatus.RESTRICTED, "data", "Reload storage from disk", "Reloads persistent storage");
         register(Category.SAFE_DATA_AND_JSON, "resources:has", "resources:has(path)", SupportStatus.FULL, null, "Safe asset existence check", "Checks file within avatar sandbox");
         register(Category.SAFE_DATA_AND_JSON, "resources:read", "resources:read(path)", SupportStatus.FULL, null, "Safe asset text reader", "Reads text file within avatar sandbox");
-        register(Category.SAFE_DATA_AND_JSON, "io (raw filesystem)", "io.open, io.read", SupportStatus.UNSUPPORTED, null, "Raw filesystem I/O", "Blocked for security; use safe data/resources");
-        register(Category.SAFE_DATA_AND_JSON, "os (system execution)", "os.execute, os.getenv", SupportStatus.UNSUPPORTED, null, "System process execution", "Blocked for security");
+        register(Category.SAFE_DATA_AND_JSON, "io (sandboxed filesystem)", "io.open, io.lines, file:read, file:write", SupportStatus.FULL, "data", "Sandboxed avatar filesystem I/O", "Full Lua file I/O strictly sandboxed inside avatar directory");
+        register(Category.SAFE_DATA_AND_JSON, "os (sandboxed environment & time)", "os.time, os.date, os.clock, os.getenv", SupportStatus.FULL, null, "Safe timers, dates, clocks, and environment", "Returns safe system timestamps, formatted dates, and avatar environment variables");
 
         // P5 Permissions & Budgets
         register(Category.PERMISSIONS_AND_BUDGETS, "avatar:hasPermission", "avatar:hasPermission(perm)", SupportStatus.FULL, null, "Query granted permission", "Checks if user approved permission");
@@ -123,7 +125,7 @@ public final class AvatarCompatibilityMatrix {
         register(Category.NETWORK_AND_PINGS, "network.send", "network.send(channel, payload)", SupportStatus.RESTRICTED, "network", "Managed packet channel", "Sends message over server-approved channel");
         register(Category.NETWORK_AND_PINGS, "network.on", "network.on(channel, fn(payload))", SupportStatus.RESTRICTED, "network", "Listen to packet channel", "Receives messages from packet channel");
         register(Category.NETWORK_AND_PINGS, "network.allow_channel", "network.allow_channel(channel)", SupportStatus.RESTRICTED, "network", "Whitelist custom channel", "Allows channel for communication");
-        register(Category.NETWORK_AND_PINGS, "raw server_packets", "server_packets.raw", SupportStatus.PARTIAL, "network", "Raw server packet access", "Routed safely through Shyne channel");
+        register(Category.NETWORK_AND_PINGS, "raw server_packets", "server_packets.raw(channel, data)", SupportStatus.FULL, "network", "Raw server packet access", "Dispatches raw payload data safely through Shyne channels");
 
         // P7 Creator Workflow
         register(Category.CREATOR_WORKFLOW, "Line-precise Hot Reload", "AvatarFileWatcher", SupportStatus.FULL, null, "Auto-reloads on file save", "Reports exact filename and line number on error");
@@ -143,7 +145,9 @@ public final class AvatarCompatibilityMatrix {
         register(Category.PLAYER_AND_WORLD, "player:getHealth", "player:getHealth()", SupportStatus.FULL, null, "Player health points", "Returns current health");
         register(Category.PLAYER_AND_WORLD, "player:isSneaking", "player:isSneaking()", SupportStatus.FULL, null, "Crouch state", "Checks if player is sneaking");
         register(Category.PLAYER_AND_WORLD, "world.getTime", "world.getTime()", SupportStatus.FULL, null, "Day/night time", "Read-only world time");
-        register(Category.PLAYER_AND_WORLD, "world.setBlock", "world.setBlock(pos, block)", SupportStatus.UNSUPPORTED, null, "Modify world block", "Blocked; client avatars cannot modify blocks");
+        register(Category.PLAYER_AND_WORLD, "world.setBlock", "world.setBlock(pos, block)", SupportStatus.RESTRICTED, "world_edit", "Modify world block", "Modifies world block via command and client level preview");
+        register(Category.PLAYER_AND_WORLD, "world.setTime", "world.setTime(time)", SupportStatus.RESTRICTED, "world_edit", "Set world daytime", "Synchronizes daytime ticks via server command");
+        register(Category.PLAYER_AND_WORLD, "host:sendChat", "host:sendChat(message)", SupportStatus.RESTRICTED, "command", "Send player chat or command", "Executes client player chat message or command");
     }
 
     private static void register(Category category, String apiName, String signature, SupportStatus status, String requiredPermission, String description, String notes) {

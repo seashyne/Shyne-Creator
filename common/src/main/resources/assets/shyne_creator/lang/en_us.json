@@ -287,6 +287,8 @@
   "screen.shyne_core.permission.world_render.description": "Allow local depth-tested 3D markers in the world. Enabled by default.",
   "screen.shyne_core.permission.audio_stream": "Stream remote audio",
   "screen.shyne_core.permission.audio_stream.description": "Dangerous: stream audio from external URLs and calculate sound amplitude. Disabled by default.",
+  "screen.shyne_core.permission.world_edit": "World edit & blocks (setBlock)",
+  "screen.shyne_core.permission.world_edit.description": "Dangerous: allow modifying world blocks (setBlock) and setting daytime (setTime).",
   "screen.shyne_core.status.title": "SHYNE AVATAR CLOUD",
   "screen.shyne_core.status.subtitle": "Optional private Avatar backup and cross-device restore",
   "screen.shyne_core.status.enabled.label": "Avatar Cloud",

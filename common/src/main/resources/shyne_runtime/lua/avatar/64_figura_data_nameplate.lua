@@ -385,3 +385,150 @@ resources = {
     return {}
   end
 }
+
+-- ------------------------------------------------------------------------------
+-- 5. SANDBOXED AVATAR FILESYSTEM I/O (io.open, io.lines, io.type)
+-- ------------------------------------------------------------------------------
+
+io = io or {}
+local file_mt = {}
+file_mt.__index = file_mt
+
+function file_mt:read(fmt)
+  if self._closed then error("attempt to use a closed file", 2) end
+  fmt = fmt or "*l"
+  if self._mode == "w" or self._mode == "a" then error("file not open for reading", 2) end
+  if not self._content then
+    self._content = _avatar_resource_read and _avatar_resource_read(self._path) or ""
+    self._pos = 1
+  end
+  if self._pos > #self._content then return nil end
+  if fmt == "*a" or fmt == "*all" then
+    local res = self._content:sub(self._pos)
+    self._pos = #self._content + 1
+    return res
+  elseif fmt == "*l" or fmt == "*line" then
+    local nl = self._content:find("\n", self._pos, true)
+    local res
+    if nl then
+      res = self._content:sub(self._pos, nl - 1)
+      self._pos = nl + 1
+    else
+      res = self._content:sub(self._pos)
+      self._pos = #self._content + 1
+    end
+    if res:sub(-1) == "\r" then res = res:sub(1, -2) end
+    return res
+  elseif type(fmt) == "number" then
+    local res = self._content:sub(self._pos, self._pos + fmt - 1)
+    self._pos = self._pos + fmt
+    return res
+  end
+  return nil
+end
+
+function file_mt:write(...)
+  if self._closed then error("attempt to use a closed file", 2) end
+  local args = { ... }
+  for _, part in ipairs(args) do
+    local str = tostring(part)
+    if self._mode == "a" or self._mode == "a+" then
+      if _avatar_file_append then _avatar_file_append(self._path, str) end
+    else
+      if not self._written then
+        if _avatar_file_write then _avatar_file_write(self._path, str) end
+        self._written = true
+      else
+        if _avatar_file_append then _avatar_file_append(self._path, str) end
+      end
+    end
+  end
+  return self
+end
+
+function file_mt:close()
+  self._closed = true
+  return true
+end
+
+function file_mt:lines()
+  return function() return self:read("*l") end
+end
+
+function io.open(filename, mode)
+  mode = mode or "r"
+  filename = tostring(filename or "")
+  if mode:find("r") and not (_avatar_resource_has and _avatar_resource_has(filename)) and not mode:find("%+") then
+    return nil, "cannot open file '" .. filename .. "' (No such file)"
+  end
+  if mode:find("w") and not mode:find("a") then
+    if _avatar_file_write then _avatar_file_write(filename, "") end
+  elseif mode:find("a") then
+    if _avatar_file_append then _avatar_file_append(filename, "") end
+  end
+  local f = {
+    _path = filename,
+    _mode = mode,
+    _closed = false,
+    _content = nil,
+    _pos = 1,
+    _written = true
+  }
+  return setmetatable(f, file_mt)
+end
+
+function io.lines(filename)
+  local f, err = io.open(filename, "r")
+  if not f then error(err, 2) end
+  return function()
+    local line = f:read("*l")
+    if line == nil then f:close() end
+    return line
+  end
+end
+
+function io.type(obj)
+  if type(obj) == "table" and getmetatable(obj) == file_mt then
+    return obj._closed and "closed file" or "file"
+  end
+  return nil
+end
+
+-- ------------------------------------------------------------------------------
+-- 6. SAFE SANDBOXED OS APIS (os.time, os.date, os.clock, os.getenv)
+-- ------------------------------------------------------------------------------
+
+os = os or {}
+
+function os.time(tbl)
+  if type(tbl) == "table" then
+    local y = tbl.year or 1970
+    local m = tbl.month or 1
+    local d = tbl.day or 1
+    local h = tbl.hour or 0
+    local min = tbl.min or 0
+    local s = tbl.sec or 0
+    return _shyne_os_time and _shyne_os_time(y, m, d, h, min, s) or 0
+  end
+  return _shyne_os_time and _shyne_os_time() or 0
+end
+
+function os.date(fmt, time)
+  return _shyne_os_date and _shyne_os_date(fmt or "%c", time or os.time()) or tostring(time or 0)
+end
+
+function os.clock()
+  return _shyne_os_clock and _shyne_os_clock() or 0
+end
+
+function os.difftime(t2, t1)
+  return (tonumber(t2) or 0) - (tonumber(t1) or 0)
+end
+
+function os.getenv(var)
+  return _shyne_os_getenv and _shyne_os_getenv(tostring(var or "")) or nil
+end
+
+function os.execute(cmd)
+  return nil, "os.execute is sandboxed for multiplayer security"
+end

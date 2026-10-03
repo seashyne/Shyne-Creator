@@ -20,7 +20,8 @@ public enum AvatarPermission {
     CHAT_NAMEPLATE("chat_nameplate", true),
     TAB_LIST_NAMEPLATE("tab_list_nameplate", true),
     DATA_STORAGE("data_storage", false),
-    NETWORK("network", false);
+    NETWORK("network", false),
+    WORLD_EDIT("world_edit", true);
 
     private final String id;
     private final boolean dangerous;
@@ -52,6 +53,7 @@ public enum AvatarPermission {
         if ("data".equals(normalized)) return Optional.of(DATA_STORAGE);
         if ("sounds".equals(normalized) || "custom_sounds".equals(normalized)) return Optional.of(SOUND);
         if ("local_camera".equals(normalized)) return Optional.of(CAMERA);
+        if ("world_edit".equals(normalized) || "setblock".equals(normalized) || "world_modify".equals(normalized) || "blocks".equals(normalized)) return Optional.of(WORLD_EDIT);
         for (AvatarPermission permission : values()) {
             if (permission.id.equals(normalized)) return Optional.of(permission);
         }

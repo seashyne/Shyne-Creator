@@ -27,7 +27,7 @@ Shyne Creator เป็น runtime สำหรับใช้ Avatar และ 
 
 ปุ่ม `Z`, `X`, `C` และ `V` เป็นช่องความสามารถจาก Content Pack จึงอาจไม่ทำอะไรหากโลกหรือเซิร์ฟเวอร์ไม่ได้ติดตั้งแพ็กที่รองรับ ส่วน **Shyne Creator Kit ใช้สำหรับสร้าง Avatar และห้ามนำไปใส่ในโฟลเดอร์ `mods`**
 
-คู่มือสำหรับผู้เล่น: [เริ่มใช้ Shyne ใน 1 นาที](PLAYER_QUICKSTART_TH.md)
+คู่มือสำหรับผู้เล่น: [เริ่มใช้ Shyne ใน 1 นาที](docs/guides/PLAYER_QUICKSTART_TH.md)
 
 ## Native Power Deck, Item Catalog, PNG Icon และ 3D Item Presentation
 
@@ -37,7 +37,7 @@ Power Deck เป็น native Minecraft UI ที่มีช่อง action �
 
 ไอเท็ม Creator สามารถประกาศ `presentation.model_id` เพื่อใช้โมเดล Blockbench เดียวกันในมือ, third-person, inventory/GUI, item frame และบนพื้นได้แล้ว โดยยังใช้ PNG `icon` แยกสำหรับ Catalog และ Power Deck. ระบบจะ fallback เป็นโมเดล Minecraft ปกติหาก client ยังไม่ได้รับโมเดลของแพ็ก จึงไม่ทำให้ item หายระหว่าง sync.
 
-ใช้ SVG เป็นไฟล์ต้นฉบับใน React/Figma/editor ได้ แต่ก่อนเข้าเกมต้อง export เป็น PNG; ไม่มี WebView หรือ SVG runtime ในม็อด อ่านรูปแบบแพ็กและคำสั่งตรวจได้ที่ [Creator Asset Package 1.0](POWER_ASSET_PACKAGE_TH.md)
+ใช้ SVG เป็นไฟล์ต้นฉบับใน React/Figma/editor ได้ แต่ก่อนเข้าเกมต้อง export เป็น PNG; ไม่มี WebView หรือ SVG runtime ในม็อด อ่านรูปแบบแพ็กและคำสั่งตรวจได้ที่ [Creator Asset Package 1.0](docs/standards/POWER_ASSET_PACKAGE_TH.md)
 
 ## Shyne Avatar Standard 2.0 — Model-first
 
@@ -54,7 +54,7 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 }
 ```
 
-`accessory` เป็นค่าเริ่มต้นแบบ overlay ที่ปลอดภัยและไม่ซ่อนตัวผู้เล่น vanilla มาตรฐานนี้ใช้ Shyne runtime โดยตรง ไม่พึ่ง Figura และไม่รับรอง compatibility กับสคริปต์ Figura/สคริปต์ legacy อ่านสัญญาและตัวอย่างทั้งหมดที่ [SHYNE_STANDARD_2_TH.md](SHYNE_STANDARD_2_TH.md)
+`accessory` เป็นค่าเริ่มต้นแบบ overlay ที่ปลอดภัยและไม่ซ่อนตัวผู้เล่น vanilla มาตรฐานนี้ใช้ Shyne runtime โดยตรง ไม่พึ่ง Figura และไม่รับรอง compatibility กับสคริปต์ Figura/สคริปต์ legacy อ่านสัญญาและตัวอย่างทั้งหมดที่ [SHYNE_STANDARD_2_TH.md](docs/standards/SHYNE_STANDARD_2_TH.md)
 
 เครื่องมือตั้ง profile, attachment, role, animation state และ export manifest จาก Blockbench อยู่ที่ [Shyne Blockbench Plugin](tools/blockbench/README_TH.md)
 
@@ -110,7 +110,7 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 - ไม่ใช้ `.sc v1`, `.sc v2`, data key หรือ lease แบบกำหนดเอง และไม่อ้างว่าสามารถลบสำเนาที่ผู้เล่นติดตั้งไปแล้วจากระยะไกล
 - Private chunk แยก namespace ตามเจ้าของ ป้องกันการอ้าง hash ข้ามบัญชี
 
-คู่มือผู้ใช้และ API: [AVATAR_CLOUD.md](AVATAR_CLOUD.md), [CLOUD_API.md](CLOUD_API.md) และ [PUBLIC_SHARE.md](PUBLIC_SHARE.md)
+คู่มือผู้ใช้และ API: [AVATAR_CLOUD.md](docs/architecture/AVATAR_CLOUD.md), [CLOUD_API.md](docs/api/CLOUD_API.md) และ [PUBLIC_SHARE.md](docs/guides/PUBLIC_SHARE.md)
 
 ## 2.8.0-alpha Native Fidelity Fix
 
@@ -141,15 +141,15 @@ Standard 2.0 เปลี่ยน workflow ให้เริ่มจาก Bl
 - เพิ่ม `shyne_role` / `shyne_tags` และ API `model.role()` / `model.tag()` โดย path ของโมเดลยังเป็น API หลักสำหรับ rig ซับซ้อน
 - รุ่น 2.7.44 ใช้ network protocol `9`; รุ่นปัจจุบันใช้ protocol `19` และ client/server ต้องใช้รุ่นเดียวกัน
 
-Creator quick start, Render Task API และ Profiler: [CREATOR_QUICKSTART_TH.md](CREATOR_QUICKSTART_TH.md)
+Creator quick start, Render Task API และ Profiler: [CREATOR_QUICKSTART_TH.md](docs/guides/CREATOR_QUICKSTART_TH.md)
 
-มาตรฐานสร้าง Avatar แบบ model-first และ Zero-Lua: [SHYNE_STANDARD_2_TH.md](SHYNE_STANDARD_2_TH.md)
+มาตรฐานสร้าง Avatar แบบ model-first และ Zero-Lua: [SHYNE_STANDARD_2_TH.md](docs/standards/SHYNE_STANDARD_2_TH.md)
 
-มาตรฐาน Blockbench animation และ Shyne Expression: [BLOCKBENCH_ANIMATION_STANDARD.md](BLOCKBENCH_ANIMATION_STANDARD.md)
+มาตรฐาน Blockbench animation และ Shyne Expression: [BLOCKBENCH_ANIMATION_STANDARD.md](docs/guides/BLOCKBENCH_ANIMATION_STANDARD.md)
 
-คู่มือ Native Rig, armor cosmetic และ secondary physics: [RIG_API_TH.md](RIG_API_TH.md)
+คู่มือ Native Rig, armor cosmetic และ secondary physics: [RIG_API_TH.md](docs/api/RIG_API_TH.md)
 
-แผนผังโค้ดและกติกาการแยกไฟล์: [ARCHITECTURE_TH.md](ARCHITECTURE_TH.md)
+แผนผังโค้ดและกติกาการแยกไฟล์: [ARCHITECTURE_TH.md](docs/architecture/ARCHITECTURE_TH.md)
 
 ## Structure
 
@@ -274,10 +274,10 @@ Avatar และ gameplay packs ยังใช้โฟลเดอร์มา
 └─ <content-pack>/
 ```
 
-Core JAR ไม่บรรจุ Avatar, model หรือ gameplay pack ตัวอย่าง ดูรูปแบบไฟล์ใน `AVATAR_SYSTEM.md`, Avatar Lua API ใน `SHYNE_LUA_API_TH.md`, Gameplay API ใน `SHYNE_GAMEPLAY_API_TH.md`, Custom Render API ใน `CUSTOM_RENDER_API_TH.md` และการทดสอบหลายผู้เล่นใน `MULTIPLAYER_TESTING.md`
+Core JAR ไม่บรรจุ Avatar, model หรือ gameplay pack ตัวอย่าง ดูรูปแบบไฟล์ใน [`AVATAR_SYSTEM.md`](docs/architecture/AVATAR_SYSTEM.md), Avatar Lua API ใน [`SHYNE_LUA_API_TH.md`](docs/api/SHYNE_LUA_API_TH.md), Gameplay API ใน [`SHYNE_GAMEPLAY_API_TH.md`](docs/api/SHYNE_GAMEPLAY_API_TH.md), Custom Render API ใน [`CUSTOM_RENDER_API_TH.md`](docs/api/CUSTOM_RENDER_API_TH.md) และการทดสอบหลายผู้เล่นใน [`MULTIPLAYER_TESTING.md`](docs/architecture/MULTIPLAYER_TESTING.md)
 
 ## License
 
 Copyright (C) 2026 seashyne
 
-ซอร์สโค้ด Shyne Creator เผยแพร่ภายใต้ `Mozilla Public License 2.0` (`MPL-2.0`) ดูข้อความฉบับเต็มใน `LICENSE` ชื่อ Shyne, Shyne Creator และโลโก้ของโครงการไม่รวมอยู่ในสิทธิ์การใช้เครื่องหมายการค้าของ MPL โปรดดู `TRADEMARKS.md`
+ซอร์สโค้ด Shyne Creator เผยแพร่ภายใต้ `Mozilla Public License 2.0` (`MPL-2.0`) ดูข้อความฉบับเต็มใน `LICENSE` ชื่อ Shyne, Shyne Creator และโลโก้ของโครงการไม่รวมอยู่ในสิทธิ์การใช้เครื่องหมายการค้าของ MPL โปรดดู [`TRADEMARKS.md`](docs/legal/TRADEMARKS.md)

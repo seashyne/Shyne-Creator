@@ -273,6 +273,8 @@
   "screen.shyne_core.permission.world_render.description": "อนุญาตเครื่องหมาย 3D ภายในโลกที่ทดสอบความลึก เปิดไว้เป็นค่าเริ่มต้น",
   "screen.shyne_core.permission.audio_stream": "สตรีมเสียงจากภายนอก",
   "screen.shyne_core.permission.audio_stream.description": "อันตราย: สตรีมเสียงจาก URL ภายนอกและคำนวณคลื่นเสียง ปิดไว้เป็นค่าเริ่มต้น",
+  "screen.shyne_core.permission.world_edit": "แก้ไขบล็อกในโลก (setBlock)",
+  "screen.shyne_core.permission.world_edit.description": "อันตราย: อนุญาตให้ปรับเปลี่ยนบล็อกในโลก (setBlock) และปรับเวลาโลก (setTime)",
   "screen.shyne_core.status.title": "SHYNE AVATAR CLOUD",
   "screen.shyne_core.status.subtitle": "ระบบเสริมสำหรับสำรอง Avatar ส่วนตัวและกู้คืนข้ามเครื่อง",
   "screen.shyne_core.status.enabled.label": "Avatar Cloud",

@@ -18,7 +18,10 @@ MAX_SYNCED_SCHEMA_BYTES = 256 * 1024
 MAX_SYNCED_SCHEMA_DEPTH = 8
 MAX_SYNCED_SCHEMA_RULES = 512
 TEXTURE_EXTENSIONS = {".png"}
-ALLOWED_PERMISSIONS = {"particle", "sound", "camera", "microphone", "command", "hud_render", "world_render"}
+ALLOWED_PERMISSIONS = {
+    "particle", "sound", "camera", "microphone", "command", "hud_render", "world_render",
+    "audio_stream", "nameplate", "chat_nameplate", "tab_list_nameplate", "data_storage", "data", "network", "world_edit"
+}
 LATEST_API = "2.0"
 SUPPORTED_APIS = {"auto", "latest", LATEST_API}
 POWER_PACKAGE_MANIFEST = "shyne-package.json"
@@ -554,6 +557,7 @@ def validate(root: Path) -> dict:
         "command": r"\bminecraft\.command\s*\(",
         "hud_render": r"\brender\.(?:text|item|block|sprite|line)\s*\(",
         "world_render": r"\brender\.world\s*\(",
+        "world_edit": r"\bworld\.(?:setBlock|setTime)\s*\(|\bminecraft\.world\.set_block\s*\(",
     }
     for permission, pattern in permission_patterns.items():
         if re.search(pattern, lua_source):

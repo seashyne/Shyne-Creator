@@ -176,65 +176,66 @@ public final class AvatarScriptLinter {
             }
 
             // Check deprecated / unsupported Figura APIs
-            if (FIGURA_METATABLES.matcher(codeOnly).find()) {
-                issues.add(new AvatarLintIssue(
-                    AvatarLintIssue.Severity.WARNING,
-                    fileName,
-                    lineNumber,
-                    "FIGURA_METATABLES",
-                    "figuraMetatables is not supported in Shyne.",
-                    "Use standard Lua metatables or Shyne vectors/matrices."
-                ));
-            }
+
             if (DEPRECATED_CAMERA.matcher(codeOnly).find()) {
-                issues.add(new AvatarLintIssue(
-                    AvatarLintIssue.Severity.WARNING,
-                    fileName,
-                    lineNumber,
-                    "DEPRECATED_CAMERA",
-                    "client.setCameraPos is deprecated.",
-                    "Use camera.setPos(...) instead (requires 'local_camera' permission)."
-                ));
+                if (declaredPermissions != null && !declaredPermissions.contains(AvatarPermission.CAMERA)) {
+                    issues.add(new AvatarLintIssue(
+                        AvatarLintIssue.Severity.WARNING,
+                        fileName,
+                        lineNumber,
+                        "MISSING_PERMISSION_CAMERA",
+                        "client.setCameraPos requires 'camera' permission.",
+                        "Add \"camera\" to \"permissions\" array in avatar.json."
+                    ));
+                }
             }
             if (BLOCKED_SET_BLOCK.matcher(codeOnly).find()) {
-                issues.add(new AvatarLintIssue(
-                    AvatarLintIssue.Severity.ERROR,
-                    fileName,
-                    lineNumber,
-                    "BLOCKED_WORLD_MOD",
-                    "world.setBlock is blocked. Client avatars cannot modify world blocks.",
-                    "Use visual avatar model blocks or particles instead."
-                ));
+                if (declaredPermissions != null && !declaredPermissions.contains(AvatarPermission.WORLD_EDIT) && !declaredPermissions.contains(AvatarPermission.COMMAND)) {
+                    issues.add(new AvatarLintIssue(
+                        AvatarLintIssue.Severity.WARNING,
+                        fileName,
+                        lineNumber,
+                        "MISSING_PERMISSION_WORLD_EDIT",
+                        "Script modifies world blocks with 'world.setBlock', but 'world_edit' permission is not declared.",
+                        "Add \"world_edit\" to \"permissions\" array in avatar.json."
+                    ));
+                }
             }
             if (BLOCKED_SET_TIME.matcher(codeOnly).find()) {
-                issues.add(new AvatarLintIssue(
-                    AvatarLintIssue.Severity.WARNING,
-                    fileName,
-                    lineNumber,
-                    "BLOCKED_WORLD_TIME",
-                    "world.setTime is blocked. Time is synchronized by the server.",
-                    "Query world.getTime() for read-only time data."
-                ));
+                if (declaredPermissions != null && !declaredPermissions.contains(AvatarPermission.WORLD_EDIT) && !declaredPermissions.contains(AvatarPermission.COMMAND)) {
+                    issues.add(new AvatarLintIssue(
+                        AvatarLintIssue.Severity.WARNING,
+                        fileName,
+                        lineNumber,
+                        "MISSING_PERMISSION_WORLD_EDIT",
+                        "Script modifies world time with 'world.setTime', but 'world_edit' permission is not declared.",
+                        "Add \"world_edit\" to \"permissions\" array in avatar.json."
+                    ));
+                }
             }
             if (UNSUPPORTED_HOST_CHAT.matcher(codeOnly).find()) {
-                issues.add(new AvatarLintIssue(
-                    AvatarLintIssue.Severity.WARNING,
-                    fileName,
-                    lineNumber,
-                    "UNSUPPORTED_HOST_CHAT",
-                    "host:sendChat is not supported in Shyne sandbox.",
-                    "Use network channels or chat events instead."
-                ));
+                if (declaredPermissions != null && !declaredPermissions.contains(AvatarPermission.COMMAND)) {
+                    issues.add(new AvatarLintIssue(
+                        AvatarLintIssue.Severity.WARNING,
+                        fileName,
+                        lineNumber,
+                        "MISSING_PERMISSION_COMMAND",
+                        "Script uses host:sendChat, but 'command' permission is not declared.",
+                        "Add \"command\" to \"permissions\" array in avatar.json."
+                    ));
+                }
             }
             if (UNSUPPORTED_POST_SHADER.matcher(codeOnly).find()) {
-                issues.add(new AvatarLintIssue(
-                    AvatarLintIssue.Severity.WARNING,
-                    fileName,
-                    lineNumber,
-                    "UNSUPPORTED_POST_SHADER",
-                    "renderer:setPostShader is not supported in the standard pipeline.",
-                    "Use custom material dynamic textures or render context callbacks."
-                ));
+                if (declaredPermissions != null && !declaredPermissions.contains(AvatarPermission.HUD_RENDER)) {
+                    issues.add(new AvatarLintIssue(
+                        AvatarLintIssue.Severity.WARNING,
+                        fileName,
+                        lineNumber,
+                        "MISSING_PERMISSION_HUD_RENDER",
+                        "Script sets post-processing shaders with 'renderer:setPostShader', but 'hud_render' permission is not declared.",
+                        "Add \"hud_render\" to \"permissions\" array in avatar.json."
+                    ));
+                }
             }
 
             // Check missing permissions

@@ -1,6 +1,6 @@
 # Shyne Public ZIP Share
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.13.0` และ Cloud API `2.2` ดู API contracts ที่เกี่ยวข้องได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.13.0` และ Cloud API `2.2` ดู API contracts ที่เกี่ยวข้องได้ที่ [API Contracts](../api/API_CONTRACTS_TH.md)
 
 Public Share แยกจาก Private Cloud Backup โฟลเดอร์พัฒนาและไฟล์ที่ Restore ยังคงเป็น Avatar folder ตามปกติ ส่วนสำเนาที่ Publish จะเป็น ZIP มาตรฐานซึ่ง Shyne Creator สร้างและ Backend ตรวจสอบก่อนเผยแพร่
 
@@ -41,4 +41,4 @@ Public Share 2.2 ไม่ใช้ container `.sc v1` หรือ `.sc v2`, �
 - DRM หรือการลบไฟล์จากเครื่องผู้เล่นระยะไกล
 - ความปลอดภัยของ Lua ที่ขอ permission อันตรายโดยอัตโนมัติ ผู้ใช้ยังต้องตรวจและอนุมัติเอง
 
-รายละเอียด endpoint และรูปแบบ header อยู่ใน [CLOUD_API.md](CLOUD_API.md)
+รายละเอียด endpoint และรูปแบบ header อยู่ใน [CLOUD_API.md](../api/CLOUD_API.md)

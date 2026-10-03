@@ -1,6 +1,6 @@
 # Shyne Creator SDK
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.13.0` schema ใน `shyne_sdk/schemas/` คือ contract สำหรับ JSON ของ Creator ดูภาพรวมได้ที่ [API Contracts](API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.13.0` schema ใน `shyne_sdk/schemas/` คือ contract สำหรับ JSON ของ Creator ดูภาพรวมได้ที่ [API Contracts](../api/API_CONTRACTS_TH.md)
 
 เอกสารนี้เป็นจุดเริ่มต้นสำหรับมอดเสริมที่สร้าง Power, Skill และ Avatar โดยไม่ฝัง content ตัวอย่างไว้ใน Shyne Creator
 
@@ -113,7 +113,7 @@ Schema อยู่ที่ `src/main/resources/shyne_sdk/schemas` และค
 }
 ```
 
-โมเดลจะแสดงในมือ, GUI/inventory, ground และ fixed display; `icon` PNG ยังใช้กับหน้า Deck/Catalog. ละ `presentation` หรือให้ `replace_vanilla` เป็น `false` เพื่อคงโมเดล Minecraft ปกติไว้. ดู field ครบและตัวอย่างได้ที่ [Gameplay API](SHYNE_GAMEPLAY_API_TH.md) และ [Asset Package](POWER_ASSET_PACKAGE_TH.md)
+โมเดลจะแสดงในมือ, GUI/inventory, ground และ fixed display; `icon` PNG ยังใช้กับหน้า Deck/Catalog. ละ `presentation` หรือให้ `replace_vanilla` เป็น `false` เพื่อคงโมเดล Minecraft ปกติไว้. ดู field ครบและตัวอย่างได้ที่ [Gameplay API](../api/SHYNE_GAMEPLAY_API_TH.md) และ [Asset Package](POWER_ASSET_PACKAGE_TH.md)
 
 ## โครง Avatar
 

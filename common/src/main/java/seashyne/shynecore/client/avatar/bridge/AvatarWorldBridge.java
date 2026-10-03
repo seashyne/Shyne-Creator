@@ -17,22 +17,31 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.luaj.vm2.Globals;
+import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
+import org.luaj.vm2.lib.OneArgFunction;
 import org.luaj.vm2.lib.VarArgFunction;
+import seashyne.shynecore.client.avatar.AvatarPermission;
+import seashyne.shynecore.client.avatar.AvatarState;
 
 import java.util.List;
+import java.util.Locale;
 
 import static seashyne.shynecore.client.avatar.bridge.AvatarBridgeHelper.vec3;
 
 /**
- * Handles read queries for player state, world queries, blocks, entities, raycasting, and physics probes.
+ * Handles read queries for player state, world queries, blocks, entities, raycasting, physics probes, and world modification.
  */
 public final class AvatarWorldBridge {
     private AvatarWorldBridge() {}
 
     public static void register(Globals globals) {
+        register(globals, null);
+    }
+
+    public static void register(Globals globals, AvatarState state) {
         globals.set("_shyne_read", new VarArgFunction() {
             @Override public Varargs invoke(Varargs args) {
                 Minecraft client = Minecraft.getInstance();
@@ -136,6 +145,55 @@ public final class AvatarWorldBridge {
                 double vy = args.arg(2).optdouble(client.player.getDeltaMovement().y);
                 double vz = args.arg(3).optdouble(client.player.getDeltaMovement().z);
                 client.player.setDeltaMovement(vx, vy, vz);
+                return LuaValue.TRUE;
+            }
+        });
+
+        globals.set("_shyne_world_set_block", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                if (state != null && !state.permissionAllowed(AvatarPermission.WORLD_EDIT) && !state.permissionAllowed(AvatarPermission.COMMAND)) {
+                    throw new LuaError("world.setBlock requires 'world_edit' or 'command' permission in avatar.json");
+                }
+                int x = args.arg(1).toint();
+                int y = args.arg(2).toint();
+                int z = args.arg(3).toint();
+                String blockId = args.arg(4).optjstring("minecraft:air");
+
+                Minecraft client = null;
+                try {
+                    client = Minecraft.getInstance();
+                } catch (Throwable ignored) {}
+                if (client == null || client.player == null) return LuaValue.TRUE;
+
+                final Minecraft finalClient = client;
+                client.execute(() -> {
+                    BlockPos pos = new BlockPos(x, y, z);
+                    var loc = net.minecraft.resources.Identifier.tryParse(blockId);
+                    if (loc != null && finalClient.level != null) {
+                        var optBlock = BuiltInRegistries.BLOCK.getOptional(loc);
+                        optBlock.ifPresent(block -> finalClient.level.setBlock(pos, block.defaultBlockState(), 3));
+                    }
+                    if (finalClient.player != null && finalClient.player.connection != null) {
+                        finalClient.player.connection.sendCommand(String.format(Locale.ROOT, "setblock %d %d %d %s", x, y, z, blockId));
+                    }
+                });
+                return LuaValue.TRUE;
+            }
+        });
+
+        globals.set("_shyne_world_set_time", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                if (state != null && !state.permissionAllowed(AvatarPermission.WORLD_EDIT) && !state.permissionAllowed(AvatarPermission.COMMAND)) {
+                    throw new LuaError("world.setTime requires 'world_edit' or 'command' permission in avatar.json");
+                }
+                long time = arg.tolong();
+                Minecraft client = null;
+                try {
+                    client = Minecraft.getInstance();
+                } catch (Throwable ignored) {}
+                if (client == null || client.player == null || client.player.connection == null) return LuaValue.TRUE;
+                final Minecraft finalClient = client;
+                client.execute(() -> finalClient.player.connection.sendCommand("time set " + time));
                 return LuaValue.TRUE;
             }
         });

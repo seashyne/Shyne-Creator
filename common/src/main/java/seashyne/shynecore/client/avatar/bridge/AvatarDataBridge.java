@@ -178,6 +178,43 @@ public final class AvatarDataBridge {
             }
         });
 
+        globals.set("_avatar_file_write", new TwoArgFunction() {
+            @Override
+            public LuaValue call(LuaValue pathArg, LuaValue contentArg) {
+                if (!state.permissionAllowed(AvatarPermission.DATA_STORAGE)) {
+                    throw new LuaError("File write requires 'data' permission in avatar.json");
+                }
+                String relative = pathArg.checkjstring();
+                try {
+                    Path file = AvatarLoader.resolveAvatarFile(state.rootDir(), relative);
+                    if (file.getParent() != null) Files.createDirectories(file.getParent());
+                    Files.writeString(file, contentArg.checkjstring(), StandardCharsets.UTF_8);
+                    return LuaValue.TRUE;
+                } catch (Exception e) {
+                    throw new LuaError("File write error: " + e.getMessage());
+                }
+            }
+        });
+
+        globals.set("_avatar_file_append", new TwoArgFunction() {
+            @Override
+            public LuaValue call(LuaValue pathArg, LuaValue contentArg) {
+                if (!state.permissionAllowed(AvatarPermission.DATA_STORAGE)) {
+                    throw new LuaError("File append requires 'data' permission in avatar.json");
+                }
+                String relative = pathArg.checkjstring();
+                try {
+                    Path file = AvatarLoader.resolveAvatarFile(state.rootDir(), relative);
+                    if (file.getParent() != null) Files.createDirectories(file.getParent());
+                    Files.writeString(file, contentArg.checkjstring(), StandardCharsets.UTF_8,
+                        java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+                    return LuaValue.TRUE;
+                } catch (Exception e) {
+                    throw new LuaError("File append error: " + e.getMessage());
+                }
+            }
+        });
+
         // --- Nameplate 2.0 Bridge ---
         globals.set("_avatar_nameplate_target_set", new VarArgFunction() {
             @Override

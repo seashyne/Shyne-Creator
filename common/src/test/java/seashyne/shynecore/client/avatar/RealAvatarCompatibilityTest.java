@@ -198,5 +198,130 @@ public class RealAvatarCompatibilityTest {
         assertTrue(markdown.contains("P6 Network API & Typed Pings"));
         assertTrue(markdown.contains("P7 Creator Workflow"));
         assertTrue(markdown.contains("Support Tiers"));
+
+        // Verify that 0 APIs are marked as Unsupported or Partial
+        assertEquals(0, AvatarCompatibilityMatrix.byStatus(AvatarCompatibilityMatrix.SupportStatus.UNSUPPORTED).size(),
+            "There must be 0 Unsupported APIs in the compatibility matrix");
+        assertEquals(0, AvatarCompatibilityMatrix.byStatus(AvatarCompatibilityMatrix.SupportStatus.PARTIAL).size(),
+            "There must be 0 Partial APIs in the compatibility matrix");
+
+        try {
+            Path file = Path.of("..", "docs", "api", "API_COMPATIBILITY_MATRIX.md");
+            if (!Files.exists(file)) file = Path.of("docs", "api", "API_COMPATIBILITY_MATRIX.md");
+            if (!Files.exists(file)) file = Path.of("..", "API_COMPATIBILITY_MATRIX.md");
+            if (!Files.exists(file)) file = Path.of("API_COMPATIBILITY_MATRIX.md");
+            if (Files.exists(file)) {
+                Files.writeString(file, markdown);
+            }
+        } catch (Exception ignored) {}
+    }
+
+    @Test
+    void testNewlySupportedApisEndToEnd() throws IOException {
+        Path avatarDir = AvatarTemplateManager.scaffold("figura_compat", tempDir, "compat_full", "Compat Full");
+        BbModelDefinition model = BbModelParser.parse(avatarDir.resolve("model.bbmodel"), "compat_full");
+
+        AvatarState state = new AvatarState(
+            "compat_full",
+            "avatar:compat_full",
+            avatarDir,
+            false,
+            Set.of(
+                AvatarPermission.WORLD_EDIT,
+                AvatarPermission.COMMAND,
+                AvatarPermission.HUD_RENDER,
+                AvatarPermission.DATA_STORAGE,
+                AvatarPermission.NETWORK,
+                AvatarPermission.CAMERA
+            ),
+            Set.of(
+                AvatarPermission.WORLD_EDIT,
+                AvatarPermission.COMMAND,
+                AvatarPermission.HUD_RENDER,
+                AvatarPermission.DATA_STORAGE,
+                AvatarPermission.NETWORK,
+                AvatarPermission.CAMERA
+            )
+        );
+
+        ClientLuaAvatarRuntime runtime = new ClientLuaAvatarRuntime(state, model, avatarDir.resolve("main.lua"));
+        assertTrue(runtime.load());
+
+        // 1. world.setBlock and world.setTime with world_edit permission
+        LuaValue setBlockRes = runtime.eval("return world.setBlock(10, 64, 10, 'minecraft:stone')");
+        assertTrue(setBlockRes.toboolean());
+        LuaValue setTimeRes = runtime.eval("return world.setTime(6000)");
+        assertTrue(setTimeRes.toboolean());
+
+        // 2. host:sendChat with command permission
+        LuaValue sendChatRes = runtime.eval("return host:sendChat('/say Hello from Avatar')");
+        assertTrue(sendChatRes.toboolean());
+
+        // 3. renderer:setPostShader and renderer:getPostShader with hud_render permission
+        runtime.eval("renderer:setPostShader('minecraft:shaders/post/creeper.json')");
+        assertEquals("minecraft:shaders/post/creeper.json", state.postShader());
+        LuaValue getShaderRes = runtime.eval("return renderer:getPostShader()");
+        assertEquals("minecraft:shaders/post/creeper.json", getShaderRes.tojstring());
+        runtime.eval("renderer:setPostShader(nil)");
+        assertNull(state.postShader());
+
+        // 4. figuraMetatables exposed
+        LuaValue metaVector3 = runtime.eval("return figuraMetatables.Vector3 ~= nil");
+        assertTrue(metaVector3.toboolean());
+        LuaValue metaItemStack = runtime.eval("return figuraMetatables.ItemStack ~= nil");
+        assertTrue(metaItemStack.toboolean());
+
+        // 5. Sandboxed io.open file read/write with data permission
+        runtime.eval("""
+            local f = io.open('test_output.txt', 'w')
+            f:write('Hello sandboxed IO')
+            f:close()
+        """);
+        Path writtenFile = avatarDir.resolve("test_output.txt");
+        assertTrue(Files.exists(writtenFile));
+        assertEquals("Hello sandboxed IO", Files.readString(writtenFile));
+
+        LuaValue readContent = runtime.eval("""
+            local f = io.open('test_output.txt', 'r')
+            local c = f:read('*a')
+            f:close()
+            return c
+        """);
+        assertEquals("Hello sandboxed IO", readContent.tojstring());
+
+        // 6. Safe os functions
+        LuaValue osTime = runtime.eval("return os.time()");
+        assertTrue(osTime.tonumber().todouble() > 0);
+        LuaValue osDate = runtime.eval("return os.date('%Y')");
+        assertFalse(osDate.tojstring().isBlank());
+        LuaValue osClock = runtime.eval("return os.clock() >= 0");
+        assertTrue(osClock.toboolean());
+        LuaValue osEnv = runtime.eval("return os.getenv('AVATAR_NAME')");
+        assertEquals("compat_full", osEnv.tojstring());
+
+        // 7. server_packets.raw with network permission
+        LuaValue rawPacketRes = runtime.eval("return server_packets.raw('shyne:channel', 'ping_data')");
+        assertTrue(rawPacketRes.toboolean());
+
+        runtime.dispose();
+
+        // 8. Test permission denials without permissions
+        AvatarState unprivilegedState = new AvatarState(
+            "compat_restricted",
+            "avatar:compat_restricted",
+            avatarDir,
+            false,
+            Set.of(),
+            Set.of()
+        );
+        ClientLuaAvatarRuntime unprivilegedRuntime = new ClientLuaAvatarRuntime(unprivilegedState, model, avatarDir.resolve("main.lua"));
+        assertTrue(unprivilegedRuntime.load());
+
+        assertThrows(Exception.class, () -> unprivilegedRuntime.eval("world.setBlock(0, 0, 0, 'air')"));
+        assertThrows(Exception.class, () -> unprivilegedRuntime.eval("host:sendChat('hello')"));
+        assertThrows(Exception.class, () -> unprivilegedRuntime.eval("renderer:setPostShader('blur')"));
+        assertThrows(Exception.class, () -> unprivilegedRuntime.eval("io.open('test.txt', 'w')"));
+
+        unprivilegedRuntime.dispose();
     }
 }

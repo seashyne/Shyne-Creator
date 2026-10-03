@@ -158,6 +158,108 @@ public final class AvatarSystemBridge {
             }
         });
 
+        globals.set("_shyne_send_chat", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                requirePermission(AvatarPermission.COMMAND);
+                String msg = arg.checkjstring().trim();
+                Minecraft client = null;
+                try {
+                    client = Minecraft.getInstance();
+                } catch (Throwable ignored) {}
+                if (client == null || client.player == null || client.player.connection == null) return LuaValue.TRUE;
+                long now = System.nanoTime();
+                if (now - lastShyneCommandNanos < 250_000_000L) {
+                    throw new LuaError("Chat command rate limit: wait 250 ms");
+                }
+                lastShyneCommandNanos = now;
+                final Minecraft finalClient = client;
+                client.execute(() -> {
+                    if (msg.startsWith("/")) {
+                        finalClient.player.connection.sendCommand(msg.substring(1));
+                    } else {
+                        finalClient.player.connection.sendChat(msg);
+                    }
+                });
+                return LuaValue.TRUE;
+            }
+        });
+
+        long startClockNanos = System.nanoTime();
+        globals.set("_shyne_os_time", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
+                if (args.narg() >= 6) {
+                    try {
+                        int y = args.arg(1).toint();
+                        int m = Math.max(1, Math.min(12, args.arg(2).toint()));
+                        int d = Math.max(1, Math.min(31, args.arg(3).toint()));
+                        int h = Math.max(0, Math.min(23, args.arg(4).toint()));
+                        int min = Math.max(0, Math.min(59, args.arg(5).toint()));
+                        int s = Math.max(0, Math.min(59, args.arg(6).toint()));
+                        java.time.ZonedDateTime dt = java.time.ZonedDateTime.of(y, m, d, h, min, s, 0, java.time.ZoneOffset.UTC);
+                        return LuaValue.valueOf(dt.toEpochSecond());
+                    } catch (Exception ignored) {}
+                }
+                return LuaValue.valueOf(System.currentTimeMillis() / 1000L);
+            }
+        });
+
+        globals.set("_shyne_os_date", new org.luaj.vm2.lib.TwoArgFunction() {
+            @Override public LuaValue call(LuaValue fmtArg, LuaValue timeArg) {
+                long epochSec = timeArg.isnil() ? System.currentTimeMillis() / 1000L : timeArg.tolong();
+                java.time.Instant instant = java.time.Instant.ofEpochSecond(epochSec);
+                java.time.ZonedDateTime dt = instant.atZone(java.time.ZoneId.systemDefault());
+                String fmt = fmtArg.optjstring("%c");
+                if (fmt.equals("*t")) {
+                    LuaTable tbl = new LuaTable();
+                    tbl.set("year", dt.getYear());
+                    tbl.set("month", dt.getMonthValue());
+                    tbl.set("day", dt.getDayOfMonth());
+                    tbl.set("hour", dt.getHour());
+                    tbl.set("min", dt.getMinute());
+                    tbl.set("sec", dt.getSecond());
+                    tbl.set("wday", dt.getDayOfWeek().getValue() % 7 + 1);
+                    tbl.set("yday", dt.getDayOfYear());
+                    return tbl;
+                }
+                String javaPattern = fmt
+                    .replace("%Y", "yyyy")
+                    .replace("%m", "MM")
+                    .replace("%d", "dd")
+                    .replace("%H", "HH")
+                    .replace("%M", "mm")
+                    .replace("%S", "ss")
+                    .replace("%c", "yyyy-MM-dd HH:mm:ss")
+                    .replace("%x", "yyyy-MM-dd")
+                    .replace("%X", "HH:mm:ss");
+                try {
+                    return LuaValue.valueOf(java.time.format.DateTimeFormatter.ofPattern(javaPattern).format(dt));
+                } catch (Exception e) {
+                    return LuaValue.valueOf(dt.toString());
+                }
+            }
+        });
+
+        globals.set("_shyne_os_clock", new org.luaj.vm2.lib.ZeroArgFunction() {
+            @Override public LuaValue call() {
+                return LuaValue.valueOf((System.nanoTime() - startClockNanos) / 1_000_000_000.0);
+            }
+        });
+
+        globals.set("_shyne_os_getenv", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue arg) {
+                String key = arg.checkjstring().toUpperCase(Locale.ROOT);
+                return switch (key) {
+                    case "SHYNE_AVATAR_ID", "AVATAR_ID", "SHYNE_AVATAR_NAME", "AVATAR_NAME" -> LuaValue.valueOf(state.avatarId());
+                    case "SHYNE_AVATAR_PATH", "AVATAR_PATH" -> LuaValue.valueOf(state.rootDir().toString().replace('\\', '/'));
+                    case "SHYNE_API_VERSION", "API_VERSION" -> LuaValue.valueOf(state.apiStandard());
+                    case "MC_VERSION" -> LuaValue.valueOf("26.3");
+                    case "PLATFORM" -> LuaValue.valueOf("minecraft");
+                    case "OS" -> LuaValue.valueOf(System.getProperty("os.name", "generic"));
+                    default -> LuaValue.NIL;
+                };
+            }
+        });
+
         globals.set("_shyne_sound_play", new VarArgFunction() {
             @Override public Varargs invoke(Varargs args) {
                 if (!state.permissionAllowed(AvatarPermission.SOUND)) return LuaValue.FALSE;

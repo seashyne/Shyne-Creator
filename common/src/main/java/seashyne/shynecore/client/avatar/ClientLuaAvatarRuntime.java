@@ -161,7 +161,7 @@ public final class ClientLuaAvatarRuntime {
         modelBridge.register(globals);
         AvatarRendererBridge.register(globals, state);
         animationBridge.register(globals);
-        AvatarWorldBridge.register(globals);
+        AvatarWorldBridge.register(globals, state);
         inputBridge.register(globals);
         renderTaskBridge.register(globals);
         scriptCanvasBridge.register(globals);

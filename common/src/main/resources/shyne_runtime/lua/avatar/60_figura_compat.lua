@@ -446,6 +446,9 @@ function host:isSneaking() return player:isSneaking() end
 function host:isSprinting() return player:isSprinting() end
 function host:isFlying() return player:isGliding() end
 function host:getAir() return 300 end
+function host:sendChat(message)
+  return _shyne_send_chat and _shyne_send_chat(tostring(message or "")) or false
+end
 
 if avatar then
   function avatar:isSpeaking() return microphone and microphone.speaking and microphone.speaking() or false end
