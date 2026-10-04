@@ -32,6 +32,7 @@ public final class BbModelTextures {
     private static final Identifier FALLBACK = Identifier.parse("minecraft:textures/block/white_wool.png");
     private static final Map<Path, CachedTexture> CACHE = new ConcurrentHashMap<>();
     private static final Map<String, SyncedTexture> SYNCED = new ConcurrentHashMap<>();
+    private static final Map<String, Identifier> EMBEDDED_CACHE = new ConcurrentHashMap<>();
 
     private BbModelTextures() {}
 
@@ -42,27 +43,58 @@ public final class BbModelTextures {
     public static Identifier resolve(BbModelDefinition model, int textureIndex) {
         SyncedTexture synced = model == null ? null : SYNCED.get(syncedKey(model.modelId(), textureIndex));
         if (synced != null) return synced.id;
+
+        // Mode 1: Physical File on Disk (checked first for creator edits & hot-reloading)
         Path path = resolveTexturePath(model, textureIndex);
-        if (path == null) return FALLBACK;
+        if (path != null && Files.isRegularFile(path)) {
+            try {
+                long modified = Files.getLastModifiedTime(path).toMillis();
+                CachedTexture cached = CACHE.get(path);
+                if (cached != null && cached.modifiedAtMillis == modified) return cached.id;
+
+                try (InputStream input = Files.newInputStream(path)) {
+                    NativeImage image = NativeImage.read(input);
+                    String hash = Integer.toUnsignedString(path.toString().toLowerCase().hashCode(), 36);
+                    Identifier id = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "dynamic/avatar_" + hash);
+                    Minecraft.getInstance().getTextureManager().register(
+                        id,
+                        new DynamicTexture(() -> "Shyne avatar texture " + path.getFileName(), image)
+                    );
+                    CACHE.put(path, new CachedTexture(id, modified));
+                    return id;
+                }
+            } catch (IOException | RuntimeException error) {
+                ShyneCore.LOGGER.warn("[AvatarTexture] Could not load {}: {}", path, error.getMessage());
+            }
+        }
+
+        // Mode 2: In-Memory Embedded Texture (zero-disk fallback)
+        BbTextureDefinition texture = model == null ? null : model.texture(textureIndex);
+        if (texture != null && texture.hasEmbeddedBytes()) {
+            return resolveEmbeddedTexture(model.modelId(), textureIndex, texture.embeddedBytes());
+        }
+
+        return FALLBACK;
+    }
+
+    private static Identifier resolveEmbeddedTexture(String modelId, int textureIndex, byte[] bytes) {
+        String key = syncedKey(modelId, textureIndex);
+        Identifier existing = EMBEDDED_CACHE.get(key);
+        if (existing != null) return existing;
 
         try {
-            long modified = Files.getLastModifiedTime(path).toMillis();
-            CachedTexture cached = CACHE.get(path);
-            if (cached != null && cached.modifiedAtMillis == modified) return cached.id;
-
-            try (InputStream input = Files.newInputStream(path)) {
-                NativeImage image = NativeImage.read(input);
-                String hash = Integer.toUnsignedString(path.toString().toLowerCase().hashCode(), 36);
-                Identifier id = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "dynamic/avatar_" + hash);
-                Minecraft.getInstance().getTextureManager().register(
-                    id,
-                    new DynamicTexture(() -> "Shyne avatar texture " + path.getFileName(), image)
-                );
-                CACHE.put(path, new CachedTexture(id, modified));
-                return id;
-            }
+            NativeImage image = NativeImage.read(new ByteArrayInputStream(bytes));
+            String hash = sha256(bytes);
+            String suffix = hash.substring(0, Math.min(16, hash.length()));
+            Identifier id = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "embedded/" + suffix + "_" + textureIndex);
+            Minecraft.getInstance().getTextureManager().register(
+                id,
+                new DynamicTexture(() -> "Shyne embedded avatar texture " + modelId + " #" + textureIndex, image)
+            );
+            EMBEDDED_CACHE.put(key, id);
+            return id;
         } catch (IOException | RuntimeException error) {
-            ShyneCore.LOGGER.warn("[AvatarTexture] Could not load {}: {}", path, error.getMessage());
+            ShyneCore.LOGGER.warn("[AvatarTexture] Could not decode embedded texture for {}: {}", modelId, error.getMessage());
             return FALLBACK;
         }
     }
@@ -96,11 +128,25 @@ public final class BbModelTextures {
         if (modelId == null || modelId.isBlank()) return;
         String prefix = modelId + "#";
         removeSyncedMatching(key -> key.startsWith(prefix));
+        EMBEDDED_CACHE.entrySet().removeIf(entry -> {
+            if (entry.getKey().startsWith(prefix)) {
+                Minecraft.getInstance().getTextureManager().release(entry.getValue());
+                return true;
+            }
+            return false;
+        });
     }
 
     public static void clearRemoteSyncedTextures() {
         AsyncTextureLoader.cancelAll();
         removeSyncedMatching(key -> key.startsWith("remote:"));
+        EMBEDDED_CACHE.entrySet().removeIf(entry -> {
+            if (entry.getKey().startsWith("remote:")) {
+                Minecraft.getInstance().getTextureManager().release(entry.getValue());
+                return true;
+            }
+            return false;
+        });
     }
 
     public static ShyneNetwork.NetTextureDefinition outfitTexture(BbModelDefinition model, byte[] bytes) {

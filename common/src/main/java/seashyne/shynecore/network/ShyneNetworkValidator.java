@@ -36,22 +36,37 @@ public final class ShyneNetworkValidator {
     private ShyneNetworkValidator() {}
 
     public static byte[] readTextureBytes(BbModelDefinition model, BbTextureDefinition texture) {
-        if (model == null || model.sourceFile() == null || texture == null || texture.relativePath() == null) return null;
-        Path modelRoot = model.sourceFile().toAbsolutePath().normalize().getParent();
-        if (modelRoot == null) return null;
-        Path allowedRoot = modelRoot.getParent() == null ? modelRoot : modelRoot.getParent();
-        Path candidate = modelRoot.resolve(texture.relativePath().replace('/', java.io.File.separatorChar)).normalize();
-        Path fallback = modelRoot.resolve("textures").resolve(Path.of(texture.relativePath()).getFileName()).normalize();
-        try {
-            Path selected = Files.isRegularFile(candidate) && candidate.startsWith(allowedRoot) ? candidate : fallback;
-            if (!selected.startsWith(allowedRoot) || !Files.isRegularFile(selected)) return null;
-            long size = Files.size(selected);
-            if (size <= 0 || size > MAX_TEXTURE_BYTES) return null;
-            byte[] bytes = Files.readAllBytes(selected);
-            return PngTextureValidator.matches(bytes, texture.width(), texture.height()) ? bytes : null;
-        } catch (Exception ignored) {
-            return null;
+        if (model == null || texture == null) return null;
+
+        // Mode 1: Physical File on Disk
+        if (model.sourceFile() != null && texture.relativePath() != null) {
+            Path modelRoot = model.sourceFile().toAbsolutePath().normalize().getParent();
+            if (modelRoot != null) {
+                Path allowedRoot = modelRoot.getParent() == null ? modelRoot : modelRoot.getParent();
+                Path candidate = modelRoot.resolve(texture.relativePath().replace('/', java.io.File.separatorChar)).normalize();
+                Path fallback = modelRoot.resolve("textures").resolve(Path.of(texture.relativePath()).getFileName()).normalize();
+                try {
+                    Path selected = Files.isRegularFile(candidate) && candidate.startsWith(allowedRoot) ? candidate : fallback;
+                    if (selected.startsWith(allowedRoot) && Files.isRegularFile(selected)) {
+                        long size = Files.size(selected);
+                        if (size > 0 && size <= MAX_TEXTURE_BYTES) {
+                            byte[] bytes = Files.readAllBytes(selected);
+                            if (PngTextureValidator.matches(bytes, texture.width(), texture.height())) return bytes;
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
         }
+
+        // Mode 2: In-Memory Embedded Texture
+        if (texture.hasEmbeddedBytes()) {
+            byte[] bytes = texture.embeddedBytes();
+            if (bytes.length > 0 && bytes.length <= MAX_TEXTURE_BYTES) {
+                return PngTextureValidator.matches(bytes, texture.width(), texture.height()) ? bytes : null;
+            }
+        }
+
+        return null;
     }
 
     public static boolean isSafeAnimationParameters(Map<String, Double> parameters) {

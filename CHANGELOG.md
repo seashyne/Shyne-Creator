@@ -1,4 +1,26 @@
+## Shyne Creator v2.14.0
+
+### Dual-Mode In-Memory & Physical Texture Architecture (Figura Compatibility)
+
+- Added native In-Memory texture loading directly from Base64 data embedded inside `.bbmodel` files without requiring disk extraction.
+- Completely resolves `texture_outside_pack` / `texture_missing` errors when loading models created in Blockbench or Figura avatars with external machine file paths (e.g., OneDrive / absolute paths).
+- Implemented Dual-Mode priority: physical files placed in the avatar pack take precedence for live editing and hot-reloading, while models with embedded Base64 run seamlessly in RAM with zero disk footprints or folder pollution.
+- Integrated in-memory texture validation into `AvatarValidator` (`validatePngBytes`) and dynamic texture registration into Minecraft's `TextureManager` via `BbModelTextures`.
+- Supported multiplayer synchronization for in-memory embedded textures in `ShyneNetworkValidator`.
+- รองรับการโหลด Texture แบบ In-Memory โดยตรงจาก Base64 ที่ฝังใน `.bbmodel` โดยไม่ต้องแตกไฟล์ลงดิสก์ แก้ปัญหาโมเดลจาก Figura หรือ Blockbench ที่อ้างอิง path ภายนอกเครื่อง (เช่น OneDrive)
+- สถาปัตยกรรม Dual-Mode: ไฟล์จริงในโฟลเดอร์มีสิทธิ์สูงกว่าเพื่อรองรับ Hot-reloading และการแก้ไขสด ขณะที่โมเดลเสมือนสามารถทำงานใน RAM ได้ 100%
+
+### Refactoring & Modular Architecture
+
+- Refactored `BbModelParser.java` from ~680 lines down to ~180 lines, delegating domain responsibilities to specialized components:
+  - `BbTextureResolver`: Base64 embedded decoding, relative path safety, canvas sizing, and standalone extraction utilities.
+  - `BbGeometryParser`: Cubes, faces UV mapping, and free polygon meshes.
+  - `BbAnimationParser`: Keyframes, animation channels, math expressions, and Blockbench v5 axis migration.
+  - `BbModelJsonHelper`: JSON vector and numerical coercion utilities.
+- ปรับโครงสร้างแยกโมดูล `BbModelParser.java` ให้สั้น กระชับ และอ่านง่ายตามหลัก Single Responsibility
+
 ## Shyne Creator v2.13.0
+
 
 ### P1 — Event Parity (Fabric & NeoForge)
 

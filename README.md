@@ -4,7 +4,7 @@
 
 ## Version
 
-- Shyne Creator: `2.13.0`
+- Shyne Creator: `2.14.0`
 - Minecraft: `26.3`
 - Java: `25`
 - Fabric Loader: `0.19.3+`

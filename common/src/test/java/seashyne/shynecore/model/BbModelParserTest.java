@@ -268,4 +268,58 @@ final class BbModelParserTest {
         IOException error = assertThrows(IOException.class, () -> BbModelParser.parse(modelFile, "test"));
         assertTrue(error.getMessage().contains("Ambiguous texture 'skin.png'"));
     }
+
+    @Test
+    void retainsEmbeddedBase64TextureInMemoryWithoutForcingDiskFile() throws Exception {
+        Path modelFile = temp.resolve("model.bbmodel");
+        // 1x1 transparent PNG in Base64
+        String base64Png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+        Files.writeString(modelFile, """
+            {
+              "name":"Embedded Texture Test",
+              "resolution":{"width":64,"height":64},
+              "textures":[{
+                "id":"0",
+                "name":"pink.png",
+                "relative_path":"../../../../../../../../OneDrive/Pictures/FiguraTextures/pink.png",
+                "source":"%s"
+              }],
+              "outliner":[{"name":"root","uuid":"root","origin":[0,0,0],"children":[]}]
+            }
+            """.formatted(base64Png));
+
+        BbModelDefinition model = BbModelParser.parse(modelFile, "test");
+
+        assertAll(
+            () -> assertEquals("pink.png", model.primaryTextureRelativePath()),
+            () -> assertNotNull(model.primaryTexture()),
+            () -> assertTrue(model.primaryTexture().hasEmbeddedBytes()),
+            () -> assertTrue(model.primaryTexture().embeddedBytes().length > 0)
+        );
+
+        // Explicit disk extraction creates the physical file
+        BbTextureResolver.extractEmbeddedTextures(modelFile);
+        assertTrue(Files.isRegularFile(temp.resolve("pink.png")));
+        assertTrue(Files.size(temp.resolve("pink.png")) > 0);
+    }
+
+    @Test
+    void extractsEmbeddedTexturesFromMultipleModelsInDirectory() throws Exception {
+        Path extraModel = temp.resolve("textures.bbmodel");
+        String base64Png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+        Files.writeString(extraModel, """
+            {
+              "textures":[{
+                "id":"1",
+                "name":"icon.png",
+                "source":"%s"
+              }]
+            }
+            """.formatted(base64Png));
+
+        BbTextureResolver.extractEmbeddedTexturesInDirectory(temp);
+
+        assertTrue(Files.isRegularFile(temp.resolve("icon.png")));
+        assertTrue(Files.size(temp.resolve("icon.png")) > 0);
+    }
 }

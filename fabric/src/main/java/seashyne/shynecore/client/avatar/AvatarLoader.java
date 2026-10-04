@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import net.fabricmc.loader.api.FabricLoader;
 import seashyne.shynecore.ShyneCore;
+import seashyne.shynecore.model.BbTextureResolver;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -291,7 +292,10 @@ public final class AvatarLoader {
         if (manifest.hasScript()) requireFile(resolveContained(safeRoot, manifest.main()), MAX_SCRIPT_BYTES, "main script");
         requireFile(resolveContained(safeRoot, manifest.model()), MAX_MODEL_BYTES, "model");
         for (String texture : manifest.textures()) {
-            requireFile(resolveContained(safeRoot, texture), 8L * 1024L * 1024L, "texture");
+            Path texturePath = resolveContainedOrNull(safeRoot, texture);
+            if (texturePath != null && Files.isRegularFile(texturePath)) {
+                requireFile(texturePath, 8L * 1024L * 1024L, "texture");
+            }
         }
         if (manifest.syncedSchema() != null && !manifest.syncedSchema().isBlank()) {
             requireFile(resolveContained(safeRoot, manifest.syncedSchema()), MAX_MANIFEST_BYTES, "synced schema");

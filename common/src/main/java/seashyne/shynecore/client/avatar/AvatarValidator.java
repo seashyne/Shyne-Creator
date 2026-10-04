@@ -8,6 +8,7 @@ import seashyne.shynecore.client.render.ShyneExpressionEngine;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -132,23 +133,29 @@ public final class AvatarValidator {
             if (!declared.isEmpty() && !declared.contains(relative)) {
                 warning(issues, "texture_undeclared", "Model texture is not listed in avatar.json; it will still be loaded from the Avatar folder: " + texture.relativePath(), manifest.model());
             }
-            if (modelRoot == null || relative.isBlank()) {
-                error(issues, "texture_path", "Model contains an empty texture path", manifest.model());
-                continue;
+
+            Path file = modelRoot == null ? null : modelRoot.resolve(relative.replace('/', java.io.File.separatorChar)).normalize();
+            boolean fileOnDisk = file != null && file.startsWith(root) && Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS);
+
+            if (fileOnDisk) {
+                long size = Files.size(file);
+                textureBytes += size;
+                if (size <= 0 || size > MAX_TEXTURE_BYTES) error(issues, "texture_file_size", "Texture must be between 1 byte and 8 MiB", relative);
+                validatePng(file, relative, issues);
+            } else if (texture.hasEmbeddedBytes()) {
+                byte[] bytes = texture.embeddedBytes();
+                textureBytes += bytes.length;
+                if (bytes.length <= 0 || bytes.length > MAX_TEXTURE_BYTES) error(issues, "texture_file_size", "Texture must be between 1 byte and 8 MiB", relative);
+                validatePngBytes(bytes, relative, issues);
+            } else {
+                if (modelRoot == null || relative.isBlank()) {
+                    error(issues, "texture_path", "Model contains an empty texture path", manifest.model());
+                } else if (file != null && !file.startsWith(root)) {
+                    error(issues, "texture_outside_pack", "Texture must be inside the Avatar folder. Copy it into this pack: " + texture.relativePath(), texture.relativePath());
+                } else {
+                    error(issues, "texture_missing", "Texture file is missing from this Avatar pack: " + texture.relativePath(), texture.relativePath());
+                }
             }
-            Path file = modelRoot.resolve(relative.replace('/', java.io.File.separatorChar)).normalize();
-            if (!file.startsWith(root)) {
-                error(issues, "texture_outside_pack", "Texture must be inside the Avatar folder. Copy it into this pack: " + texture.relativePath(), texture.relativePath());
-                continue;
-            }
-            if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
-                error(issues, "texture_missing", "Texture file is missing from this Avatar pack: " + texture.relativePath(), texture.relativePath());
-                continue;
-            }
-            long size = Files.size(file);
-            textureBytes += size;
-            if (size <= 0 || size > MAX_TEXTURE_BYTES) error(issues, "texture_file_size", "Texture must be between 1 byte and 8 MiB", relative);
-            validatePng(file, relative, issues);
         }
         if (textureBytes > MAX_TEXTURE_TOTAL_BYTES) error(issues, "texture_total_size", "Avatar textures exceed the 64 MiB multiplayer limit", manifest.model());
         for (String value : declared) {
@@ -310,25 +317,37 @@ public final class AvatarValidator {
 
     private static void validatePng(Path file, String relative, List<AvatarValidationReport.Issue> issues) {
         try (ImageInputStream input = ImageIO.createImageInputStream(file.toFile())) {
-            if (input == null) throw new IOException("Could not read image");
-            Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
-            if (!readers.hasNext()) throw new IOException("File is not a supported image");
-            ImageReader reader = readers.next();
-            try {
-                reader.setInput(input, true, true);
-                int width = reader.getWidth(0);
-                int height = reader.getHeight(0);
-                if (width <= 0 || height <= 0) {
-                    error(issues, "texture_dimensions", "Texture dimensions must be positive", relative);
-                } else if (width > 8192 || height > 8192) {
-                    warning(issues, "large_texture_dimensions", "Large texture: " + width + "×" + height + ". It is allowed locally.", relative);
-                }
-                if (!"png".equalsIgnoreCase(reader.getFormatName())) error(issues, "texture_format", "Avatar textures must be PNG files", relative);
-            } finally {
-                reader.dispose();
-            }
+            validatePngStream(input, relative, issues);
         } catch (Exception imageError) {
             error(issues, "texture_invalid", "Texture cannot be decoded: " + safeMessage(imageError), relative);
+        }
+    }
+
+    private static void validatePngBytes(byte[] bytes, String relative, List<AvatarValidationReport.Issue> issues) {
+        try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+            validatePngStream(input, relative, issues);
+        } catch (Exception imageError) {
+            error(issues, "texture_invalid", "Texture cannot be decoded: " + safeMessage(imageError), relative);
+        }
+    }
+
+    private static void validatePngStream(ImageInputStream input, String relative, List<AvatarValidationReport.Issue> issues) throws IOException {
+        if (input == null) throw new IOException("Could not read image");
+        Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
+        if (!readers.hasNext()) throw new IOException("File is not a supported image");
+        ImageReader reader = readers.next();
+        try {
+            reader.setInput(input, true, true);
+            int width = reader.getWidth(0);
+            int height = reader.getHeight(0);
+            if (width <= 0 || height <= 0) {
+                error(issues, "texture_dimensions", "Texture dimensions must be positive", relative);
+            } else if (width > 8192 || height > 8192) {
+                warning(issues, "large_texture_dimensions", "Large texture: " + width + "×" + height + ". It is allowed locally.", relative);
+            }
+            if (!"png".equalsIgnoreCase(reader.getFormatName())) error(issues, "texture_format", "Avatar textures must be PNG files", relative);
+        } finally {
+            reader.dispose();
         }
     }
 

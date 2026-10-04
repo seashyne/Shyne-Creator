@@ -324,4 +324,41 @@ public class RealAvatarCompatibilityTest {
 
         unprivilegedRuntime.dispose();
     }
+
+    @Test
+    void testAvatarWithPureInMemoryTexturePassesValidation() throws IOException {
+        Path avatarDir = tempDir.resolve("in_memory_avatar");
+        Files.createDirectories(avatarDir);
+        Files.writeString(avatarDir.resolve("avatar.json"), """
+            {
+              "name": "In Memory Avatar",
+              "standard": "figura",
+              "import": "figura"
+            }
+            """);
+
+        String base64Png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+        Files.writeString(avatarDir.resolve("model.bbmodel"), """
+            {
+              "name":"InMemoryModel",
+              "resolution":{"width":64,"height":64},
+              "textures":[{
+                "id":"0",
+                "name":"pink.png",
+                "relative_path":"../../../../../../../../OneDrive/Pictures/FiguraTextures/pink.png",
+                "source":"%s"
+              }],
+              "outliner":[{"name":"root","uuid":"root","origin":[0,0,0],"children":[]}]
+            }
+            """.formatted(base64Png));
+
+        AvatarValidationReport report = AvatarValidator.validate(avatarDir);
+
+        assertAll(
+            () -> assertTrue(report.valid(), "Avatar with in-memory texture should be valid"),
+            () -> assertEquals(0L, report.errorCount(), "Should have 0 validation errors"),
+            // Verify no PNG files were written to disk
+            () -> assertFalse(Files.exists(avatarDir.resolve("pink.png")), "Pure in-memory mode should not force writing PNG to disk")
+        );
+    }
 }
