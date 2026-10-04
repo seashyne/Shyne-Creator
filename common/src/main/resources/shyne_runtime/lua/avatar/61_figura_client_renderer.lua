@@ -322,3 +322,24 @@ function textures:bindToModel(texture, target)
 end
 
 function textures:fromVanilla(_) return nil end
+
+local function make_fallback_texture(tex_name)
+  local tex = setmetatable({
+    _name = tostring(tex_name or ""),
+    _id = tostring(tex_name or ""),
+    _w = 64,
+    _h = 64,
+    _data = {},
+    _dirty = false
+  }, texture_mt)
+  _active_textures[tex._name] = tex
+  return tex
+end
+
+setmetatable(textures, {
+  __index = function(t, name)
+    local sname = tostring(name or "")
+    if _active_textures[sname] then return _active_textures[sname] end
+    return make_fallback_texture(sname)
+  end
+})

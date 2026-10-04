@@ -21,14 +21,25 @@ function action_mt:setColor(r, g, b) return self:color(r, g, b) end
 function action_mt:hoverColor(r, g, b) self._hoverColor = { r or 1, g or 1, b or 1 }; return self end
 function action_mt:setHoverColor(r, g, b) return self:hoverColor(r, g, b) end
 function action_mt:texture(path, u, v, w, h) self._texture = path; return self end
+function action_mt:setTexture(path, u, v, w, h) return self:texture(path, u, v, w, h) end
+function action_mt:toggleTitle(t) self._toggleTitle = tostring(t or ""); return self end
+function action_mt:setToggleTitle(t) return self:toggleTitle(t) end
+function action_mt:toggleTexture(t) self._toggleTexture = t; return self end
+function action_mt:setToggleTexture(t) return self:toggleTexture(t) end
+function action_mt:toggleColor(r, g, b) self._toggleColor = { r or 0, g or 0, b or 0 }; return self end
+function action_mt:setToggleColor(r, g, b) return self:toggleColor(r, g, b) end
 function action_mt:onLeftClick(fn) self._onLeftClick = fn; self:_update(); return self end
+function action_mt:setOnLeftClick(fn) return self:onLeftClick(fn) end
 function action_mt:onRightClick(fn) self._onRightClick = fn; self:_update(); return self end
+function action_mt:setOnRightClick(fn) return self:onRightClick(fn) end
 function action_mt:onScroll(fn) self._onScroll = fn; return self end
+function action_mt:setOnScroll(fn) return self:onScroll(fn) end
 function action_mt:toggled(t) self._toggled = t and true or false; return self end
 function action_mt:onToggle(fn) self._onToggle = fn; return self end
+function action_mt:setOnToggle(fn) return self:onToggle(fn) end
 
 function action_mt:_update()
-  if self._title ~= "" then
+  if type(_avatar_action_register) == "function" and self._title ~= "" then
     local page_name = self._page and self._page.id or "main"
     local id = self.id or (page_name .. "_" .. self._title:gsub("%s+", "_"):lower())
     local col = nil

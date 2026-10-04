@@ -27,18 +27,64 @@ local function part_proxy(path)
       if key == "setRot" then return function(self, x, y, z) return self:rot(x, y, z) end end
       if key == "getRot" or key == "getTrueRot" or key == "getAnimRot" then return function(self) return self:rot() end end
 
-      -- Additive Rotation (Layered on top of Blockbench animations)
-      if key == "rot_add" or key == "add_rot" or key == "add_rotation" then return function(self, x, y, z) if x == nil then return vector.new(_avatar_part_read(path, "rotation_add")) end x, y, z = coordinates(x, y, z, 0); _avatar_part_mutate(path, "rot_add", x, y, z) return self end end
+      -- Additive Rotation (Layered on top of Blockbench animations / Figura setOffsetRot)
+      if key == "rot_add" or key == "add_rot" or key == "add_rotation" or key == "setOffsetRot" then
+        return function(self, x, y, z)
+          if x == nil then
+            local r = _avatar_part_read(path, "rotation_add")
+            return (vectors and vectors.vec3) and vectors.vec3(r) or vector.new(r)
+          end
+          x, y, z = coordinates(x, y, z, 0)
+          _avatar_part_mutate(path, "rot_add", x, y, z)
+          return self
+        end
+      end
+      if key == "getOffsetRot" then
+        return function(self)
+          local r = _avatar_part_read(path, "rotation_add")
+          return (vectors and vectors.vec3) and vectors.vec3(r) or vector.new(r)
+        end
+      end
 
       -- Position
-      if key == "move" or key == "position" or key == "pos" then return function(self, x, y, z) if x == nil then return vector.new(_avatar_part_read(path, "position")) end x, y, z = coordinates(x, y, z, 0); _avatar_part_mutate(path, "pos", x, y, z) return self end end
+      if key == "move" or key == "position" or key == "pos" or key == "setOffsetPos" then
+        return function(self, x, y, z)
+          if x == nil then
+            local p = _avatar_part_read(path, "position")
+            return (vectors and vectors.vec3) and vectors.vec3(p) or vector.new(p)
+          end
+          x, y, z = coordinates(x, y, z, 0)
+          _avatar_part_mutate(path, "pos", x, y, z)
+          return self
+        end
+      end
       if key == "setPos" then return function(self, x, y, z) return self:pos(x, y, z) end end
-      if key == "getPos" or key == "getTruePos" or key == "getAnimPos" then return function(self) return self:pos() end end
+      if key == "getPos" or key == "getTruePos" or key == "getAnimPos" or key == "getOffsetPos" then
+        return function(self)
+          local p = _avatar_part_read(path, "position")
+          return (vectors and vectors.vec3) and vectors.vec3(p) or vector.new(p)
+        end
+      end
 
       -- Scale
-      if key == "scale" then return function(self, x, y, z) if x == nil then return vector.new(_avatar_part_read(path, "scale")) end x, y, z = coordinates(x, y, z, 1); _avatar_part_mutate(path, "scale", x, y, z) return self end end
+      if key == "scale" or key == "setOffsetScale" then
+        return function(self, x, y, z)
+          if x == nil then
+            local s = _avatar_part_read(path, "scale")
+            return (vectors and vectors.vec3) and vectors.vec3(s) or vector.new(s)
+          end
+          x, y, z = coordinates(x, y, z, 1)
+          _avatar_part_mutate(path, "scale", x, y, z)
+          return self
+        end
+      end
       if key == "setScale" then return function(self, x, y, z) return self:scale(x, y, z) end end
-      if key == "getScale" or key == "getTrueScale" then return function(self) return self:scale() end end
+      if key == "getScale" or key == "getTrueScale" or key == "getOffsetScale" then
+        return function(self)
+          local s = _avatar_part_read(path, "scale")
+          return (vectors and vectors.vec3) and vectors.vec3(s) or vector.new(s)
+        end
+      end
 
       -- Appearance & Shading
       if key == "color" then return function(self, r, g, b) if r == nil then return vector.new(_avatar_part_read(path, "color")) end r, g, b = coordinates(r, g, b, 1); _avatar_part_mutate(path, "color", r, g, b) return self end end
@@ -355,12 +401,41 @@ models = setmetatable({}, {
         _avatar_camera_set("first_person_arm", bool(enabled))
       end
     end
+    if key == "setPrimaryTexture" then
+      return function(self, name, texture)
+        if textures and textures.bindToModel then
+          return textures:bindToModel(texture, name)
+        end
+        return self
+      end
+    end
     return model.part(tostring(key))
   end
 })
 
-animations = setmetatable({}, {
-  __index = function(_, key)
+local animations_methods = {
+  getPlaying = function(self)
+    local list = {}
+    if _avatar_anim_playing_list then
+      local names = _avatar_anim_playing_list()
+      for i = 1, #names do
+        local name = names[i]
+        table.insert(list, model.animation.get(name))
+      end
+    end
+    return list
+  end,
+  stopAll = function(self)
+    if _avatar_anim_stop_all then
+      _avatar_anim_stop_all()
+    end
+    return self
+  end
+}
+
+animations = setmetatable(animations_methods, {
+  __index = function(t, key)
+    if animations_methods[key] then return animations_methods[key] end
     local anim_name = tostring(key)
     if model.animation.exists(anim_name) then return model.animation.get(anim_name) end
     return setmetatable({}, {

@@ -159,7 +159,27 @@ local function make_nameplate_target(target_name)
   end
   function target:hasShadow() return self._shadow end
 
-  function target:setBackgroundColor(c, g, b)
+  function target:setOutline(o)
+    self._outline = o and true or false
+    return self
+  end
+  function target:hasOutline() return self._outline end
+
+  function target:setLight(block, sky)
+    self._light = { block = block, sky = sky }
+    return self
+  end
+  function target:getLight() return self._light end
+
+  function target:setBackgroundColor(c, g, b, a)
+    if a ~= nil then
+      local alpha = math.floor(math.max(0, math.min(1, tonumber(c) or 1)) * 255)
+      local red = math.floor(math.max(0, math.min(1, tonumber(g) or 1)) * 255)
+      local green = math.floor(math.max(0, math.min(1, tonumber(b) or 1)) * 255)
+      local blue = math.floor(math.max(0, math.min(1, tonumber(a) or 1)) * 255)
+      self._bg_color = (alpha * 16777216) + (red * 65536) + (green * 256) + blue
+      return self
+    end
     self._bg_color = parse_color_argb(c, g, b)
     return self
   end
@@ -217,14 +237,26 @@ local all_np = {
   setBadge = function(self, b) entity_np:setBadge(b); chat_np:setBadge(b); list_np:setBadge(b); return self end,
   setColor = function(self, c, g, b) entity_np:setColor(c, g, b); chat_np:setColor(c, g, b); list_np:setColor(c, g, b); return self end,
   setBold = function(self, bo) entity_np:setBold(bo); chat_np:setBold(bo); list_np:setBold(bo); return self end,
-  setItalic = function(self, it) entity_np:setItalic(it); chat_np:setItalic(it); list_np:setItalic(it); return self end
+  setItalic = function(self, it) entity_np:setItalic(it); chat_np:setItalic(it); list_np:setItalic(it); return self end,
+  setOutline = function(self, o) entity_np:setOutline(o); chat_np:setOutline(o); list_np:setOutline(o); return self end,
+  setShadow = function(self, s) entity_np:setShadow(s); chat_np:setShadow(s); list_np:setShadow(s); return self end,
+  setBackgroundColor = function(self, c, g, b, a) entity_np:setBackgroundColor(c, g, b, a); chat_np:setBackgroundColor(c, g, b, a); list_np:setBackgroundColor(c, g, b, a); return self end,
+  setLight = function(self, b, s) entity_np:setLight(b, s); chat_np:setLight(b, s); list_np:setLight(b, s); return self end
 }
 
 nameplate = {
   ENTITY = entity_np,
+  Entity = entity_np,
+  entity = entity_np,
   CHAT = chat_np,
+  Chat = chat_np,
+  chat = chat_np,
   LIST = list_np,
+  List = list_np,
+  list = list_np,
   ALL = all_np,
+  All = all_np,
+  all = all_np,
   setText = function(self, t) return entity_np:setText(t) end,
   getText = function(self) return entity_np:getText() end,
   setVisible = function(self, v) return entity_np:setVisible(v) end,
@@ -238,7 +270,11 @@ nameplate = {
   setScale = function(self, x, y, z) return entity_np:setScale(x, y, z) end,
   getScale = function(self) return entity_np:getScale() end,
   setPivot = function(self, x, y, z) return entity_np:setPivot(x, y, z) end,
-  getPivot = function(self) return entity_np:getPivot() end
+  getPivot = function(self) return entity_np:getPivot() end,
+  setOutline = function(self, o) return entity_np:setOutline(o) end,
+  setShadow = function(self, s) return entity_np:setShadow(s) end,
+  setBackgroundColor = function(self, c, g, b, a) return entity_np:setBackgroundColor(c, g, b, a) end,
+  setLight = function(self, b, s) return entity_np:setLight(b, s) end
 }
 
 -- Synchronize avatar.nameplate.configure with Nameplate 2.0
@@ -357,6 +393,10 @@ json = {
   toJson = function(self, value) return json:encode(value) end,
   fromJson = function(self, str) return json:decode(str) end
 }
+
+toJson = function(value) return json:encode(value) end
+parseJson = function(str) return json:decode(str) end
+fromJson = function(str) return json:decode(str) end
 
 -- ------------------------------------------------------------------------------
 -- 4. RESOURCES / ASSETS LOOKUP (resources:has, resources:getText, resources:getJson)

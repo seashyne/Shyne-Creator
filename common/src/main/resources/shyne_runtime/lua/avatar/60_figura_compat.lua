@@ -407,6 +407,9 @@ function player:getLookDir()
   local look = _shyne_read("player.look")
   return look and vectors.vec3(look.x, look.y, look.z) or vectors.vec3(0, 0, 1)
 end
+function player:getBodyYaw() return _shyne_read("player.body_yaw") or 0 end
+function player:getPose() return _shyne_read("player.pose") or "STANDING" end
+function player:getVehicle() return _shyne_read("player.vehicle") end
 function player:isSneaking() return _shyne_read("player.crouching") or false end
 function player:isSprinting() return _shyne_read("player.sprinting") or false end
 function player:isUnderwater() return _shyne_read("player.underwater") or false end
@@ -551,7 +554,10 @@ sounds = sounds or setmetatable({}, {
           pitch = vol.pitch
           vol = vol.volume or vol.vol
         end
-        return sound.play(sound_name, { volume = vol, pitch = pitch, pos = pos })
+        if sound and sound.play then
+          return sound.play(sound_name, { volume = vol, pitch = pitch, pos = pos })
+        end
+        return false
       end
     }
     rawset(t, name, entry)
@@ -559,28 +565,54 @@ sounds = sounds or setmetatable({}, {
   end
 })
 
-function sounds:playSound(name, vol, pitch, pos)
-  if type(vol) == "table" then
-    pos = vol.pos or vol.position
-    pitch = vol.pitch
-    vol = vol.volume or vol.vol
+local function _parse_sound_args(name, a2, a3, a4)
+  local pos = nil
+  local vol = 1
+  local pitch = 1
+  if type(a2) == "table" then
+    if a2.x ~= nil or a2[1] ~= nil then
+      pos = a2
+      vol = tonumber(a3) or 1
+      pitch = tonumber(a4) or 1
+    else
+      pos = a2.pos or a2.position
+      pitch = a2.pitch or 1
+      vol = a2.volume or a2.vol or 1
+    end
+  else
+    vol = tonumber(a2) or 1
+    pitch = tonumber(a3) or 1
+    pos = a4
   end
-  return sound.play(tostring(name), { volume = vol, pitch = pitch, pos = pos })
+  return tostring(name or ""), { volume = vol, pitch = pitch, pos = pos }
+end
+
+function sounds:playSound(name, vol, pitch, pos)
+  local sound_id, opts = _parse_sound_args(name, vol, pitch, pos)
+  if sound and sound.play then
+    return sound.play(sound_id, opts)
+  end
+  return false
 end
 
 function sounds.playSound(name, vol, pitch, pos)
-  if type(vol) == "table" then
-    pos = vol.pos or vol.position
-    pitch = vol.pitch
-    vol = vol.volume or vol.vol
+  local sound_id, opts = _parse_sound_args(name, vol, pitch, pos)
+  if sound and sound.play then
+    return sound.play(sound_id, opts)
   end
-  return sound.play(tostring(name), { volume = vol, pitch = pitch, pos = pos })
+  return false
 end
 
 function sounds:playStream(url, options)
-  return sound.stream(url, options)
+  if sound and sound.stream then
+    return sound.stream(url, options)
+  end
+  return false
 end
 
 function sounds.playStream(url, options)
-  return sound.stream(url, options)
+  if sound and sound.stream then
+    return sound.stream(url, options)
+  end
+  return false
 end

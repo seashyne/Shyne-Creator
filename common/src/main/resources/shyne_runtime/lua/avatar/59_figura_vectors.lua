@@ -240,9 +240,116 @@ function mat4_methods:copy()
   return m
 end
 
+--- Universal Figura vector constructor.
+function vec(x, y, z, w)
+  if w ~= nil then
+    return vectors.vec4(x, y, z, w)
+  elseif z ~= nil then
+    return vectors.vec3(x, y, z)
+  elseif y ~= nil then
+    return vectors.vec2(x, y)
+  elseif type(x) == "table" then
+    if x[4] ~= nil or x.w ~= nil then
+      return vectors.vec4(x)
+    elseif x[3] ~= nil or x.z ~= nil or x.b ~= nil then
+      return vectors.vec3(x)
+    elseif x[2] ~= nil or x.y ~= nil or x.g ~= nil or x.v ~= nil then
+      return vectors.vec2(x)
+    else
+      return vectors.vec3(x)
+    end
+  elseif type(x) == "number" then
+    return vectors.vec3(x, x, x)
+  else
+    return vectors.vec3(0, 0, 0)
+  end
+end
+vectors.vec = vec
+vectors.of = vec
+
+function vectors.hexToRGB(hex)
+  if not hex then return vectors.vec3(0, 0, 0) end
+  if type(hex) == "table" then
+    local r = hex.r or hex.x or hex[1] or 0
+    local g = hex.g or hex.y or hex[2] or 0
+    local b = hex.b or hex.z or hex[3] or 0
+    if r > 1 or g > 1 or b > 1 then
+      r, g, b = r / 255, g / 255, b / 255
+    end
+    return vectors.vec3(r, g, b)
+  end
+  if type(hex) == "number" then
+    local num = math.floor(hex)
+    local r = math.floor(num / 65536) % 256
+    local g = math.floor(num / 256) % 256
+    local b = num % 256
+    return vectors.vec3(r / 255, g / 255, b / 255)
+  end
+  local str = tostring(hex):gsub("#", ""):gsub("%s+", "")
+  if #str == 3 then
+    local r = tonumber(str:sub(1, 1):rep(2), 16) or 0
+    local g = tonumber(str:sub(2, 2):rep(2), 16) or 0
+    local b = tonumber(str:sub(3, 3):rep(2), 16) or 0
+    return vectors.vec3(r / 255, g / 255, b / 255)
+  elseif #str >= 6 then
+    local r = tonumber(str:sub(1, 2), 16) or 0
+    local g = tonumber(str:sub(3, 4), 16) or 0
+    local b = tonumber(str:sub(5, 6), 16) or 0
+    return vectors.vec3(r / 255, g / 255, b / 255)
+  end
+  return vectors.vec3(0, 0, 0)
+end
+
+function vectors.rgbToHex(rgb, g, b)
+  local red, green, blue = 0, 0, 0
+  if type(rgb) == "table" then
+    red = rgb.r or rgb.x or rgb[1] or 0
+    green = rgb.g or rgb.y or rgb[2] or 0
+    blue = rgb.b or rgb.z or rgb[3] or 0
+  elseif type(rgb) == "number" then
+    red = rgb
+    green = g or 0
+    blue = b or 0
+  end
+  if red <= 1 and green <= 1 and blue <= 1 and (red > 0 or green > 0 or blue > 0) then
+    red = red * 255
+    green = green * 255
+    blue = blue * 255
+  end
+  local ir = math.max(0, math.min(255, math.floor(red + 0.5)))
+  local ig = math.max(0, math.min(255, math.floor(green + 0.5)))
+  local ib = math.max(0, math.min(255, math.floor(blue + 0.5)))
+  return string.format("%02x%02x%02x", ir, ig, ib)
+end
+
+math.lerp = math.lerp or function(a, b, t)
+  return a + (b - a) * t
+end
+
+math.clamp = math.clamp or function(val, min, max)
+  if val < min then return min end
+  if val > max then return max end
+  return val
+end
+
+math.sign = math.sign or function(x)
+  if x > 0 then return 1 end
+  if x < 0 then return -1 end
+  return 0
+end
+
+math.round = math.round or function(x)
+  return math.floor(x + 0.5)
+end
+
+math.map = math.map or function(val, in_min, in_max, out_min, out_max)
+  return out_min + (val - in_min) * (out_max - out_min) / (in_max - in_min)
+end
+
 figuraMetatables = figuraMetatables or {
   Vector2 = vec2_mt,
   Vector3 = vec3_mt,
   Vector4 = vec4_mt,
   Matrix4 = mat4_mt
 }
+

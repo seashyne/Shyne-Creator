@@ -364,6 +364,81 @@ final class FiguraTierOneCompatibilityTest {
         assertTrue(result.toboolean(), "Network channel and Figura shims must enforce allowed channels");
     }
 
+    @Test
+    void figuraExtendedLibrariesAndHelpersSupport() throws Exception {
+        LuaSandbox.Environment environment = LuaSandbox.create();
+        Globals globals = environment.globals();
+        installBootstrapMocks(environment, new LuaTable());
+        runBootstrap(environment);
+
+        LuaValue result = globals.load("""
+            -- 1. Universal vec constructor
+            local v0 = vec()
+            local v2 = vec(10, 20)
+            local v3 = vec(1, 2, 3)
+            local v4 = vec(1, 2, 3, 4)
+            local v_num = vec(5)
+            local v_tbl = vec({ x = 7, y = 8, z = 9 })
+
+            -- 2. Hex <-> RGB color conversions
+            local c_white = vectors.hexToRGB("#ffffff")
+            local hex_white = vectors.rgbToHex(c_white)
+            local c_pink = vectors.hexToRGB("#ff8a90")
+            local hex_pink = vectors.rgbToHex(c_pink)
+
+            -- 3. Figura Math Helpers
+            local lerped = math.lerp(0, 10, 0.5)
+            local clamped = math.clamp(15, 0, 10)
+            local sign_pos = math.sign(42)
+            local sign_neg = math.sign(-42)
+            local rounded = math.round(3.6)
+
+            -- 4. Player methods
+            local yaw = player:getBodyYaw()
+            local pose = player:getPose()
+            local rot = player:getRot()
+
+            -- 5. Nameplate aliases and advanced methods
+            nameplate.Entity:setVisible(true):setOutline(true):setShadow(false):setLight(15, 15)
+            nameplate.ALL:setText("Test Name"):setBackgroundColor(0.5, 1, 0, 0)
+            local json_str = toJson({ name = "Pink", value = 123 })
+            local parsed = parseJson(json_str)
+
+            -- 6. Action wheel methods
+            local p = action_wheel:newPage()
+            local act = p:newAction()
+                :title("Test")
+                :setTexture(textures["textures.main"])
+                :toggleTitle("Alt")
+                :toggleTexture(textures["textures.alt"])
+                :toggleColor(1, 0, 0)
+                :setOnToggle(function(t) end)
+                :setOnLeftClick(function() end)
+
+            -- 7. Sounds playSound with pos as 2nd arg
+            sounds:playSound("test_sound", player:getPos(), 1, 1)
+
+            return v0.x == 0 and v0.y == 0 and v0.z == 0
+              and v2.x == 10 and v2.y == 20
+              and v3.x == 1 and v3.y == 2 and v3.z == 3
+              and v4.w == 4
+              and v_num.x == 5 and v_num.y == 5 and v_num.z == 5
+              and v_tbl.x == 7 and v_tbl.y == 8 and v_tbl.z == 9
+              and hex_white == "ffffff"
+              and hex_pink == "ff8a90"
+              and lerped == 5
+              and clamped == 10
+              and sign_pos == 1 and sign_neg == -1
+              and rounded == 4
+              and yaw == 45
+              and pose == "CROUCHING"
+              and parsed.name == "Pink"
+              and parsed.value == 123
+            """, "figura-extended-helpers-test").call();
+
+        assertTrue(result.toboolean(), "Figura extended libraries, math helpers, and facade methods must function correctly");
+    }
+
     /** Installs only the native callbacks needed to load and observe the compatibility facade. */
     private static void installBootstrapMocks(LuaSandbox.Environment environment, LuaTable rendererWrites) {
         Globals globals = environment.globals();
@@ -464,6 +539,11 @@ final class FiguraTierOneCompatibilityTest {
             @Override public Varargs invoke(Varargs args) {
                 textureWrites.set("model_texture", args.arg(1));
                 textureWrites.set("model_target", args.arg(2));
+                return LuaValue.TRUE;
+            }
+        });
+        globals.set("_avatar_action_register", new VarArgFunction() {
+            @Override public Varargs invoke(Varargs args) {
                 return LuaValue.TRUE;
             }
         });
@@ -614,6 +694,12 @@ final class FiguraTierOneCompatibilityTest {
             case "player.main_hand" -> item("minecraft:diamond_sword", "Diamond Sword", 1, 12, 1561, true);
             case "player.off_hand" -> item("minecraft:shield", "Shield", 1, 0, 336, false);
             case "player.item" -> itemForSlot(argument.optint(0));
+            case "player.body_yaw" -> LuaValue.valueOf(45.0);
+            case "player.pose" -> LuaValue.valueOf("CROUCHING");
+            case "player.rot" -> vector(10, 20, 0);
+            case "player.look" -> vector(0, 0, 1);
+            case "player.pos" -> vector(100, 64, -200);
+            case "player.velocity" -> vector(0.5, 0, 0.2);
             default -> LuaValue.NIL;
         };
     }

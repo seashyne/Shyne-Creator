@@ -6,6 +6,7 @@ import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
 import org.luaj.vm2.lib.OneArgFunction;
 import org.luaj.vm2.lib.VarArgFunction;
+import org.luaj.vm2.lib.ZeroArgFunction;
 import seashyne.shynecore.animation.AnimationPlayback;
 import seashyne.shynecore.client.avatar.AvatarAnimationLayer;
 import seashyne.shynecore.client.avatar.AvatarEmoteDefinition;
@@ -73,6 +74,29 @@ public final class AvatarAnimationBridge {
             @Override public LuaValue call(LuaValue arg) {
                 stopAnimation(arg.optjstring(""));
                 return LuaValue.NIL;
+            }
+        });
+
+        globals.set("_avatar_anim_stop_all", new ZeroArgFunction() {
+            @Override public LuaValue call() {
+                state.animationLayers().clear();
+                state.markAnimationLayersDirty();
+                state.markSnapshotDirty();
+                return LuaValue.NIL;
+            }
+        });
+
+        globals.set("_avatar_anim_playing_list", new ZeroArgFunction() {
+            @Override public LuaValue call() {
+                LuaTable table = new LuaTable();
+                long now = System.currentTimeMillis();
+                int idx = 1;
+                for (var entry : state.animationLayers().entrySet()) {
+                    if (!entry.getValue().finished(now)) {
+                        table.set(idx++, LuaValue.valueOf(entry.getKey()));
+                    }
+                }
+                return table;
             }
         });
 
