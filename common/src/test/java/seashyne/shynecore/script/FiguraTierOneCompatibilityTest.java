@@ -397,6 +397,8 @@ final class FiguraTierOneCompatibilityTest {
             local yaw = player:getBodyYaw()
             local pose = player:getPose()
             local rot = player:getRot()
+            local using = player:isUsingItem()
+            local swinging = player:isSwingingArm()
 
             -- 5. Nameplate aliases and advanced methods
             nameplate.Entity:setVisible(true):setOutline(true):setShadow(false):setLight(15, 15)
@@ -418,6 +420,12 @@ final class FiguraTierOneCompatibilityTest {
             -- 7. Sounds playSound with pos as 2nd arg
             sounds:playSound("test_sound", player:getPos(), 1, 1)
 
+            -- 8. Models setPrimaryTexture (if models facade is present)
+            if models and models.setPrimaryTexture then
+                models:setPrimaryTexture("Custom", textures["model.alt"])
+                models.setPrimaryTexture("Custom", textures["model.alt"])
+            end
+
             return v0.x == 0 and v0.y == 0 and v0.z == 0
               and v2.x == 10 and v2.y == 20
               and v3.x == 1 and v3.y == 2 and v3.z == 3
@@ -434,6 +442,8 @@ final class FiguraTierOneCompatibilityTest {
               and pose == "CROUCHING"
               and parsed.name == "Pink"
               and parsed.value == 123
+              and using == false
+              and swinging == false
             """, "figura-extended-helpers-test").call();
 
         assertTrue(result.toboolean(), "Figura extended libraries, math helpers, and facade methods must function correctly");
@@ -700,6 +710,8 @@ final class FiguraTierOneCompatibilityTest {
             case "player.look" -> vector(0, 0, 1);
             case "player.pos" -> vector(100, 64, -200);
             case "player.velocity" -> vector(0.5, 0, 0.2);
+            case "player.using_item" -> LuaValue.FALSE;
+            case "player.swinging" -> LuaValue.FALSE;
             default -> LuaValue.NIL;
         };
     }

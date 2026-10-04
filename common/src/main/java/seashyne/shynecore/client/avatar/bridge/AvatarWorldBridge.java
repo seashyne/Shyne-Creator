@@ -77,6 +77,7 @@ public final class AvatarWorldBridge {
                     case "player.target" -> targetInfo(player, args.arg(2).optdouble(6));
                     case "player.effects" -> activeEffects(player);
                     case "player.swing" -> LuaValue.valueOf(1.0f - player.getAttackStrengthScale(0));
+                    case "player.swinging", "player.swinging_arm" -> LuaValue.valueOf((1.0f - player.getAttackStrengthScale(0)) > 0.05f);
                     case "player.name" -> LuaValue.valueOf(player.getName().getString());
                     case "player.uuid" -> LuaValue.valueOf(player.getStringUUID());
                     case "player.health" -> LuaValue.valueOf(player.getHealth());

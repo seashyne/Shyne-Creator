@@ -402,11 +402,17 @@ models = setmetatable({}, {
       end
     end
     if key == "setPrimaryTexture" then
-      return function(self, name, texture)
-        if textures and textures.bindToModel then
-          return textures:bindToModel(texture, name)
+      return function(a1, a2, a3)
+        local target, tex
+        if type(a1) == "string" then
+          target, tex = a1, a2
+        else
+          target, tex = a2, a3
         end
-        return self
+        if textures and textures.bindToModel then
+          return textures:bindToModel(tex, target)
+        end
+        return a1
       end
     end
     return model.part(tostring(key))

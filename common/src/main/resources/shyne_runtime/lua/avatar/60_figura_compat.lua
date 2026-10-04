@@ -416,7 +416,8 @@ function player:isUnderwater() return _shyne_read("player.underwater") or false 
 function player:isInWater() return _shyne_read("player.in_water") or false end
 function player:isOnGround() return _shyne_read("player.on_ground") or false end
 function player:isGliding() return _shyne_read("player.fall_flying") or false end
-function player:isSwingingArm() return _shyne_read("player.using_item") or false end
+function player:isSwingingArm() return _shyne_read("player.swinging") or ((_shyne_read("player.swing") or 0) > 0.05) or false end
+function player:isUsingItem() return _shyne_read("player.using_item") or false end
 function player:getName() return _shyne_read("player.name") or "Player" end
 function player:isAlive() return _shyne_read("player.alive") or (self:getHealth() > 0) end
 function player:getHealth() return _shyne_read("player.health") or 20 end
