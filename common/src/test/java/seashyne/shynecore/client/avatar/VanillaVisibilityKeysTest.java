@@ -14,6 +14,8 @@ final class VanillaVisibilityKeysTest {
             () -> assertEquals(VanillaVisibilityKeys.LEFT_ITEM, VanillaVisibilityKeys.normalize("left hand item")),
             () -> assertEquals(VanillaVisibilityKeys.MAIN_HAND, VanillaVisibilityKeys.normalize("mainhand")),
             () -> assertEquals(VanillaVisibilityKeys.HEAD_ITEM, VanillaVisibilityKeys.normalize("skull")),
+            () -> assertEquals(VanillaVisibilityKeys.HEAD_ITEM, VanillaVisibilityKeys.normalize("helmet_item")),
+            () -> assertEquals(VanillaVisibilityKeys.HEAD_ITEM, VanillaVisibilityKeys.normalize("helmet-item")),
             () -> assertEquals("CHESTPLATE", VanillaVisibilityKeys.normalize("body armor"))
         );
     }
@@ -38,6 +40,11 @@ final class VanillaVisibilityKeysTest {
         assertFalse(VanillaVisibilityKeys.effectiveVisible(Map.of("PLAYER", true, "HAT", false), false, "HAT", true));
         assertFalse(VanillaVisibilityKeys.effectiveVisible(Map.of("PLAYER", true, "HAT", true), false, "HAT", false));
         assertTrue(VanillaVisibilityKeys.effectiveVisible(Map.of("PLAYER", true, "HAT", true), false, "HAT", true));
+
+        // Independent layers like ARMOR, CAPE, ELYTRA remain visible even when PLAYER is hidden
+        assertTrue(VanillaVisibilityKeys.effectiveVisible(Map.of("PLAYER", false, "ARMOR", true), false, "ARMOR", true));
+        assertTrue(VanillaVisibilityKeys.effectiveVisible(Map.of("PLAYER", false, "CAPE", true), false, "CAPE", true));
+        assertTrue(VanillaVisibilityKeys.effectiveVisible(Map.of("PLAYER", false, "HEAD_ITEM", true), false, "HEAD_ITEM", true));
     }
 
     @Test

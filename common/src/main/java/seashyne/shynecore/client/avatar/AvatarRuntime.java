@@ -214,7 +214,7 @@ public final class AvatarRuntime {
     }
 
     private static boolean resolvedVanillaVisibility(Map<String, Boolean> visibility, boolean replaceVanilla, String key) {
-        if (!VanillaVisibilityKeys.PLAYER.equals(key)
+        if (VanillaVisibilityKeys.isPlayerBodyPart(key)
             && !VanillaVisibilityKeys.isVisible(visibility, replaceVanilla, VanillaVisibilityKeys.PLAYER)) return false;
         return VanillaVisibilityKeys.isVisible(visibility, replaceVanilla, key);
     }

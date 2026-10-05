@@ -33,7 +33,7 @@ public final class VanillaVisibilityKeys {
             case "RIGHT_HAND_ITEM", "RIGHT_HELD_ITEM" -> RIGHT_ITEM;
             case "MAINHAND", "MAIN_HAND_ITEM" -> MAIN_HAND;
             case "OFFHAND", "OFF_HAND_ITEM" -> OFF_HAND;
-            case "SKULL", "HELD_ON_HEAD", "CUSTOM_HEAD" -> HEAD_ITEM;
+            case "SKULL", "HELMET_ITEM", "HEAD_ITEM", "HELD_ON_HEAD", "CUSTOM_HEAD" -> HEAD_ITEM;
             case "LEFT_PANTS_LEG" -> "LEFT_PANTS";
             case "RIGHT_PANTS_LEG" -> "RIGHT_PANTS";
             case "HEAD_ARMOR" -> "HELMET";
@@ -47,6 +47,20 @@ public final class VanillaVisibilityKeys {
             case "SLEEVES" -> "SLEEVE";
             case "PANTS" -> "PANTS";
             default -> normalized;
+        };
+    }
+
+    /**
+     * Determines whether the given canonical key is a body part of the player rig.
+     * Non-body parts like ARMOR, CAPE, ELYTRA, and HELD_ITEMS are independent of PLAYER.
+     */
+    public static boolean isPlayerBodyPart(String key) {
+        String canonical = normalize(key);
+        return switch (canonical) {
+            case "HEAD", "HAT", "BODY", "JACKET",
+                 "RIGHT_ARM", "LEFT_ARM", "RIGHT_SLEEVE", "LEFT_SLEEVE",
+                 "RIGHT_LEG", "LEFT_LEG", "RIGHT_PANTS", "LEFT_PANTS" -> true;
+            default -> false;
         };
     }
 
@@ -108,7 +122,10 @@ public final class VanillaVisibilityKeys {
         if (!capturedVisible) return false;
         String canonical = normalize(key);
         if (PLAYER.equals(canonical)) return isVisible(visibility, replaceVanilla, PLAYER);
-        return isVisible(visibility, replaceVanilla, PLAYER)
-            && isVisible(visibility, replaceVanilla, canonical);
+        if (isPlayerBodyPart(canonical)) {
+            return isVisible(visibility, replaceVanilla, PLAYER)
+                && isVisible(visibility, replaceVanilla, canonical);
+        }
+        return isVisible(visibility, replaceVanilla, canonical);
     }
 }

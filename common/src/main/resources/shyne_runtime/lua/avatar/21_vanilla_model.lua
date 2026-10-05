@@ -44,6 +44,8 @@ local PART_GROUPS = {
   chestplate = { "CHESTPLATE" },
   leggings = { "LEGGINGS" },
   boots = { "BOOTS" },
+  helmet_item = { "HEAD_ITEM" },
+  head_item = { "HEAD_ITEM" },
   items = { "HELD_ITEMS", "LEFT_ITEM", "RIGHT_ITEM", "MAIN_HAND", "OFF_HAND" },
   held_items = { "HELD_ITEMS", "LEFT_ITEM", "RIGHT_ITEM", "MAIN_HAND", "OFF_HAND" },
   all = { "PLAYER" },
@@ -82,7 +84,7 @@ local function replace_vanilla_impl(config, opt_state)
     local raw = config:gsub("[,;]", " ")
     for token in raw:gmatch("%S+") do
       local lower = token:lower()
-      if lower == "all" then
+      if lower == "all" or lower == "player" then
         set_vanilla_visible_native("PLAYER", not should_replace)
       elseif lower == "none" then
         set_vanilla_visible_native("PLAYER", true)
@@ -133,7 +135,7 @@ local function vanilla_proxy(part)
     if value == nil then
       return _avatar_vanilla_transform and _avatar_vanilla_transform(self.part).visible or true
     end
-    replace_vanilla_impl(self.part, not bool(value))
+    apply_part_visibility(self.part, bool(value))
     return self
   end
   function proxy:show() return self:visible(true) end

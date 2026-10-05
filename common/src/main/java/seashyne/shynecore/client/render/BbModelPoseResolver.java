@@ -137,6 +137,11 @@ private static BbModelEntityRenderer.BonePose buildBonePose(
             emissive |= part.emissive();
         }
     }
+    if (part == null || !part.visibilityControlled()) {
+        if (isSpecialFiguraHiddenByDefault(bone.name())) {
+            localVisible = false;
+        }
+    }
     visible &= localVisible;
 
     matrix.translate(pivot.x, pivot.y, pivot.z);
@@ -195,6 +200,12 @@ private static float blendAngle(float from, float to, float weight) {
     if (delta > 180f) delta -= 360f;
     if (delta < -180f) delta += 360f;
     return from + delta * weight;
+}
+
+static boolean isSpecialFiguraHiddenByDefault(String boneName) {
+    if (boneName == null) return false;
+    String normalized = boneName.trim().toLowerCase(java.util.Locale.ROOT).replace("_", "");
+    return "skull".equals(normalized) || "portrait".equals(normalized);
 }
 
 }

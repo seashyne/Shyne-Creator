@@ -85,7 +85,10 @@ public final class AvatarModelHelper {
         String path = state.resolvePath(requestedPath);
         if (model == null || path == null) return true;
         for (var bone : model.bones()) {
-            if (model.bonePath(bone.uuid()).equalsIgnoreCase(path)) return bone.visible();
+            if (model.bonePath(bone.uuid()).equalsIgnoreCase(path)) {
+                if (isSpecialFiguraHiddenByDefault(bone.name())) return false;
+                return bone.visible();
+            }
         }
         for (var cube : model.cubes()) {
             if (model.cubePath(cube).equalsIgnoreCase(path)) return cube.visible();
@@ -94,6 +97,12 @@ public final class AvatarModelHelper {
             if (model.meshPath(mesh).equalsIgnoreCase(path)) return mesh.visible();
         }
         return true;
+    }
+
+    public static boolean isSpecialFiguraHiddenByDefault(String boneName) {
+        if (boneName == null) return false;
+        String normalized = boneName.trim().toLowerCase(Locale.ROOT).replace("_", "");
+        return "skull".equals(normalized) || "portrait".equals(normalized);
     }
 
     public static AvatarPhysicsController.PhysicsConfig parsePhysicsConfig(String path, LuaValue val) {

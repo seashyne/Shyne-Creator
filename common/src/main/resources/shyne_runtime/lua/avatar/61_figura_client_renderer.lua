@@ -38,7 +38,7 @@ renderer = renderer or {}
 
 function renderer:isFirstPerson()
   local val = _shyne_read("client.first_person")
-  return val == nil or val == true
+  return val == true
 end
 
 function renderer:isCamera()

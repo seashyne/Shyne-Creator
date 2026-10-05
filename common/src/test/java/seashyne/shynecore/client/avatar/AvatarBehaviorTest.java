@@ -89,6 +89,16 @@ final class AvatarBehaviorTest {
         assertEquals(now - 100L, state.currentAnimationStartedAtMillis());
     }
 
+    @Test
+    void figuraSpecialBonesHiddenByDefault() {
+        assertTrue(seashyne.shynecore.client.avatar.bridge.AvatarModelHelper.isSpecialFiguraHiddenByDefault("Skull"));
+        assertTrue(seashyne.shynecore.client.avatar.bridge.AvatarModelHelper.isSpecialFiguraHiddenByDefault("skull"));
+        assertTrue(seashyne.shynecore.client.avatar.bridge.AvatarModelHelper.isSpecialFiguraHiddenByDefault("Portrait"));
+        assertTrue(seashyne.shynecore.client.avatar.bridge.AvatarModelHelper.isSpecialFiguraHiddenByDefault("portrait"));
+        assertFalse(seashyne.shynecore.client.avatar.bridge.AvatarModelHelper.isSpecialFiguraHiddenByDefault("Head"));
+        assertFalse(seashyne.shynecore.client.avatar.bridge.AvatarModelHelper.isSpecialFiguraHiddenByDefault("root"));
+    }
+
     private static BbModelDefinition model() {
         List<BbAnimationDefinition> animations = List.of(
             animation("Idle", true), animation("Walk", true), animation("Ear Wiggle", true), animation("Blink", false)

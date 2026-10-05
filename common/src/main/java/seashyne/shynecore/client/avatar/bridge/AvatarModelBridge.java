@@ -131,13 +131,6 @@ public final class AvatarModelBridge {
                     Boolean previous = state.vanillaVisibility().put(key, visible);
                     if (previous == null || previous != visible) changed = true;
                 }
-                if (!visible && !keys.contains(VanillaVisibilityKeys.PLAYER)) {
-                    Boolean prevPlayer = state.vanillaVisibility().get(VanillaVisibilityKeys.PLAYER);
-                    if (prevPlayer == null || !prevPlayer) {
-                        state.vanillaVisibility().put(VanillaVisibilityKeys.PLAYER, true);
-                        changed = true;
-                    }
-                }
                 if (changed) state.markSnapshotDirty();
                 return LuaValue.NIL;
             }

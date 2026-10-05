@@ -728,6 +728,16 @@ final class LuaBootstrapSyntaxTest {
         globals.load("vanilla_model.ARMS:setVisible(true)", "test").call();
         assertEquals(Boolean.TRUE, visibilityLog.get("RIGHT_ARM"), "vanilla_model.ARMS should restore RIGHT_ARM");
         assertEquals(Boolean.TRUE, visibilityLog.get("LEFT_ARM"), "vanilla_model.ARMS should restore LEFT_ARM");
+
+        // 8. Hiding individual parts after PLAYER is hidden must not re-enable PLAYER
+        globals.load("vanilla_model.PLAYER:setVisible(false)", "test").call();
+        assertEquals(Boolean.FALSE, visibilityLog.get("PLAYER"), "PLAYER should be hidden");
+        globals.load("vanilla_model.ARMOR:setVisible(false)", "test").call();
+        assertEquals(Boolean.FALSE, visibilityLog.get("PLAYER"), "Hiding ARMOR must not re-enable PLAYER");
+        assertEquals(Boolean.FALSE, visibilityLog.get("ARMOR"), "ARMOR should be hidden");
+        globals.load("vanilla_model.HELMET_ITEM:setVisible(true)", "test").call();
+        assertEquals(Boolean.TRUE, visibilityLog.get("HEAD_ITEM"), "HELMET_ITEM should map to HEAD_ITEM");
+        assertEquals(Boolean.FALSE, visibilityLog.get("PLAYER"), "Setting HELMET_ITEM must not re-enable PLAYER");
     }
 
     private String avatarBootstrap() throws IOException {

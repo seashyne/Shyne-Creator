@@ -138,7 +138,8 @@ private static boolean isFirstPersonArmBone(BbBoneDefinition bone, HumanoidArm a
     if (bone == null) return false;
     String side = arm == HumanoidArm.LEFT ? "left" : "right";
     String name = normalizeBoneName(bone.name());
-    if (name.equals(side + "armfp") || name.equals(side + "armfirstperson") || name.equals("firstperson" + side + "arm")) return true;
+    if (name.equals(side + "armfp") || name.equals(side + "armfirstperson") || name.equals("firstperson" + side + "arm")
+        || name.equals(side + "armfirstp") || name.equals("firstp" + side + "arm")) return true;
 
     String wantedRole = "firstperson" + side + "arm";
     if (normalizeBoneName(bone.role()).equals(wantedRole)) return true;
@@ -152,6 +153,12 @@ public static boolean isDedicatedFirstPersonArm(BbBoneDefinition bone) {
     return isFirstPersonArmBone(bone, HumanoidArm.LEFT) || isFirstPersonArmBone(bone, HumanoidArm.RIGHT);
 }
 
+public static boolean isFirstPersonSubtreeRoot(BbBoneDefinition bone) {
+    if (bone == null) return false;
+    String name = normalizeBoneName(bone.name());
+    return name.equals("fpmodel") || name.equals("firstpersonmodel") || name.equals("firstperson") || name.equals("fp");
+}
+
 /**
  * Hides authored first-person trees from regular player renders.
  * ซ่อน tree สำหรับมุมมองบุคคลที่หนึ่งจากการวาดผู้เล่นปกติ.
@@ -159,7 +166,7 @@ public static boolean isDedicatedFirstPersonArm(BbBoneDefinition bone) {
 public static Set<String> hiddenFirstPersonBones(BbModelDefinition model) {
     Set<String> hidden = new HashSet<>();
     for (BbBoneDefinition bone : model.bones()) {
-        if (isFirstPersonArmBone(bone, HumanoidArm.LEFT) || isFirstPersonArmBone(bone, HumanoidArm.RIGHT)) {
+        if (isDedicatedFirstPersonArm(bone) || isFirstPersonSubtreeRoot(bone)) {
             addBoneSubtree(model, bone.uuid(), hidden);
         }
     }
