@@ -1,3 +1,17 @@
+## Shyne Creator v2.14.1
+
+### Model Parity & Vanilla Visibility Fixes (Figura Compatibility)
+
+- **Fixed Vanilla Player Overlap Bug**: Resolved an issue where calling `vanilla_model.ARMOR:setVisible(false)`, `CAPE`, or `ELYTRA` erroneously re-enabled `vanilla_model.PLAYER = true`. `vanilla_proxy:visible` now only modifies the target layer without touching base player visibility.
+- **Separated Player Body Rig from Independent Layers**: Added `VanillaVisibilityKeys.isPlayerBodyPart` to decouple body parts (`HEAD`, `BODY`, `ARMS`, `LEGS`) from independent layers (`ARMOR`, `CAPE`, `ELYTRA`, `HELMET_ITEM`, `HELD_ITEMS`). Hiding `PLAYER` only suppresses the player's physical body parts, matching Figura standard behavior.
+- **Added `HELMET_ITEM` Alias**: Normalized `HELMET_ITEM` and `helmet-item` to `HEAD_ITEM` in `VanillaVisibilityKeys` and Lua runtime `PART_GROUPS`.
+- **Special Figura Bone Defaults (`Skull` & `Portrait`)**: Bones named `Skull` and `Portrait` (case-insensitive) are now automatically hidden by default in normal entity rendering, preventing secondary skull models/hair duplicates from rendering at the player's feet.
+- **First-Person Subtree Detection**: Enhanced first-person bone filtering to recognize `fpModel`, `firstpersonmodel`, and `RightArmFirstP` hierarchies in third-person view, and fixed `renderer:isFirstPerson()` default state.
+- แก้ไขปัญหาโมเดล Vanilla ซ้อนทับเมื่อมีการสั่งซ่อนเกราะ, ผ้าคลุม หรือปีกในสคริปต์
+- แยกชิ้นส่วนร่างกายของโมเดลผู้เล่นออกจากเลเยอร์อิสระ (เกราะ, ปีก, ผ้าคลุม, ไอเทม) ให้ตรงกับมาตรฐาน Figura
+- ซ่อนกระดูกพิเศษ `Skull` และ `Portrait` โดยอัตโนมัติบนโมเดลผู้เล่น แก้ปัญหาชิ้นส่วนหัวสำรองโผล่ซ้อนอยู่ที่เท้า
+- รองรับคีย์ `vanilla_model.HELMET_ITEM` และปรับปรุงการตรวจจับกรุ๊ปโมเดลบุคคลที่หนึ่ง `fpModel`
+
 ## Shyne Creator v2.14.0
 
 ### Dual-Mode In-Memory & Physical Texture Architecture (Figura Compatibility)
