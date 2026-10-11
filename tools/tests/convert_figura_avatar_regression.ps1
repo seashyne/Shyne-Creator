@@ -61,7 +61,7 @@ foreach ($name in @("Tail_normal.png", "Tail_emissive.png", "Tail_specular.png",
 & $converter -Source $source -Destination $output -Id "converter.regression" | Out-Null
 $outputManifest = Get-Content -LiteralPath (Join-Path $output "avatar.json") -Raw | ConvertFrom-Json
 $outfits = @(Get-ChildItem -LiteralPath (Join-Path $output "outfit") -File)
-Assert-True ($outputManifest.standard -eq "2.0") "fresh output must use Standard 2.0"
+Assert-True ($outputManifest.standard -eq "standard" -or $outputManifest.standard -eq "2.0") "fresh output must use Shyne Standard"
 Assert-True ($null -eq $outputManifest.PSObject.Properties["main"]) "fresh output must not declare a Lua main"
 Assert-True (@(Get-ChildItem -LiteralPath $output -Recurse -Filter "*.lua" -File).Count -eq 0) "fresh output must contain no Lua files"
 Assert-True ($outfits.Count -eq 1 -and $outfits[0].Name -eq "Tail_Alt.replace.png") "the real alternate texture should become an explicit replacement outfit"

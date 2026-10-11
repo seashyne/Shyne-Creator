@@ -36,9 +36,13 @@ final class AvatarScriptCanvasScreen extends Screen {
         var button = canvas.hit(event.x(), event.y());
         if (button == null) return true;
         if (button.callback() != null) {
-            button.callback().accept(new AvatarScriptCanvasRegistry.CanvasPointerEvent(
-                button.id(), event.x(), event.y(), event.button(), doubleClick
-            ));
+            try {
+                button.callback().accept(new AvatarScriptCanvasRegistry.CanvasPointerEvent(
+                    button.id(), event.x(), event.y(), event.button(), doubleClick
+                ));
+            } catch (Throwable t) {
+                seashyne.shynecore.ShyneCore.LOGGER.error("[AvatarScriptCanvas] Button '{}' callback error: {}", button.id(), t.getMessage(), t);
+            }
         }
         return true;
     }

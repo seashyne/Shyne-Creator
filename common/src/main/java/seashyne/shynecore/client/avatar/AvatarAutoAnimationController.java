@@ -27,6 +27,16 @@ public final class AvatarAutoAnimationController {
         Map.entry("sit", List.of("Sit", "Mount", "SitAnim", "sitanim"))
     );
 
+    private static final Set<String> HUMANOID_LIMBS = Set.of(
+        "head", "body", "torso", "chest", "waist",
+        "leftarm", "rightarm", "leftleg", "rightleg"
+    );
+
+    private static final java.util.regex.Pattern ACCESSORY_PATTERN = java.util.regex.Pattern.compile(
+        ".*(tail|ear|wing|fin|halo|horn|wiggle|wag|ambient|breath|float|spin|sparkle).*",
+        java.util.regex.Pattern.CASE_INSENSITIVE
+    );
+
     private final AvatarBehavior behavior;
     private final Map<String, String> animationNames;
     private final Map<String, String> slots;
@@ -40,8 +50,8 @@ public final class AvatarAutoAnimationController {
     public AvatarAutoAnimationController(BbModelDefinition model, AvatarBehavior behavior, long seed) {
         this.behavior = behavior == null ? AvatarBehavior.AUTO : behavior;
         this.animationNames = indexAnimations(model);
-        this.slots = resolveSlots(this.behavior);
-        this.autoplay = resolveAll(this.behavior.autoplay());
+        this.autoplay = resolveAll(resolveAutoplayList(model, this.behavior));
+        this.slots = resolveSlots(this.behavior, this.autoplay);
         this.blinkAnimation = firstExisting(this.behavior.blink().animations());
         this.random = new Random(seed);
         this.blinkTicks = nextBlinkDelay();
@@ -53,15 +63,14 @@ public final class AvatarAutoAnimationController {
         List<String> stops = new ArrayList<>();
         if (!initialized) {
             initialized = true;
-            Set<String> stateAnimations = new LinkedHashSet<>(slots.values());
             for (String animation : autoplay) {
-                if (!stateAnimations.contains(animation)) plays.add(Play.ambient(animation));
+                plays.add(Play.ambient(animation));
             }
         }
 
         String desired = select(signals == null ? Signals.IDLE : signals);
         if (!same(activeStateAnimation, desired)) {
-            if (activeStateAnimation != null && behavior.blendTicks() == 0) stops.add(activeStateAnimation);
+            if (activeStateAnimation != null && (desired == null || behavior.blendTicks() == 0)) stops.add(activeStateAnimation);
             activeStateAnimation = desired;
             if (desired != null) plays.add(Play.state(desired, behavior.blendTicks()));
         }
@@ -83,8 +92,8 @@ public final class AvatarAutoAnimationController {
         if (signals.sleeping()) return fallback("sleep", "idle");
         if (signals.fallFlying()) return fallback("fly", "idle");
         if (signals.mounted()) return fallback("sit", "idle");
-        if (signals.swimming() || signals.inWater()) return fallback("swim", signals.moving() ? "walk" : "idle");
-        if (signals.crouching()) return fallback("crouch", signals.moving() ? "walk" : "idle");
+        if (signals.swimming() || signals.inWater()) return fallback("swim", signals.moving() ? "walk" : "idle", "idle");
+        if (signals.crouching()) return fallback("crouch", signals.moving() ? "walk" : "idle", "idle");
         if (signals.moving() && signals.sprinting()) return fallback("sprint", "walk", "idle");
         if (signals.moving()) return fallback("walk", "idle");
         return slots.get("idle");
@@ -98,18 +107,125 @@ public final class AvatarAutoAnimationController {
         return null;
     }
 
-    private Map<String, String> resolveSlots(AvatarBehavior definition) {
+    private Map<String, String> resolveSlots(AvatarBehavior definition, List<String> resolvedAutoplay) {
+        Set<String> autoplaySet = new LinkedHashSet<>();
+        if (resolvedAutoplay != null) {
+            for (String name : resolvedAutoplay) {
+                if (name != null) autoplaySet.add(normalize(name));
+            }
+        }
         Map<String, String> result = new LinkedHashMap<>();
         DEFAULT_SLOTS.forEach((state, defaults) -> {
             List<String> configured = definition.candidates(state);
             String selected = firstExisting(configured.isEmpty() ? defaults : configured);
-            if (selected != null) result.put(state, selected);
+            if (selected != null && !autoplaySet.contains(normalize(selected))) {
+                result.put(state, selected);
+            }
         });
         definition.animations().forEach((state, candidates) -> {
             String selected = firstExisting(candidates);
-            if (selected != null) result.put(state.toLowerCase(Locale.ROOT), selected);
+            if (selected != null && !autoplaySet.contains(normalize(selected))) {
+                result.put(state.toLowerCase(Locale.ROOT), selected);
+            }
         });
         return Map.copyOf(result);
+    }
+
+    private List<String> resolveAutoplayList(BbModelDefinition model, AvatarBehavior definition) {
+        List<String> result = new ArrayList<>(definition.autoplay());
+        if (model == null || model.animations() == null || !definition.automatic()) {
+            return List.copyOf(result);
+        }
+
+        Set<String> explicitlyConfigured = new LinkedHashSet<>();
+        definition.autoplay().forEach(name -> explicitlyConfigured.add(normalize(name)));
+        definition.animations().values().forEach(candidates -> {
+            for (String c : candidates) explicitlyConfigured.add(normalize(c));
+        });
+        if (definition.blink().enabled()) {
+            for (String b : definition.blink().animations()) explicitlyConfigured.add(normalize(b));
+        }
+
+        Map<String, String> boneMap = new LinkedHashMap<>();
+        if (model.bones() != null) {
+            for (var bone : model.bones()) {
+                if (bone != null && bone.uuid() != null && bone.name() != null) {
+                    boneMap.put(bone.uuid(), bone.name());
+                }
+            }
+        }
+
+        boolean hasExplicitWalk = model.animations().stream().anyMatch(a -> {
+            if (a == null || a.name() == null) return false;
+            String n = normalize(a.name());
+            return n.equals("walk") || n.equals("move") || n.equals("run") || n.equals("sprint");
+        });
+
+        for (BbAnimationDefinition anim : model.animations()) {
+            if (anim == null || anim.name() == null) continue;
+            String normAnimName = normalize(anim.name());
+            if (explicitlyConfigured.contains(normAnimName)) continue;
+
+            if (isAccessoryAnimation(anim, boneMap, hasExplicitWalk, model.animations().size())) {
+                if (!result.contains(anim.name())) {
+                    result.add(anim.name());
+                }
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    private static boolean isAccessoryAnimation(
+        BbAnimationDefinition anim,
+        Map<String, String> boneMap,
+        boolean hasExplicitWalk,
+        int totalAnimationsCount
+    ) {
+        String animName = anim.name();
+        if (animName == null || animName.isBlank()) return false;
+        String normAnim = normalize(animName);
+
+        Set<String> boneKeys = new LinkedHashSet<>();
+        if (anim.boneAnimations() != null) boneKeys.addAll(anim.boneAnimations().keySet());
+        if (anim.affectedBones() != null) boneKeys.addAll(anim.affectedBones());
+
+        boolean hasHumanoidLimb = false;
+        boolean hasAccessoryBoneMatch = false;
+
+        for (String boneKey : boneKeys) {
+            String boneName = boneMap.getOrDefault(boneKey, boneKey);
+            String normBone = normalize(boneName);
+            if (HUMANOID_LIMBS.contains(normBone)) {
+                hasHumanoidLimb = true;
+                break;
+            }
+            if (ACCESSORY_PATTERN.matcher(boneName).matches()) {
+                hasAccessoryBoneMatch = true;
+            }
+        }
+
+        if (hasHumanoidLimb) {
+            return false;
+        }
+
+        boolean animMatchesAccessory = ACCESSORY_PATTERN.matcher(animName).matches();
+
+        if (animMatchesAccessory || hasAccessoryBoneMatch) {
+            if ((normAnim.equals("idle") || normAnim.equals("stand") || normAnim.equals("standing")) && hasExplicitWalk) {
+                return false;
+            }
+            return true;
+        }
+
+        if (totalAnimationsCount == 1 && !boneKeys.isEmpty()) {
+            return true;
+        }
+
+        if (!boneKeys.isEmpty() && !DEFAULT_SLOTS.containsKey(normAnim) && !normAnim.equals("move") && !normAnim.equals("run")) {
+            return true;
+        }
+
+        return false;
     }
 
     private List<String> resolveAll(List<String> names) {

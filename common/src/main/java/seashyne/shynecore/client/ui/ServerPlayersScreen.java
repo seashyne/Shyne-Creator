@@ -80,13 +80,7 @@ public final class ServerPlayersScreen extends Screen {
         }
 
         int footerY = panelY + panelHeight - 28;
-        Button previous = Button.builder(Component.literal("‹"), ignored -> openPage(page - 1)).bounds(panelX + 16, footerY, 30, 20).build();
-        previous.active = page > 0;
-        addRenderableWidget(previous);
-        Button next = Button.builder(Component.literal("›"), ignored -> openPage(page + 1)).bounds(panelX + 50, footerY, 30, 20).build();
-        next.active = page + 1 < totalPages;
-        addRenderableWidget(next);
-        int footerActionWidth = Math.max(58, Math.min(78, (panelWidth - 112) / 3));
+        int footerActionWidth = Math.max(68, Math.min(90, (panelWidth - 112) / 3));
         int footerActionsX = panelX + panelWidth - 16 - footerActionWidth * 3 - 8;
         addRenderableWidget(Button.builder(Component.translatable(
                 ShyneClientSettings.hideAllRemoteAvatars ? "screen.shyne_core.players.hide_all.active" : "screen.shyne_core.players.hide_all"
@@ -165,6 +159,18 @@ public final class ServerPlayersScreen extends Screen {
         rebuildWidgets();
     }
 
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (verticalAmount != 0 && totalPages > 1) {
+            int newPage = Math.max(0, Math.min(totalPages - 1, page + (verticalAmount < 0 ? 1 : -1)));
+            if (newPage != page) {
+                openPage(newPage);
+                return true;
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+
     private List<PlayerEntry> collectPlayers() {
         Minecraft client = Minecraft.getInstance();
         UUID localId = client.player == null ? null : client.player.getUUID();
@@ -224,8 +230,22 @@ public final class ServerPlayersScreen extends Screen {
         if (players.isEmpty()) {
             graphics.text(font, Component.translatable("screen.shyne_core.players.empty"), panelX + 20, listTop + 14, TEXT_MUTED, false);
         }
-        if (panelWidth >= 420) {
-            graphics.text(font, Component.translatable("screen.shyne_core.avatars.page", page + 1, totalPages), panelX + 88, panelY + panelHeight - 22, TEXT_MUTED, false);
+        Component pageLabel = totalPages > 1
+            ? Component.literal("Scroll ↕  " + (page + 1) + " / " + totalPages)
+            : Component.translatable("screen.shyne_core.avatars.page", page + 1, totalPages);
+        graphics.text(font, pageLabel, panelX + 16, panelY + panelHeight - 22, TEXT_MUTED, false);
+
+        if (totalPages > 1) {
+            int trackX = panelX + panelWidth - 16 - 3;
+            int trackTop = listTop;
+            int trackBottom = panelY + panelHeight - 34;
+            int trackHeight = trackBottom - trackTop;
+            if (trackHeight > 10) {
+                graphics.fill(trackX, trackTop, trackX + 3, trackBottom, 0x33445A78);
+                int thumbHeight = Math.max(8, trackHeight / totalPages);
+                int thumbY = trackTop + (int) ((trackHeight - thumbHeight) * ((float) page / (totalPages - 1)));
+                graphics.fill(trackX, thumbY, trackX + 3, thumbY + thumbHeight, ACCENT);
+            }
         }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }

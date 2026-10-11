@@ -1,8 +1,8 @@
 # 📖 Shyne Creator — API Reference ฉบับสมบูรณ์
 
-> ตรวจทานกับ Shyne Creator `2.13.0` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
+> ตรวจทานกับ Shyne Creator `2.15.0` เอกสารนี้เป็น reference แบบรวม; schema และขอบเขตสัญญาปัจจุบันอยู่ใน [API Contracts](API_CONTRACTS_TH.md)
 
-> **เวอร์ชัน:** `2.13.0` | **Standard:** `2.0` | **ภาษา:** ไทย
+> **เวอร์ชัน:** `2.15.0` | **Standard:** `2.0` | **ภาษา:** ไทย
 > เอกสารนี้รวม **ทุก API** ของ Shyne Creator ไว้ในที่เดียว
 
 ---
@@ -1234,6 +1234,39 @@ figura.compatibility_level -- "tier_1"
 
 ---
 
+## 20. Voice, Speech & Mouth Tracking API (v2.15.0)
+
+Shyne Creator 2.15.0 เพิ่มระบบตรวจจับเสียงไมโครโฟนและการพิมพ์ข้อความแชท เพื่อขยับเปิด-ปิดปากอัตโนมัติ และอนุญาตให้ Lua script ควบคุมโมเดลปากได้เทียบเท่า Figura:
+
+### ตรวจสอบสถานะการพูด
+
+```lua
+-- ตรวจจับว่าผู้เล่นกำลังพูดผ่านไมโครโฟนหรือไม่
+if host:isVoiceActive() then
+    -- ไมโครโฟนทำงาน
+end
+
+-- ตรวจสอบว่าหน้าจอพิมพ์แชทเปิดอยู่หรือไม่
+if host:isChatOpen() then
+    -- ผู้เล่นกำลังเปิดหน้าต่างแชท
+end
+
+-- ตรวจจับสถานะการพูดโดยรวม (เสียงพูดไมค์ หรือ กำลังพิมพ์แชท)
+if voice.isSpeaking() then
+    models.mouth_open:setVisible(true)
+    models.mouth_closed:setVisible(false)
+else
+    models.mouth_open:setVisible(false)
+    models.mouth_closed:setVisible(true)
+end
+```
+
+### Zero-Lua Auto Mouth Tracking
+
+หากโมเดลไม่มีไฟล์สคริปต์ ระบบจะตรวจหากลุ่มหรือ Cube ชื่อ `mouth_open`, `open_mouth` และ `mouth_closed` โดยอัตโนมัติ เมื่อไมโครโฟนมีสัญญาณเสียง หรือผู้เล่นเปิดหน้าต่างแชท ตัวเกมจะสลับแสดงผล `mouth_open` และซ่อน `mouth_closed` ให้อัตโนมัติทันที
+
+---
+
 ## ข้อจำกัดรวม
 
 | ข้อจำกัด | ค่า |
@@ -1254,4 +1287,5 @@ figura.compatibility_level -- "tier_1"
 ---
 
 > 📝 เอกสารนี้สร้างอัตโนมัติจาก `SHYNE_LUA_API_TH.md`, `CUSTOM_RENDER_API_TH.md`, `RIG_API_TH.md`, `SHYNE_GAMEPLAY_API_TH.md`, `CLOUD_API.md` และ `60_figura_compat.lua`  
-> อัปเดตล่าสุด: 2026-10-02 | Shyne Creator v2.13.0
+> อัปเดตล่าสุด: 2026-10-10 | Shyne Creator v2.15.0
+

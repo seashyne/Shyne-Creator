@@ -61,6 +61,9 @@ public final class ShyneClientSettings {
     public static int avatarMaxAnimations = 512;
     public static int avatarMaxTextures = 256;
     public static int avatarMaxTextureSize = 8192;
+    public static double avatarMaxRenderDistance = 96.0;
+    public static double avatarLodDistance = 32.0;
+    public static boolean avatarLodEnabled = true;
 
     private ShyneClientSettings() {}
 
@@ -101,6 +104,9 @@ public final class ShyneClientSettings {
             avatarMaxAnimations = positive(data.avatarMaxAnimations, 512);
             avatarMaxTextures = positive(data.avatarMaxTextures, 256);
             avatarMaxTextureSize = positive(data.avatarMaxTextureSize, 8192);
+            avatarMaxRenderDistance = data.avatarMaxRenderDistance > 0 ? data.avatarMaxRenderDistance : 96.0;
+            avatarLodDistance = data.avatarLodDistance > 0 ? data.avatarLodDistance : 32.0;
+            avatarLodEnabled = data.avatarLodEnabled;
         } catch (Exception e) {
             ShyneCore.LOGGER.warn("[ShyneCreator] Could not load client settings: {}", e.getMessage());
         }
@@ -142,6 +148,9 @@ public final class ShyneClientSettings {
         avatarMaxAnimations = 512;
         avatarMaxTextures = 256;
         avatarMaxTextureSize = 8192;
+        avatarMaxRenderDistance = 96.0;
+        avatarLodDistance = 32.0;
+        avatarLodEnabled = true;
         save();
     }
 
@@ -333,6 +342,9 @@ public final class ShyneClientSettings {
         data.avatarMaxAnimations = avatarMaxAnimations;
         data.avatarMaxTextures = avatarMaxTextures;
         data.avatarMaxTextureSize = avatarMaxTextureSize;
+        data.avatarMaxRenderDistance = avatarMaxRenderDistance;
+        data.avatarLodDistance = avatarLodDistance;
+        data.avatarLodEnabled = avatarLodEnabled;
         return data;
     }
 
@@ -407,5 +419,8 @@ public final class ShyneClientSettings {
         int avatarMaxAnimations = 512;
         int avatarMaxTextures = 256;
         int avatarMaxTextureSize = 8192;
+        double avatarMaxRenderDistance = 96.0;
+        double avatarLodDistance = 32.0;
+        boolean avatarLodEnabled = true;
     }
 }

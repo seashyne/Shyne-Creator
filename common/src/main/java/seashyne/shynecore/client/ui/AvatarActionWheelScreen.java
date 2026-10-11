@@ -166,7 +166,7 @@ public class AvatarActionWheelScreen extends Screen {
         graphics.text(this.font, subtitle, cx - this.font.width(subtitle) / 2, top + 11, TEXT_MUTED, false);
 
         String footer = totalPages > 1
-            ? "‹  " + (currentPage + 1) + "/" + totalPages + "  " + pages.get(currentPage).name() + "  ›"
+            ? "Scroll ↕  " + (currentPage + 1) + "/" + totalPages + "  •  " + pages.get(currentPage).name()
             : pages.get(currentPage).name();
         Component page = Component.literal(this.font.plainSubstrByWidth(footer, this.width - 12));
         graphics.text(this.font, page, cx - this.font.width(page) / 2,
@@ -306,13 +306,25 @@ public class AvatarActionWheelScreen extends Screen {
                 if (action.isToggle()) {
                     action.setToggled(!action.isToggled());
                 }
-                action.callback().run();
+                if (action.callback() != null) {
+                    try {
+                        action.callback().run();
+                    } catch (Throwable t) {
+                        seashyne.shynecore.ShyneCore.LOGGER.error("[AvatarActionWheel] Action '{}' primary callback error: {}", action.id(), t.getMessage(), t);
+                    }
+                }
                 if (action.closeOnUse()) {
                     this.onClose();
                 }
                 return true;
             } else if (event.button() == 1 && action.hasSecondaryCallback()) { // Right Click
-                action.secondaryCallback().run();
+                if (action.secondaryCallback() != null) {
+                    try {
+                        action.secondaryCallback().run();
+                    } catch (Throwable t) {
+                        seashyne.shynecore.ShyneCore.LOGGER.error("[AvatarActionWheel] Action '{}' secondary callback error: {}", action.id(), t.getMessage(), t);
+                    }
+                }
                 return true;
             }
         }

@@ -228,7 +228,7 @@ final class BbModelParserTest {
     }
 
     @Test
-    void convertsV5AnimationAxesLikeFiguraV5Loader() throws Exception {
+    void preservesV5AnimationCoordinatesForNativeParity() throws Exception {
         Path modelFile = temp.resolve("v5.bbmodel");
         Files.writeString(modelFile, """
             {
@@ -246,10 +246,10 @@ final class BbModelParserTest {
             .findAnimation("modern").boneAnimations().get("root");
 
         assertAll(
-            () -> assertEquals("-(v.pitch+10)", animation.rotation().getFirst().pre().x()),
-            () -> assertEquals(-20f, animation.rotation().getFirst().y()),
+            () -> assertEquals("v.pitch+10", animation.rotation().getFirst().pre().x()),
+            () -> assertEquals(20f, animation.rotation().getFirst().y()),
             () -> assertEquals(30f, animation.rotation().getFirst().z()),
-            () -> assertEquals(-4f, animation.position().getFirst().x()),
+            () -> assertEquals(4f, animation.position().getFirst().x()),
             () -> assertEquals(5f, animation.position().getFirst().y())
         );
     }
@@ -321,5 +321,76 @@ final class BbModelParserTest {
 
         assertTrue(Files.isRegularFile(temp.resolve("icon.png")));
         assertTrue(Files.size(temp.resolve("icon.png")) > 0);
+    }
+
+    @Test
+    void resolvesSubGroupsAndVisibilityWhenChildrenAndOutlinerContainUuidStrings() throws Exception {
+        Path modelFile = temp.resolve("string-uuid-hierarchy.bbmodel");
+        Files.writeString(modelFile, """
+            {
+              "meta":{"format_version":"4.10"},
+              "groups":[
+                {"name":"Root","uuid":"root-uuid","origin":[0,0,0],"visibility":true,"export":true,"children":["subgroup-uuid","cube-root"]},
+                {"name":"HiddenSub","uuid":"subgroup-uuid","origin":[0,10,0],"visibility":false,"export":true,"children":["cube-sub"]}
+              ],
+              "outliner":["root-uuid"],
+              "elements":[
+                {"type":"cube","uuid":"cube-root","name":"RootCube","from":[-1,0,-1],"to":[1,2,1],"visibility":true},
+                {"type":"cube","uuid":"cube-sub","name":"SubCube","from":[-1,10,-1],"to":[1,12,1],"visibility":false}
+              ]
+            }
+            """);
+
+        BbModelDefinition model = BbModelParser.parse(modelFile, "test");
+        BbBoneDefinition rootBone = model.findBoneByUuid("root-uuid");
+        BbBoneDefinition subBone = model.findBoneByUuid("subgroup-uuid");
+
+        assertNotNull(rootBone, "Root bone should be resolved from outliner string UUID");
+        assertNotNull(subBone, "Sub-group bone should be resolved from children string UUID");
+        assertTrue(rootBone.visible(), "Root bone should be visible");
+        assertFalse(subBone.visible(), "Sub bone should be hidden (visibility: false)");
+        assertEquals("root-uuid", subBone.parentUuid());
+
+        BbCubeDefinition rootCube = model.cubes().stream().filter(c -> "cube-root".equals(c.name()) || "RootCube".equals(c.name())).findFirst().orElseThrow();
+        BbCubeDefinition subCube = model.cubes().stream().filter(c -> "cube-sub".equals(c.name()) || "SubCube".equals(c.name())).findFirst().orElseThrow();
+
+        assertEquals("root-uuid", rootCube.parentBoneUuid());
+        assertEquals("subgroup-uuid", subCube.parentBoneUuid());
+        assertTrue(rootCube.visible());
+        assertFalse(subCube.visible());
+    }
+
+    @Test
+    void preservesBlockbenchFiveAnimationCoordinatesWithoutInvertingPitchOrYaw() throws Exception {
+        Path modelFile = temp.resolve("bb5-anim.bbmodel");
+        Files.writeString(modelFile, """
+            {
+              "meta":{"format_version":"5.0"},
+              "outliner":[{"name":"Tail","uuid":"tail-bone","origin":[0,13,1.5],"children":[]}],
+              "animations":[{"name":"Idle","length":1,"loop":"loop","animators":{"tail-bone":{"keyframes":[
+                {"channel":"rotation","time":0,"data_points":[{"x":"30","y":"-15","z":"0"}]}
+              ]}}}]
+            }
+            """);
+
+        BbModelDefinition model = BbModelParser.parse(modelFile, "test");
+        BbKeyframe key = model.findAnimation("Idle").boneAnimations().get("tail-bone").rotation().getFirst();
+
+        // Must remain exactly +30 on X and -15 on Y as authored in Blockbench 5.0, NOT inverted to -30 and +15
+        assertEquals(30f, key.x());
+        assertEquals(-15f, key.y());
+        assertEquals(0f, key.z());
+    }
+
+    @Test
+    void bindsBodyAliasesToBodyPoseWithoutDuplicateNestedTransforms() {
+        var body = new BbBoneDefinition("body", "Body", null, null, "", "", java.util.List.of(), 0, 0, 24, 0, 0, 0, 0, true, java.util.List.of("body-child"));
+        var body2 = new BbBoneDefinition("body2", "Body2", null, null, "", "", java.util.List.of(), 0, 0, 24, 0, 0, 0, 0, true, java.util.List.of());
+        var bodyChild = new BbBoneDefinition("body-child", "BodyChild", "Body", "body", "", "", java.util.List.of(), 0, 0, 24, 0, 0, 0, 0, true, java.util.List.of());
+        var model = new BbModelDefinition("test", "test", "Test", Path.of("model.bbmodel"), 4, 16, 16, "", java.util.List.of(), java.util.List.of(body, body2, bodyChild), java.util.List.of(), java.util.List.of());
+
+        assertEquals("body", seashyne.shynecore.client.render.BbModelRigResolver.automaticPoseKey(model, body));
+        assertEquals("body", seashyne.shynecore.client.render.BbModelRigResolver.automaticPoseKey(model, body2));
+        assertEquals("", seashyne.shynecore.client.render.BbModelRigResolver.automaticPoseKey(model, bodyChild));
     }
 }

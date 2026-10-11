@@ -63,6 +63,21 @@ public final class AvatarRuntimeLoaderAdapter {
                         ctx.getSource().sendSystemMessage(net.minecraft.network.chat.Component.literal("§d[Lua] §f" + result));
                         return com.mojang.brigadier.Command.SINGLE_SUCCESS;
                     })))
+                .then(net.minecraft.commands.Commands.literal("diagnose")
+                    .executes(ctx -> seashyne.shynecore.client.avatar.importer.AvatarCommandHelper.executeDiagnoseActive(ctx.getSource()::sendSystemMessage))
+                    .then(net.minecraft.commands.Commands.argument("target", com.mojang.brigadier.arguments.StringArgumentType.string()).executes(ctx -> {
+                        String target = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "target");
+                        return seashyne.shynecore.client.avatar.importer.AvatarCommandHelper.executeDiagnose(target, ctx.getSource()::sendSystemMessage);
+                    })))
+                .then(net.minecraft.commands.Commands.literal("import")
+                    .then(net.minecraft.commands.Commands.argument("folder", com.mojang.brigadier.arguments.StringArgumentType.string()).executes(ctx -> {
+                        String folder = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "folder");
+                        return seashyne.shynecore.client.avatar.importer.AvatarCommandHelper.executeImport(folder, ctx.getSource()::sendSystemMessage);
+                    })))
+                .then(net.minecraft.commands.Commands.literal("unimported")
+                    .executes(ctx -> seashyne.shynecore.client.avatar.importer.AvatarCommandHelper.executeListUnimported(ctx.getSource()::sendSystemMessage)))
+                .then(net.minecraft.commands.Commands.literal("report")
+                    .executes(ctx -> seashyne.shynecore.client.avatar.importer.AvatarCommandHelper.executeExportReport(ctx.getSource()::sendSystemMessage)))
             );
         });
     }

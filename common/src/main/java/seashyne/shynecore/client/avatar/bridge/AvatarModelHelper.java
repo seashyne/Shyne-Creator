@@ -84,17 +84,40 @@ public final class AvatarModelHelper {
     public static boolean defaultPartVisibility(AvatarState state, BbModelDefinition model, String requestedPath) {
         String path = state.resolvePath(requestedPath);
         if (model == null || path == null) return true;
+        java.util.UUID entityId = state != null ? state.boundEntityId() : null;
         for (var bone : model.bones()) {
             if (model.bonePath(bone.uuid()).equalsIgnoreCase(path)) {
                 if (isSpecialFiguraHiddenByDefault(bone.name())) return false;
+                if (seashyne.shynecore.client.render.BbModelPoseResolver.isMouthOpenName(bone.name())) {
+                    return seashyne.shynecore.voice.ShyneMicrophoneState.isSpeaking(entityId);
+                }
+                if (seashyne.shynecore.client.render.BbModelPoseResolver.isMouthClosedName(bone.name())) {
+                    return !seashyne.shynecore.voice.ShyneMicrophoneState.isSpeaking(entityId);
+                }
                 return bone.visible();
             }
         }
         for (var cube : model.cubes()) {
-            if (model.cubePath(cube).equalsIgnoreCase(path)) return cube.visible();
+            if (model.cubePath(cube).equalsIgnoreCase(path)) {
+                if (seashyne.shynecore.client.render.BbModelPoseResolver.isMouthOpenName(cube.name())) {
+                    return seashyne.shynecore.voice.ShyneMicrophoneState.isSpeaking(entityId);
+                }
+                if (seashyne.shynecore.client.render.BbModelPoseResolver.isMouthClosedName(cube.name())) {
+                    return !seashyne.shynecore.voice.ShyneMicrophoneState.isSpeaking(entityId);
+                }
+                return cube.visible();
+            }
         }
         for (var mesh : model.meshes()) {
-            if (model.meshPath(mesh).equalsIgnoreCase(path)) return mesh.visible();
+            if (model.meshPath(mesh).equalsIgnoreCase(path)) {
+                if (seashyne.shynecore.client.render.BbModelPoseResolver.isMouthOpenName(mesh.name())) {
+                    return seashyne.shynecore.voice.ShyneMicrophoneState.isSpeaking(entityId);
+                }
+                if (seashyne.shynecore.client.render.BbModelPoseResolver.isMouthClosedName(mesh.name())) {
+                    return !seashyne.shynecore.voice.ShyneMicrophoneState.isSpeaking(entityId);
+                }
+                return mesh.visible();
+            }
         }
         return true;
     }

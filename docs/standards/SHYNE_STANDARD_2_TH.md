@@ -1,10 +1,10 @@
-# Shyne Avatar Standard 2.0
+# Shyne Avatar Standard
 
-เอกสารนี้ตรวจทานกับ Shyne Creator `2.13.0` และ `avatar.schema.json` คือ contract ที่ตรวจรูปแบบ `avatar.json` จริง ดู API ที่เกี่ยวข้องได้ที่ [API Contracts](../api/API_CONTRACTS_TH.md)
+เอกสารนี้ตรวจทานกับ Shyne Creator `2.15.0` และ `avatar.schema.json` คือ contract ที่ตรวจรูปแบบ `avatar.json` จริง ดู API ที่เกี่ยวข้องได้ที่ [API Contracts](../api/API_CONTRACTS_TH.md)
 
-Shyne Avatar Standard 2.0 เป็นมาตรฐานแบบ **model-first**: งานทั่วไปควรสร้างให้เสร็จจาก Blockbench และ `avatar.json` โดยไม่ต้องมี `script.lua` เป้าหมายคือให้ผู้สร้างเริ่มจากโมเดล, hierarchy, `parent_type` และ animation ที่ตั้งชื่อชัดเจน แล้วให้ Shyne จัดการพฤติกรรมพื้นฐานให้
+Shyne Avatar Standard เป็นมาตรฐานแบบ **model-first** ที่ออกแบบให้ใช้งานเหมือนกันทั้งหมด โดย**ไม่จำเป็นต้องระบุเลขเวอร์ชัน 2.0 อีกต่อไป** (สามารถใส่ `"standard": "standard"`, `"standard": "2.0"` หรือไม่ต้องระบุฟิลด์นี้เลยก็ได้ ระบบจะใช้ Shyne Standard เป็นค่าเริ่มต้นเสมอ) เป้าหมายคือให้ผู้สร้างเริ่มจากโมเดล, hierarchy, `parent_type` และ animation ที่ตั้งชื่อชัดเจน แล้วให้ Shyne จัดการพฤติกรรมพื้นฐานให้
 
-Standard 2.0 ทำงานบน Shyne runtime โดยตรง ไม่ติดตั้ง ไม่โหลด และไม่เรียก Figura runtime ไฟล์จาก Figura อาจใช้เป็นข้อมูลอ้างอิงตอนย้าย geometry, texture และ animation เท่านั้น มาตรฐานนี้ **ไม่โหลดสคริปต์ Figura หรือ compatibility layer รุ่นเก่า** และรับเฉพาะสัญญา API 2.0
+Shyne Standard ทำงานบน Shyne runtime โดยตรง ไม่ติดตั้ง ไม่โหลด และไม่เรียก Figura runtime ไฟล์จาก Figura อาจใช้เป็นข้อมูลอ้างอิงตอนย้าย geometry, texture และ animation เท่านั้น มาตรฐานนี้รับสัญญา Shyne Standard อย่างสม่ำเสมอกันทุกโปรเจกต์
 
 ## ระดับการสร้าง Avatar
 
@@ -30,7 +30,15 @@ Lua เป็นความสามารถระดับหนึ่งข�
 }
 ```
 
-Shyne เติม `standard: 2.0`, ID จากชื่อโฟลเดอร์, `model.bbmodel`, profile `accessory`, blend และ Auto Animation ให้เอง ถ้า animation ชื่อเฉพาะอย่าง `EarWiggle` ต้องเล่นตลอด ให้ตั้ง `Shyne Ambient Autoplay` ใน Blockbench plugin หรือเพิ่ม `behavior.autoplay` ไม่ต้องสร้าง `script.lua` สำหรับกรณีนี้
+Shyne เติม `standard: 2.0`, ID จากชื่อโฟลเดอร์, `model.bbmodel`, profile `accessory`, blend และ Auto Animation ให้เอง ไม่ต้องสร้าง `script.lua` สำหรับกรณีนี้
+
+### Smart Accessory Autoplay (Zero-Config Standard)
+
+ตั้งแต่ Standard 2.0 (Shyne 2.15+) รองรับการตรวจจับ animation ส่วนเสริมอัตโนมัติ:
+- หากโมเดลมี animation ที่ควบคุมเฉพาะกระดูกส่วนเสริม (เช่น หาง `tail`, หู `ear`, ปีก `wing`, ครีบ `fin`, เขา `horn`, วงแหวน `halo`, ผม `hair`, ผ้าคลุม `cape` ฯลฯ) โดยไม่มี keyframe บนกระดูกร่างกายหลัก (`Head`, `Body`, `LeftArm`, `RightArm`, `LeftLeg`, `RightLeg`)
+- Shyne Runtime และ Blockbench Plugin จะตรวจจับและบรรจุเข้าสู่ ambient `autoplay` ให้ทันทีโดยไม่ต้องกำหนด `behavior.autoplay` เองใน `avatar.json`
+- Animation จะเล่นเป็นเลเยอร์พื้นหลังแบบ additive (priority -20) ต่อเนื่องเสมอ ไม่หยุดชะงักเมื่อผู้เล่นวิ่ง, ดำน้ำ, ก้ม หรือกระโดด
+- หากโมเดลมี animation ท่าทางหลัก (เช่น Idle และ Walk เต็มตัว) ระบบจะสลับสถานะตามการเคลื่อนไหวของผู้เล่นอย่างถูกต้อง และไม่แย่งเลเยอร์กัน
 
 ใน Blockbench ให้ตั้ง `parent_type` ของ bone หลักเป็น `Head`, `Body`, `LeftArm`, `RightArm`, `LeftLeg` หรือ `RightLeg` เพื่อให้ส่วนเสริมตามส่วนร่างกายจริง Animation ของ bone จะซ้อนบน transform นั้นโดยอัตโนมัติ
 
@@ -40,7 +48,7 @@ Shyne เติม `standard: 2.0`, ID จากชื่อโฟลเดอ�
 
 | ฟิลด์ | รูปแบบ | หน้าที่ |
 |---|---|---|
-| `standard` | string | ไม่ใส่ได้ โดยค่าเริ่มต้นคือ `"2.0"` |
+| `standard` | string | ไม่ต้องใส่ได้ โดยค่าเริ่มต้นคือ Shyne Standard (หรือใส่ `"standard"` / `"2.0"`) |
 | `name` | string | ชื่อที่แสดงใน Avatar Library |
 | `id` | string | ID คงที่ของ Avatar; ถ้าไม่ใส่ Shyne สร้างจากชื่อโฟลเดอร์ |
 | `model` | string | ไฟล์ Blockbench; ค่าเริ่มต้นคือ `model.bbmodel` |

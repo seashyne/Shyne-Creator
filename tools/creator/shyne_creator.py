@@ -23,7 +23,7 @@ ALLOWED_PERMISSIONS = {
     "audio_stream", "nameplate", "chat_nameplate", "tab_list_nameplate", "data_storage", "data", "network", "world_edit"
 }
 LATEST_API = "2.0"
-SUPPORTED_APIS = {"auto", "latest", LATEST_API}
+SUPPORTED_APIS = {"auto", "latest", "standard", "shyne", LATEST_API}
 POWER_PACKAGE_MANIFEST = "shyne-package.json"
 POWER_PACKAGE_FORMAT = "shyne_asset_package"
 POWER_PACKAGE_FORMAT_VERSION = 1
@@ -438,9 +438,9 @@ def validate(root: Path) -> dict:
         (isinstance(import_spec, str) and import_spec.strip().lower() == "figura")
         or (isinstance(import_spec, dict) and str(import_spec.get("type", "")).strip().lower() == "figura")
     )
-    declared_standard = str(manifest.get("standard", "figura" if is_figura else "2.0")).strip()
-    if manifest and declared_standard not in {"2.0", "figura"} and not is_figura:
-        errors.append("standard must be 2.0")
+    declared_standard = str(manifest.get("standard", "figura" if is_figura else "standard")).strip().lower()
+    if manifest and declared_standard not in {"standard", "shyne", "2.0", "figura"} and not is_figura:
+        errors.append("standard must be standard or 2.0")
     declared_profile = str(manifest.get("profile", "accessory")).strip().lower()
     profile = PROFILE_ALIASES.get(declared_profile, declared_profile)
     if manifest and declared_profile in PROFILE_ALIASES:
@@ -448,11 +448,11 @@ def validate(root: Path) -> dict:
     if manifest and profile not in PROFILES:
         errors.append("profile must be accessory, full_body, or custom")
     if manifest and "api_version" in manifest:
-        errors.append('api_version is not supported by Standard 2.0; use api "2.0"')
+        errors.append('api_version is not supported by Shyne Standard; use api "standard"')
     selected_api = str(manifest.get("api", "latest")).strip().lower()
     if selected_api not in SUPPORTED_APIS:
-        errors.append("api must be auto, latest, or 2.0")
-    effective_api = LATEST_API if selected_api in {"auto", "latest"} else selected_api
+        errors.append("api must be standard, auto, latest, or 2.0")
+    effective_api = LATEST_API if selected_api in {"auto", "latest", "standard", "shyne"} else selected_api
     requirements = manifest.get("requires", {})
     if requirements and not isinstance(requirements, dict):
         errors.append("requires must be an object")

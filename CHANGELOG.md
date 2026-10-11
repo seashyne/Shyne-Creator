@@ -1,3 +1,34 @@
+## Shyne Creator v2.16.0
+
+### Comprehensive Themed Tutorials Hub, Shyne Standard Unification & Security Hardening
+
+- **Interactive Themed Tutorials Hub**: Added an extensive, topic-divided learning center across 6 comprehensive categories on the official docs portal and in-repo guides:
+  - *1. เริ่มต้นสำหรับผู้เล่น (Player Basics)*: Installation on Fabric/NeoForge, 1-minute quickstart, .zip auto-extraction, modern mouse wheel scrolling, and mouth speech tracking.
+  - *2. ออกแบบโมเดลใน Blockbench (Blockbench 3D)*: Vanilla bone hierarchy alignment, ear/tail attachments, pivot point positioning, emissive glowing textures, and animation state machines.
+  - *3. สร้าง Avatar แบบ Zero-Lua (Zero-Lua)*: Full model-first avatars via `avatar.json`, auto-animations (idle/walk/run/blink), automatic speech lip-sync, and vanilla model masking.
+  - *4. เขียนสคริปต์ Lua (Lua Scripting & Events)*: Core lifecycle events (`events.TICK`, `events.RENDER`, `events.KEY_PRESS`), dynamic bone manipulation, Action Wheel 8-way menu, and sound/particle effects.
+  - *5. ระบบออนไลน์และซิงก์ท่าทาง (Multiplayer & Pings RPC)*: Network synchronization of emotes, costumes, and color states across all clients with rate limiting and argument safety.
+  - *6. ฟิสิกส์และการตกแต่งขั้นสูง (Physics, HUD & Profiler)*: Native Spring Physics for ears and tails, first-person arm customization, custom HUD rendering, and performance profiling.
+- **Unified "Shyne Standard"**: Normalized all schemas, validators, Blockbench plugin, and Lua runtimes to standard Shyne nomenclature, eliminating version confusion.
+- **Decompression Bomb Protection**: Hardened `AvatarZipExtractor` with strict uncompressed byte limits (128 MB maximum) and file entry caps (1,024 files maximum) alongside existing Zip Slip mitigations.
+- **Multi-Path Avatar Auto-Discovery**: Enhanced `AvatarLoader` to automatically scan `.minecraft/shyne-mods/avatars/`, `shyne_creator/avatars/`, and legacy `.minecraft/figura/avatars/` for zero-friction migration.
+
+## Shyne Creator v2.15.0
+
+### Phase 3 & 4 Performance, Importer, and Modernized Scrolling UX/UI
+
+- **Modernized Mouse Wheel Scrolling UX/UI**: Replaced legacy left/right page buttons (`‹` / `›`) with smooth mouse wheel scrolling (`mouseScrolled`), instant in-place updates, and sleek glowing scrollbar indicators across `AvatarManagerScreen`, `AvatarOutfitScreen`, `AvatarValidationScreen`, `ServerPlayersScreen`, and `AvatarImporterScreen`.
+- **Performance, Dynamic LOD & Distance Culling**: Integrated distance culling (`distanceCull()`), dynamic level-of-detail reduction for distant players, frame render budgets, profiler metrics via `AvatarProfiler`, and automated memory lifecycle purging for inactive avatars and cached textures.
+- **Automated Avatar Importer & Creator Attribution**: Introduced `AvatarImporter` tool for automated one-click ingestion and migration of Figura & Blockbench avatars into Shyne Standard 2.0 with creator copyright preservation (`ATTRIBUTION.md`) and clean-room licensing notices.
+- **MultiLoader In-Game Commands**: Added `/shyne avatar import <folder>` helper commands accessible on both Fabric and NeoForge.
+- **Critical Crash Fix (StackOverflowError on Mouse Click)**: Resolved an issue where unhandled `StackOverflowError` or infinite Lua event recursion during mouse clicks escaped through `MouseHandler.onButton` and crashed the Minecraft client. Added multi-layer safeguards:
+  - `ClientLuaAvatarRuntime.callEvent` now catches `Throwable` (preventing VM errors from bubbling up to Minecraft).
+  - `AvatarRuntime` input and gameplay dispatchers now catch `Throwable` at the Minecraft hook boundary.
+  - Lua event scheduler (`05_events_scheduler.lua`) and Action Wheel / Pings RPC now enforce recursion depth limits (`_dispatch_depth` and `_ping_depth`).
+  - Action wheel button callbacks and script canvas callbacks are wrapped in `try-catch (Throwable)`.
+- **Automatic Mouth Speech Tracking & Figura Script Parity**: Added automatic voice and chat speech tracking for `mouth_open`, `open_mouth`, and `mouth_closed` elements in zero-Lua mode, with full script control via `host:isVoiceActive()`, `host:isChatOpen()`, `voice.isSpeaking()`, and `models.<part>:setScale/setVisible`.
+- **Vanilla Parent Attachment Alignment**: Fixed root coordinate space transforms ensuring tails and child limb accessories align seamlessly with the player model.
+
 ## Shyne Creator v2.14.1
 
 ### Model Parity & Vanilla Visibility Fixes (Figura Compatibility)

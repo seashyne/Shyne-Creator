@@ -68,9 +68,27 @@ local function make_figura_event_emitter(...)
         local context = payload and payload.context or "SKULL"
         return fn(delta, context, payload)
       end
+      if primary == "arrow_render" then
+        local delta = payload and (payload.delta or payload.partial_tick) or 0
+        local arrow = payload and (payload.arrow or payload.entity) or nil
+        return fn(delta, arrow, payload)
+      end
+      if primary == "item_render" then
+        local item = payload and payload.item or nil
+        local mode = payload and payload.mode or "NONE"
+        local pos = payload and payload.pos or nil
+        local rot = payload and payload.rot or nil
+        local scale = payload and payload.scale or nil
+        local left = payload and payload.left or false
+        return fn(item, mode, pos, rot, scale, left, payload)
+      end
+      if primary == "world_tick" then
+        return fn()
+      end
       local delta = payload and (payload.delta or payload.partial_tick) or 0
       local context = payload and payload.context or "render"
-      return fn(delta, context)
+      local matrix = payload and payload.matrix or nil
+      return fn(delta, context, matrix)
     end
     registered[name] = listener
     for _, n in ipairs(names) do events.on(n, listener) end
@@ -88,10 +106,27 @@ local function make_figura_event_emitter(...)
     end
     registered = {}
   end
+  function emitter:getRegisteredCount()
+    local count = 0
+    for _ in pairs(registered) do count = count + 1 end
+    return count
+  end
+  function emitter:getRegistered()
+    local list = {}
+    for r_name in pairs(registered) do table.insert(list, r_name) end
+    table.sort(list)
+    return list
+  end
+  setmetatable(emitter, {
+    __call = function(self, fn, name)
+      return self:register(fn, name)
+    end
+  })
   return emitter
 end
 
 events.TICK = make_figura_event_emitter("tick")
+events.WORLD_TICK = make_figura_event_emitter("world_tick")
 events.RENDER = make_figura_event_emitter("render")
 events.POST_RENDER = make_figura_event_emitter("post_render")
 events.WORLD_RENDER = make_figura_event_emitter("world_render")
@@ -115,6 +150,65 @@ events.TOTEM_POP = events.TOTEM
 events.ENTITY_DAMAGE = events.DAMAGE
 events.CHAT_RECEIVE = events.CHAT_RECEIVE_MESSAGE
 events.SKULL_RENDER = make_figura_event_emitter("skull_render")
+events.ARROW_RENDER = make_figura_event_emitter("arrow_render")
+events.ITEM_RENDER = make_figura_event_emitter("item_render")
+
+function events:getEvents()
+  return {
+    "TICK", "WORLD_TICK", "RENDER", "POST_RENDER", "WORLD_RENDER", "POST_WORLD_RENDER",
+    "ENTITY_INIT", "DAMAGE", "CHAT_SEND_MESSAGE", "CHAT_RECEIVE_MESSAGE",
+    "KEY_PRESS", "KEY_RELEASE", "KEY_REPEAT", "MOUSE_PRESS", "MOUSE_RELEASE",
+    "MOUSE_SCROLL", "MOUSE_MOVE", "CHAR_TYPED", "USE_ITEM", "TOTEM",
+    "SKULL_RENDER", "ARROW_RENDER", "ITEM_RENDER"
+  }
+end
+
+local event_alias_map = {
+  tick = "TICK",
+  world_tick = "WORLD_TICK",
+  render = "RENDER",
+  post_render = "POST_RENDER",
+  world_render = "WORLD_RENDER",
+  post_world_render = "POST_WORLD_RENDER",
+  entity_init = "ENTITY_INIT",
+  damage = "DAMAGE",
+  chat_receive = "CHAT_RECEIVE_MESSAGE",
+  chat_receive_message = "CHAT_RECEIVE_MESSAGE",
+  chat_send_message = "CHAT_SEND_MESSAGE",
+  key_press = "KEY_PRESS",
+  key_release = "KEY_RELEASE",
+  key_repeat = "KEY_REPEAT",
+  mouse_press = "MOUSE_PRESS",
+  mouse_release = "MOUSE_RELEASE",
+  mouse_scroll = "MOUSE_SCROLL",
+  mouse_move = "MOUSE_MOVE",
+  char_typed = "CHAR_TYPED",
+  use_item = "USE_ITEM",
+  item_use = "USE_ITEM",
+  totem = "TOTEM",
+  skull_render = "SKULL_RENDER",
+  arrow_render = "ARROW_RENDER",
+  item_render = "ITEM_RENDER"
+}
+
+local events_mt = getmetatable(events) or {}
+local old_newindex = events_mt.__newindex
+events_mt.__newindex = function(t, k, v)
+  local emitter_name = event_alias_map[string.lower(tostring(k))]
+  if emitter_name and events[emitter_name] and type(events[emitter_name].register) == "function" then
+    if type(v) == "function" then
+      events[emitter_name]:register(v, "__direct_" .. tostring(k))
+    elseif v == nil then
+      events[emitter_name]:remove("__direct_" .. tostring(k))
+    end
+  end
+  if old_newindex then
+    old_newindex(t, k, v)
+  else
+    rawset(t, k, v)
+  end
+end
+setmetatable(events, events_mt)
 
 -- Action Wheel is implemented in 63_figura_action_wheel.lua
 
@@ -130,6 +224,8 @@ local _ping_sequence = 0
 local _ping_last_received = 0
 local _ping_capacity = 64
 local _ping_outbox = { first = 1, events = {} }
+local _ping_depth = 0
+local MAX_PING_DEPTH = 16
 
 local function _sanitize_ping_value(val, depth)
   local t = type(val)
@@ -279,11 +375,19 @@ setmetatable(pings, {
       return _ping_builtins[name]
     end
     return function(...)
+      if _ping_depth >= MAX_PING_DEPTH then
+        if _shyne_report_error then
+          _shyne_report_error("ping_recursion", tostring(name), "Maximum ping recursion depth exceeded (" .. tostring(MAX_PING_DEPTH) .. ")")
+        end
+        return
+      end
+      _ping_depth = _ping_depth + 1
       local safe_args = _validate_and_sanitize_ping_args(name, { ... })
       if _ping_handlers[name] then
         pcall(_ping_handlers[name], table.unpack(safe_args))
       end
       _enqueue_ping(name, safe_args)
+      _ping_depth = _ping_depth - 1
     end
   end
 })
@@ -443,6 +547,7 @@ host = host or {}
 function host:isHost() return true end
 function host:isChatOpen() return _shyne_read("client.chat_open") or false end
 function host:isVoiceActive() return microphone and microphone.speaking and microphone.speaking() or false end
+function host:isSpeaking() return self:isVoiceActive() or self:isChatOpen() end
 function host:isMuted() return microphone and microphone.muted and microphone.muted() or false end
 function host:getVoiceLevel() return microphone and microphone.level and microphone.level() or 0 end
 function host:getPos() return player:getPos() end
@@ -454,9 +559,17 @@ function host:sendChat(message)
   return _shyne_send_chat and _shyne_send_chat(tostring(message or "")) or false
 end
 
+---@class FiguraVoice
+voice = voice or {}
+function voice.isSpeaking() return host:isVoiceActive() end
+function voice.getVolume() return host:getVoiceLevel() end
+function voice:isSpeaking() return host:isVoiceActive() end
+function voice:getVolume() return host:getVoiceLevel() end
+
 if avatar then
-  function avatar:isSpeaking() return microphone and microphone.speaking and microphone.speaking() or false end
-  function avatar:getVoiceLevel() return microphone and microphone.level and microphone.level() or 0 end
+  function avatar:isSpeaking() return host:isVoiceActive() or host:isChatOpen() end
+  function avatar:isChatOpen() return host:isChatOpen() end
+  function avatar:getVoiceLevel() return host:getVoiceLevel() end
   function avatar:canRender() return true end
   function avatar:isLoaded() return true end
 end

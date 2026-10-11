@@ -94,6 +94,12 @@ public final class ShyneMicrophoneState {
 
     public static Snapshot getSpeakerSnapshot(UUID playerUuid) {
         if (playerUuid == null) return snapshot();
+        try {
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc != null && mc.player != null && playerUuid.equals(mc.player.getUUID())) {
+                return snapshot();
+            }
+        } catch (Throwable ignored) {}
         RemoteSpeaker speaker = remoteSpeakers.get(playerUuid);
         if (speaker == null) return new Snapshot(false, 0D, false, false, false);
         long now = System.nanoTime();
@@ -102,6 +108,19 @@ public final class ShyneMicrophoneState {
         if (currentLevel == 0D) speaker.level = 0D;
         boolean speaking = currentLevel >= SPEAKING_THRESHOLD || now < speaker.speakingUntilNanos;
         return new Snapshot(true, currentLevel, speaking, false, speaker.whispering);
+    }
+
+    public static boolean isSpeaking(UUID playerUuid) {
+        if (getSpeakerSnapshot(playerUuid).speaking()) return true;
+        try {
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc != null && mc.player != null && (playerUuid == null || playerUuid.equals(mc.player.getUUID()))) {
+                if (mc.gui != null && mc.gui.screen() instanceof net.minecraft.client.gui.screens.ChatScreen) {
+                    return true;
+                }
+            }
+        } catch (Throwable ignored) {}
+        return false;
     }
 
     public static void clearAll() {

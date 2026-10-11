@@ -102,7 +102,7 @@ public class AvatarManagerScreen extends Screen {
         previewWidth = Math.max(82, Math.min(148, innerWidth / 3));
         previewX = innerX;
         listX = previewX + previewWidth + 10;
-        listWidth = innerX + innerWidth - listX;
+        listWidth = innerX + innerWidth - listX - 6;
         pageSize = compactHeight ? 1 : Math.max(1, Math.min(5, (pagerY - contentTop - 2) / ROW_HEIGHT));
         totalPages = Math.max(1, (catalog.size() + pageSize - 1) / pageSize);
         currentPage = Math.min(page, totalPages - 1);
@@ -110,7 +110,6 @@ public class AvatarManagerScreen extends Screen {
         addHeaderControls();
         addSearchControls();
         addAvatarRows();
-        if (!compactHeight) addPager();
         addFooter(innerX, innerWidth);
         requestCatalogRefresh();
     }
@@ -202,19 +201,7 @@ public class AvatarManagerScreen extends Screen {
         }
     }
 
-    private void addPager() {
-        Button previous = Button.builder(Component.literal("‹"), btn -> openPage(currentPage - 1))
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.previous")))
-            .bounds(listX, pagerY, 30, 20).build();
-        previous.active = currentPage > 0;
-        addRenderableWidget(previous);
 
-        Button next = Button.builder(Component.literal("›"), btn -> openPage(currentPage + 1))
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.next")))
-            .bounds(listX + 34, pagerY, 30, 20).build();
-        next.active = currentPage + 1 < totalPages;
-        addRenderableWidget(next);
-    }
 
     private void addFooter(int innerX, int innerWidth) {
         Button back = Button.builder(Component.translatable("gui.back"), btn -> onClose()).build();
@@ -281,25 +268,19 @@ public class AvatarManagerScreen extends Screen {
         }).tooltip(Tooltip.create(Component.literal("Manage capabilities and permissions for this avatar"))).build();
         permissions.active = active != null;
 
+        Button importer = Button.builder(Component.literal("Importer"), btn -> {
+            if (this.minecraft != null) this.minecraft.gui.setScreen(new AvatarImporterScreen(this));
+        }).tooltip(Tooltip.create(Component.literal("Import and convert Figura & Blockbench avatars with Creator Attribution"))).build();
+
         if (moreOpen) {
             placeRow(innerX, footerTop - 24, innerWidth, active == null
-                ? List.of(permissions, mask, validate, verify, cloudSettings)
-                : List.of(permissions, mask, validate, folder, verify, cloudSettings));
+                ? List.of(importer, permissions, mask, validate, verify, cloudSettings)
+                : List.of(importer, permissions, mask, validate, folder, verify, cloudSettings));
         }
 
         if (compactFooter) {
             placeRow(innerX, footerTop, innerWidth, List.of(back, primary, reload));
-            if (compactHeight) {
-                Button previous = Button.builder(Component.literal("‹"), btn -> openPage(currentPage - 1))
-                    .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.previous"))).build();
-                previous.active = currentPage > 0;
-                Button next = Button.builder(Component.literal("›"), btn -> openPage(currentPage + 1))
-                    .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.next"))).build();
-                next.active = currentPage + 1 < totalPages;
-                placeRow(innerX, footerTop + 24, innerWidth, List.of(wheel, previous, next));
-            } else {
-                placeRow(innerX, footerTop + 24, innerWidth, List.of(wheel, more));
-            }
+            placeRow(innerX, footerTop + 24, innerWidth, compactHeight ? List.of(wheel) : List.of(wheel, more));
         } else {
             placeRow(innerX, footerTop, innerWidth, List.of(back, primary, reload, wheel, more));
         }
@@ -365,7 +346,22 @@ public class AvatarManagerScreen extends Screen {
         renderAvatarRows(graphics);
 
         if (!compactHeight) {
-            graphics.text(this.font, Component.translatable("screen.shyne_core.avatars.page", currentPage + 1, totalPages), listX + 72, pagerY + 6, 0xFF718198, false);
+            Component pageText = totalPages > 1
+                ? Component.literal("Scroll ↕  " + (currentPage + 1) + " / " + totalPages)
+                : Component.translatable("screen.shyne_core.avatars.page", currentPage + 1, totalPages);
+            graphics.text(this.font, pageText, listX + 4, pagerY + 6, 0xFF718198, false);
+        }
+        if (totalPages > 1) {
+            int trackX = panelX + panelWidth - 16 - 3;
+            int trackTop = contentTop;
+            int trackBottom = pagerY - 4;
+            int trackHeight = trackBottom - trackTop;
+            if (trackHeight > 10) {
+                graphics.fill(trackX, trackTop, trackX + 3, trackBottom, 0x33445A78);
+                int thumbHeight = Math.max(8, trackHeight / totalPages);
+                int thumbY = trackTop + (int) ((trackHeight - thumbHeight) * ((float) currentPage / (totalPages - 1)));
+                graphics.fill(trackX, thumbY, trackX + 3, thumbY + thumbHeight, ACCENT);
+            }
         }
         String activeName = active == null ? Component.translatable("screen.shyne_core.avatars.vanilla.name").getString() : active.avatarId();
         Component activeLabel = Component.translatable("screen.shyne_core.avatars.current", activeName);
@@ -591,9 +587,21 @@ public class AvatarManagerScreen extends Screen {
     }
 
     private void openPage(int newPage) {
-        if (this.minecraft != null) {
-            this.minecraft.gui.setScreen(new AvatarManagerScreen(parent, newPage, searchText, moreOpen));
+        this.page = Math.max(0, Math.min(newPage, totalPages - 1));
+        this.currentPage = this.page;
+        rebuildWidgets();
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (verticalAmount != 0 && totalPages > 1) {
+            int newPage = Math.max(0, Math.min(totalPages - 1, currentPage + (verticalAmount < 0 ? 1 : -1)));
+            if (newPage != currentPage) {
+                openPage(newPage);
+                return true;
+            }
         }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override

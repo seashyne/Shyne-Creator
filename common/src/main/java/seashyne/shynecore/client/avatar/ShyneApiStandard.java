@@ -7,13 +7,14 @@ import java.util.Set;
 /**
  * Single source of truth for the Shyne Lua API contract.
  *
- * <p>Avatar authors use Standard {@code 2.0}, or the aliases
+ * <p>Avatar authors use Shyne Standard, or explicit {@code 2.0}, or aliases
  * {@code latest}/{@code auto}. Module requirements are checked before any Lua
  * code runs so an Avatar never starts with a partially supported API.</p>
  */
 public final class ShyneApiStandard {
+    public static final String STANDARD = "standard";
     public static final String LATEST = "2.0";
-    public static final Set<String> SUPPORTED_STANDARDS = Set.of(LATEST);
+    public static final Set<String> SUPPORTED_STANDARDS = Set.of(STANDARD, LATEST, "shyne", "latest", "auto");
 
     private static final Map<String, String> MODULES = Map.ofEntries(
         Map.entry("animation", "1.1"),
@@ -36,11 +37,17 @@ public final class ShyneApiStandard {
     );
     private ShyneApiStandard() {}
 
+    public static boolean isSupportedStandard(String standard) {
+        if (standard == null || standard.isBlank()) return true;
+        String s = standard.trim().toLowerCase(Locale.ROOT);
+        return SUPPORTED_STANDARDS.contains(s) || s.equals("2.0") || s.equals("standard") || s.equals("shyne") || s.equals("latest") || s.equals("auto");
+    }
+
     public static Selection select(String declaredApi) {
         String value = declaredApi == null ? "" : declaredApi.trim().toLowerCase(Locale.ROOT);
-        boolean automatic = value.isBlank() || value.equals("latest") || value.equals("auto");
+        boolean automatic = value.isBlank() || value.equals("latest") || value.equals("auto") || value.equals("standard") || value.equals("shyne");
         String standard = automatic ? LATEST : normalizeVersion(value);
-        if (!SUPPORTED_STANDARDS.contains(standard)) {
+        if (!SUPPORTED_STANDARDS.contains(standard) && !isSupportedStandard(standard)) {
             throw new IllegalArgumentException(
                 "unsupported Shyne Lua API " + standard + "; supported: " + SUPPORTED_STANDARDS
             );
@@ -49,8 +56,10 @@ public final class ShyneApiStandard {
     }
 
     public static Map<String, String> modulesFor(String standard) {
-        String selected = normalizeVersion(standard);
-        if (!SUPPORTED_STANDARDS.contains(selected)) {
+        String selected = (standard == null || standard.isBlank() || standard.equalsIgnoreCase("standard") || standard.equalsIgnoreCase("shyne"))
+            ? LATEST
+            : normalizeVersion(standard);
+        if (!SUPPORTED_STANDARDS.contains(selected) && !isSupportedStandard(selected)) {
             throw new IllegalArgumentException(
                 "unsupported Shyne Lua API " + selected + "; supported: " + SUPPORTED_STANDARDS
             );
@@ -103,7 +112,12 @@ public final class ShyneApiStandard {
     }
 
     private static String normalizeVersion(String raw) {
-        String[] parts = raw.trim().split("\\.");
+        if (raw == null || raw.isBlank()) return LATEST;
+        String trimmed = raw.trim().toLowerCase(Locale.ROOT);
+        if (trimmed.equals("standard") || trimmed.equals("shyne") || trimmed.equals("latest") || trimmed.equals("auto")) {
+            return LATEST;
+        }
+        String[] parts = trimmed.split("\\.");
         if (parts.length < 1 || parts.length > 3) throw new IllegalArgumentException("invalid API version: " + raw);
         try {
             int major = Integer.parseInt(parts[0]);

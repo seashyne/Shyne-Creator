@@ -62,6 +62,21 @@ public final class AvatarRuntimeLoaderAdapter {
                         ctx.getSource().sendFeedback(net.minecraft.network.chat.Component.literal("§d[Lua] §f" + result));
                         return com.mojang.brigadier.Command.SINGLE_SUCCESS;
                     })))
+                .then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("diagnose")
+                    .executes(ctx -> seashyne.shynecore.client.avatar.importer.AvatarCommandHelper.executeDiagnoseActive(ctx.getSource()::sendFeedback))
+                    .then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument("target", com.mojang.brigadier.arguments.StringArgumentType.string()).executes(ctx -> {
+                        String target = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "target");
+                        return seashyne.shynecore.client.avatar.importer.AvatarCommandHelper.executeDiagnose(target, ctx.getSource()::sendFeedback);
+                    })))
+                .then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("import")
+                    .then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument("folder", com.mojang.brigadier.arguments.StringArgumentType.string()).executes(ctx -> {
+                        String folder = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "folder");
+                        return seashyne.shynecore.client.avatar.importer.AvatarCommandHelper.executeImport(folder, ctx.getSource()::sendFeedback);
+                    })))
+                .then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("unimported")
+                    .executes(ctx -> seashyne.shynecore.client.avatar.importer.AvatarCommandHelper.executeListUnimported(ctx.getSource()::sendFeedback)))
+                .then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("report")
+                    .executes(ctx -> seashyne.shynecore.client.avatar.importer.AvatarCommandHelper.executeExportReport(ctx.getSource()::sendFeedback)))
             );
         });
     }

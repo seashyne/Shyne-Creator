@@ -45,6 +45,11 @@ public final class BbModelParser {
                     collectRawBones(entry, null, null, rawBones, groupDefinitions);
                 }
             }
+            for (Map.Entry<String, JsonObject> groupEntry : groupDefinitions.entrySet()) {
+                if (!rawBones.containsKey(groupEntry.getKey())) {
+                    collectRawBones(groupEntry.getValue(), null, null, rawBones, groupDefinitions);
+                }
+            }
 
             Map<String, String> elementParents = new HashMap<>();
             for (RawBone bone : rawBones.values()) {
@@ -116,7 +121,7 @@ public final class BbModelParser {
     }
 
     private static JsonElement groupProperty(JsonObject outline, JsonObject definition, String name) {
-        if (outline != null && outline.has(name)) return outline.get(name);
+        if (outline != null && outline.has(name) && !outline.get(name).isJsonNull()) return outline.get(name);
         return definition == null ? null : definition.get(name);
     }
 
@@ -127,10 +132,30 @@ public final class BbModelParser {
         Map<String, RawBone> rawBones,
         Map<String, JsonObject> groupDefinitions
     ) {
-        if (!entry.isJsonObject()) return;
-        JsonObject obj = entry.getAsJsonObject();
-        String uuid = obj.has("uuid") ? obj.get("uuid").getAsString() : UUID.randomUUID().toString();
-        JsonObject definition = groupDefinitions.get(uuid);
+        if (entry == null || entry.isJsonNull()) return;
+        JsonObject obj;
+        JsonObject definition = null;
+        String uuid;
+        if (entry.isJsonPrimitive() && entry.getAsJsonPrimitive().isString()) {
+            uuid = entry.getAsString();
+            definition = groupDefinitions.get(uuid);
+            if (definition == null) return;
+            obj = definition;
+        } else if (entry.isJsonObject()) {
+            obj = entry.getAsJsonObject();
+            uuid = obj.has("uuid") ? obj.get("uuid").getAsString() : UUID.randomUUID().toString();
+            definition = groupDefinitions.get(uuid);
+        } else {
+            return;
+        }
+
+        if (rawBones.containsKey(uuid)) {
+            if (parentUuid != null && rawBones.containsKey(parentUuid)) {
+                rawBones.get(parentUuid).childBoneUuids.add(uuid);
+            }
+            return;
+        }
+
         String name = raw(groupProperty(obj, definition, "name"), "bone_" + rawBones.size());
         float[] origin = readVec3(groupProperty(obj, definition, "origin"), 0, 0, 0);
         float[] rotation = readVec3(groupProperty(obj, definition, "rotation"), 0, 0, 0);
@@ -153,9 +178,24 @@ public final class BbModelParser {
         if (children != null && children.isJsonArray()) {
             for (JsonElement child : children.getAsJsonArray()) {
                 if (child.isJsonPrimitive() && child.getAsJsonPrimitive().isString()) {
-                    bone.childElementUuids.add(child.getAsString());
-                } else {
-                    collectRawBones(child, uuid, name, rawBones, groupDefinitions);
+                    String childUuid = child.getAsString();
+                    if (groupDefinitions.containsKey(childUuid)) {
+                        collectRawBones(groupDefinitions.get(childUuid), uuid, name, rawBones, groupDefinitions);
+                    } else {
+                        bone.childElementUuids.add(childUuid);
+                    }
+                } else if (child.isJsonObject()) {
+                    JsonObject childObj = child.getAsJsonObject();
+                    if (childObj.has("from") || childObj.has("vertices")
+                        || "cube".equalsIgnoreCase(raw(childObj.get("type"), ""))
+                        || "mesh".equalsIgnoreCase(raw(childObj.get("type"), ""))) {
+                        String elementUuid = childObj.has("uuid") ? childObj.get("uuid").getAsString() : null;
+                        if (elementUuid != null) {
+                            bone.childElementUuids.add(elementUuid);
+                        }
+                    } else {
+                        collectRawBones(child, uuid, name, rawBones, groupDefinitions);
+                    }
                 }
             }
         }
@@ -177,11 +217,9 @@ public final class BbModelParser {
     }
 
     private static boolean usesV5AnimationCoordinates(JsonObject root) {
-        if (!root.has("meta") || !root.get("meta").isJsonObject()) return false;
-        JsonObject meta = root.getAsJsonObject("meta");
-        if (!meta.has("format_version")) return false;
-        try { return Double.parseDouble(meta.get("format_version").getAsString()) >= 5.0; }
-        catch (RuntimeException ignored) { return false; }
+        // Blockbench 5.x animations share the canonical Blockbench rotation space with static bones.
+        // Inverting X/Y produces inverted pitch/yaw compared to the Blockbench viewport.
+        return false;
     }
 
     static final class RawBone {

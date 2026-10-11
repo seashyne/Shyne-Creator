@@ -28,7 +28,7 @@ public final class AvatarOutfitScreen extends Screen {
     private static final int TEXT_MUTED = 0xFF91A0B7;
 
     private final Screen parent;
-    private final int requestedPage;
+    private int requestedPage;
     private int panelX;
     private int panelY;
     private int panelWidth;
@@ -89,7 +89,7 @@ public final class AvatarOutfitScreen extends Screen {
         previewWidth = Math.max(92, Math.min(150, innerWidth / 3));
         previewX = innerX;
         listX = previewX + previewWidth + 10;
-        listWidth = innerX + innerWidth - listX;
+        listWidth = innerX + innerWidth - listX - 6;
         pageSize = Math.max(1, Math.min(6, (footerY - contentTop - 25) / ROW_HEIGHT));
         totalPages = Math.max(1, (rows.size() + pageSize - 1) / pageSize);
         currentPage = Math.min(requestedPage, totalPages - 1);
@@ -119,20 +119,14 @@ public final class AvatarOutfitScreen extends Screen {
     }
 
     private void addFooter(int innerX, int innerWidth) {
-        Button previous = Button.builder(Component.literal("‹"), ignored -> openPage(currentPage - 1))
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.previous"))).build();
-        previous.active = currentPage > 0;
-        Button next = Button.builder(Component.literal("›"), ignored -> openPage(currentPage + 1))
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.next"))).build();
-        next.active = currentPage + 1 < totalPages;
         Button folder = Button.builder(Component.translatable("screen.shyne_core.outfits.folder"), ignored -> openFolder())
             .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.outfits.folder.tooltip"))).build();
         Button refresh = Button.builder(Component.translatable("screen.shyne_core.outfits.refresh"), ignored -> refreshOutfits())
             .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.outfits.refresh.tooltip"))).build();
         Button back = Button.builder(Component.translatable("gui.back"), ignored -> onClose()).build();
 
-        List<Button> buttons = List.of(previous, next, folder, refresh, back);
-        int gap = 4;
+        List<Button> buttons = List.of(folder, refresh, back);
+        int gap = 6;
         int width = (innerWidth - gap * (buttons.size() - 1)) / buttons.size();
         for (int i = 0; i < buttons.size(); i++) {
             Button button = buttons.get(i);
@@ -189,8 +183,23 @@ public final class AvatarOutfitScreen extends Screen {
             graphics.text(this.font, Component.literal(detail), listX + 10, y + 17, row.valid() ? TEXT_MUTED : 0xFFFF8793, false);
         }
 
-        Component page = Component.translatable("screen.shyne_core.avatars.page", currentPage + 1, totalPages);
+        Component page = totalPages > 1
+            ? Component.literal("Scroll ↕  " + (currentPage + 1) + " / " + totalPages)
+            : Component.translatable("screen.shyne_core.avatars.page", currentPage + 1, totalPages);
         graphics.text(this.font, page, panelX + panelWidth - 16 - this.font.width(page), panelY + 31, TEXT_MUTED, false);
+
+        if (totalPages > 1) {
+            int trackX = panelX + panelWidth - 16 - 3;
+            int trackTop = contentTop;
+            int trackBottom = footerY - 8;
+            int trackHeight = trackBottom - trackTop;
+            if (trackHeight > 10) {
+                graphics.fill(trackX, trackTop, trackX + 3, trackBottom, 0x33445A78);
+                int thumbHeight = Math.max(8, trackHeight / totalPages);
+                int thumbY = trackTop + (int) ((trackHeight - thumbHeight) * ((float) currentPage / (totalPages - 1)));
+                graphics.fill(trackX, thumbY, trackX + 3, thumbY + thumbHeight, ACCENT);
+            }
+        }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
@@ -217,7 +226,21 @@ public final class AvatarOutfitScreen extends Screen {
     }
 
     private void openPage(int page) {
-        if (this.minecraft != null) this.minecraft.gui.setScreen(new AvatarOutfitScreen(parent, page));
+        this.requestedPage = Math.max(0, Math.min(page, totalPages - 1));
+        this.currentPage = this.requestedPage;
+        rebuildWidgets();
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (verticalAmount != 0 && totalPages > 1) {
+            int newPage = Math.max(0, Math.min(totalPages - 1, currentPage + (verticalAmount < 0 ? 1 : -1)));
+            if (newPage != currentPage) {
+                openPage(newPage);
+                return true;
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override

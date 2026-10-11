@@ -27,6 +27,8 @@ public final class AvatarProfiler {
     private static int bones;
     private static int cubes;
     private static int animations;
+    private static volatile int lastGeometryRendered;
+    private static volatile int lastGeometryCulled;
 
     static {
         for (Category category : Category.values()) SERIES.put(category, new Series());
@@ -47,10 +49,22 @@ public final class AvatarProfiler {
         avatarId = "";
         assetBytes = 0;
         bones = cubes = animations = 0;
+        lastGeometryRendered = lastGeometryCulled = 0;
         resetSamples();
     }
 
-    public static synchronized void reset() { resetSamples(); }
+    public static synchronized void reset() {
+        lastGeometryRendered = lastGeometryCulled = 0;
+        resetSamples();
+    }
+
+    public static void recordGeometry(int rendered, int culled) {
+        lastGeometryRendered = rendered;
+        lastGeometryCulled = culled;
+    }
+
+    public static int lastGeometryRendered() { return lastGeometryRendered; }
+    public static int lastGeometryCulled() { return lastGeometryCulled; }
 
     public static void record(Category category, long elapsedNanos) {
         if (category == null || elapsedNanos < 0) return;
@@ -103,6 +117,7 @@ public final class AvatarProfiler {
         for (var entry : SERIES.entrySet()) metrics.put(entry.getKey(), entry.getValue().metric());
         return new Snapshot(avatarId, fps, frameMs, avatarFrameMs, estimatedFpsLoss,
             heapUsed, assetBytes + taskBytes, taskCount, bones, cubes, animations,
+            lastGeometryRendered, lastGeometryCulled,
             metrics, List.copyOf(warnings), quota);
     }
 
@@ -114,7 +129,7 @@ public final class AvatarProfiler {
         String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").format(LocalDateTime.now());
         Path target = directory.resolve(safeAvatar + "-" + timestamp + ".json");
         Path temporary = target.resolveSibling(target.getFileName() + ".tmp");
-        ExportReport report = new ExportReport("shyne-avatar-profiler-v1", LocalDateTime.now().toString(), rendered, culled, snapshot);
+        ExportReport report = new ExportReport("shyne-avatar-profiler-v1", LocalDateTime.now().toString(), rendered, culled, lastGeometryRendered, lastGeometryCulled, snapshot);
         Files.writeString(temporary, GSON.toJson(report));
         try {
             Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE);
@@ -144,10 +159,11 @@ public final class AvatarProfiler {
     public record Snapshot(String avatarId, int fps, double frameMs, double avatarFrameMs,
                            double estimatedFpsLoss, long heapBytes, long avatarBytes,
                            int taskCount, int bones, int cubes, int animations,
+                           int geometryRendered, int geometryCulled,
                            EnumMap<Category, Metric> metrics, List<String> warnings,
                            seashyne.shynecore.client.avatar.AvatarQuotaManager.QuotaSnapshot quota) {}
     private record ExportReport(String format, String exportedAt, int renderedTasks,
-                                int culledTasks, Snapshot snapshot) {}
+                                int culledTasks, int renderedGeometry, int culledGeometry, Snapshot snapshot) {}
 
     private static final class Series {
         private final long[] values = new long[WINDOW];

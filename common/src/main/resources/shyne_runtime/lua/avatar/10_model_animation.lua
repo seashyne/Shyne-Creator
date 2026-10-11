@@ -19,6 +19,7 @@ local function part_proxy(path)
       -- Visibility
       if key == "visible" then return function(self, value) if value == nil then return _avatar_part_read(path, "visible") end _avatar_part_mutate(path, "visible", bool(value)) return self end end
       if key == "setVisible" then return function(self, value) return self:visible(value) end end
+      if key == "getVisible" or key == "isVisible" or key == "getTrueVisible" then return function(self) return self:visible() end end
       if key == "show" then return function(self) return self:visible(true) end end
       if key == "hide" then return function(self) return self:visible(false) end end
 
@@ -395,6 +396,21 @@ setmetatable(model, { __index = function(_, key) return part_proxy("model." .. t
 -- ------------------------------------------------------------------------------
 models = setmetatable({}, {
   __index = function(_, key)
+    if key == "visible" or key == "setVisible" then
+      return function(self, value)
+        if value == nil and type(self) == "boolean" then value = self end
+        return model.part("model"):visible(value)
+      end
+    end
+    if key == "getVisible" or key == "isVisible" or key == "getTrueVisible" then
+      return function() return model.part("model"):visible() end
+    end
+    if key == "show" then
+      return function() return model.part("model"):show() end
+    end
+    if key == "hide" then
+      return function() return model.part("model"):hide() end
+    end
     if key == "firstPersonHand" or key == "setFirstPersonHand" or key == "firstPersonArm" or key == "setFirstPersonArm" then
       return function(_, enabled)
         if enabled == nil and type(_) == "boolean" then enabled = _ end

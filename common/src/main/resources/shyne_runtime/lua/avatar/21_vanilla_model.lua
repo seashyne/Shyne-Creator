@@ -82,7 +82,16 @@ local function replace_vanilla_impl(config, opt_state)
   if type(config) == "string" then
     local should_replace = (opt_state == nil) and true or bool(opt_state)
     local raw = config:gsub("[,;]", " ")
+    local tokens = {}
+    local explicit_player = nil
     for token in raw:gmatch("%S+") do
+      local lower = token:lower()
+      if lower == "all" or lower == "player" then
+        explicit_player = should_replace
+      end
+      table.insert(tokens, token)
+    end
+    for _, token in ipairs(tokens) do
       local lower = token:lower()
       if lower == "all" or lower == "player" then
         set_vanilla_visible_native("PLAYER", not should_replace)
@@ -92,7 +101,7 @@ local function replace_vanilla_impl(config, opt_state)
           for _, t in ipairs(targets) do set_vanilla_visible_native(t, true) end
         end
       else
-        if should_replace then set_vanilla_visible_native("PLAYER", true) end
+        if should_replace and explicit_player == nil then set_vanilla_visible_native("PLAYER", true) end
         apply_part_visibility(token, not should_replace)
       end
     end
@@ -101,13 +110,16 @@ local function replace_vanilla_impl(config, opt_state)
 
   if type(config) == "table" then
     local has_partial = false
-    for k, _ in pairs(config) do
-      if type(k) == "number" or (type(k) == "string" and k:lower() ~= "all" and k:lower() ~= "player") then
+    local explicit_player = nil
+    for k, v in pairs(config) do
+      local lower = type(k) == "string" and k:lower() or ""
+      if lower == "all" or lower == "player" then
+        explicit_player = v
+      elseif type(k) == "number" or (type(k) == "string" and lower ~= "all" and lower ~= "player") then
         has_partial = true
-        break
       end
     end
-    if has_partial then set_vanilla_visible_native("PLAYER", true) end
+    if has_partial and explicit_player == nil then set_vanilla_visible_native("PLAYER", true) end
 
     for k, v in pairs(config) do
       if type(k) == "number" and (type(v) == "string" or type(v) == "table") then

@@ -504,7 +504,7 @@ if ($blinkName) {
 }
 
 $manifest = [ordered]@{
-    standard = "2.0"
+    standard = "standard"
     id = $Id
     name = $Name
     version = "1.0.0"
@@ -527,7 +527,7 @@ if ($copiedTextures.Count -gt 0) { $manifest.textures = @($copiedTextures) }
 $manifestJson = $manifest | ConvertTo-Json -Depth 20
 [IO.File]::WriteAllText((Join-Path $destinationRoot "avatar.json"), $manifestJson + "`n", [Text.UTF8Encoding]::new($false))
 
-Write-Output "Converted '$Name' as '$Id' to Shyne Standard 2.0"
+Write-Output "Converted '$Name' as '$Id' to Shyne Standard"
 Write-Output "Destination: $destinationRoot"
 Write-Output "Profile: $nativeProfile"
 Write-Output "Animations: $($animationNames -join ', ')"

@@ -24,6 +24,8 @@ sourceSets {
     }
     test {
         java.setSrcDirs(['../common/src/test/java'])
+        compileClasspath += sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.compileClasspath
     }
 }
 

@@ -40,6 +40,18 @@ public final class AvatarLoader {
         Set<Path> roots = new LinkedHashSet<>();
         collectAvatarRoots(avatarsDir(), roots);
 
+        try {
+            Path gameDir = avatarsDir().getParent().getParent();
+            Path shyneCreatorAvatars = gameDir.resolve("shyne_creator").resolve("avatars");
+            if (Files.isDirectory(shyneCreatorAvatars) && !shyneCreatorAvatars.equals(avatarsDir())) {
+                collectAvatarRoots(shyneCreatorAvatars, roots);
+            }
+            Path figuraAvatars = gameDir.resolve("figura").resolve("avatars");
+            if (Files.isDirectory(figuraAvatars) && !figuraAvatars.equals(avatarsDir())) {
+                collectAvatarRoots(figuraAvatars, roots);
+            }
+        } catch (Exception ignored) {}
+
         return roots.stream()
             .sorted(Comparator.comparing(Path::toString, String.CASE_INSENSITIVE_ORDER))
             .toList();
@@ -134,15 +146,15 @@ public final class AvatarLoader {
             }
         }
         String standard = json.has("standard") ? json.get("standard").getAsString().trim() : ShyneApiStandard.LATEST;
-        if (standard.isBlank() || "latest".equalsIgnoreCase(standard) || "auto".equalsIgnoreCase(standard)) {
+        if (standard.isBlank() || "latest".equalsIgnoreCase(standard) || "auto".equalsIgnoreCase(standard) || "standard".equalsIgnoreCase(standard) || "shyne".equalsIgnoreCase(standard)) {
             standard = ShyneApiStandard.LATEST;
         }
         if ("figura".equalsIgnoreCase(standard)) {
             importSource = "figura";
         }
         boolean isFigura = "figura".equalsIgnoreCase(importSource);
-        if (!isFigura && !ShyneApiStandard.LATEST.equals(standard)) {
-            throw new IOException("unsupported Shyne Avatar standard: " + standard + "; expected " + ShyneApiStandard.LATEST);
+        if (!isFigura && !ShyneApiStandard.isSupportedStandard(standard)) {
+            throw new IOException("unsupported Shyne Avatar standard: " + standard + "; expected 2.0 (Shyne Standard)");
         }
         List<String> declaredTextures = new ArrayList<>();
         if (json.has("textures") && json.get("textures").isJsonArray()) {
@@ -185,7 +197,7 @@ public final class AvatarLoader {
             declaredPermissions.add(AvatarPermission.CAMERA);
         }
         if (json.has("api_version")) {
-            throw new IOException("avatar api_version is not supported by Shyne Standard 2.0; use api \"2.0\"");
+            throw new IOException("avatar api_version is not supported by Shyne Standard; use api \"standard\"");
         }
         String declaredApi = json.has("api") ? json.get("api").getAsString() : "";
         ShyneApiStandard.Selection apiSelection;
@@ -254,7 +266,7 @@ public final class AvatarLoader {
             }
         }
         String mainScript = json.has("main") ? json.get("main").getAsString().trim() : "";
-        if (isFigura && mainScript.isBlank()) {
+        if (mainScript.isBlank()) {
             if (Files.isRegularFile(safeRoot.resolve("script.lua"))) {
                 mainScript = "script.lua";
             } else if (Files.isRegularFile(safeRoot.resolve("main.lua"))) {

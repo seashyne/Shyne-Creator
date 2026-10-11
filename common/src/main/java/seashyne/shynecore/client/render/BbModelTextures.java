@@ -50,7 +50,10 @@ public final class BbModelTextures {
             try {
                 long modified = Files.getLastModifiedTime(path).toMillis();
                 CachedTexture cached = CACHE.get(path);
-                if (cached != null && cached.modifiedAtMillis == modified) return cached.id;
+                if (cached != null) {
+                    if (cached.modifiedAtMillis == modified) return cached.id;
+                    releaseTexture(cached.id);
+                }
 
                 try (InputStream input = Files.newInputStream(path)) {
                     NativeImage image = NativeImage.read(input);
@@ -130,7 +133,7 @@ public final class BbModelTextures {
         removeSyncedMatching(key -> key.startsWith(prefix));
         EMBEDDED_CACHE.entrySet().removeIf(entry -> {
             if (entry.getKey().startsWith(prefix)) {
-                Minecraft.getInstance().getTextureManager().release(entry.getValue());
+                releaseTexture(entry.getValue());
                 return true;
             }
             return false;
@@ -142,11 +145,33 @@ public final class BbModelTextures {
         removeSyncedMatching(key -> key.startsWith("remote:"));
         EMBEDDED_CACHE.entrySet().removeIf(entry -> {
             if (entry.getKey().startsWith("remote:")) {
-                Minecraft.getInstance().getTextureManager().release(entry.getValue());
+                releaseTexture(entry.getValue());
                 return true;
             }
             return false;
         });
+    }
+
+    public static void clearLocalCache() {
+        for (CachedTexture cached : CACHE.values()) {
+            if (cached != null && cached.id != null) {
+                releaseTexture(cached.id);
+            }
+        }
+        CACHE.clear();
+    }
+
+    public static void clearAllAvatarTextures() {
+        clearLocalCache();
+        clearRemoteSyncedTextures();
+        for (Identifier id : EMBEDDED_CACHE.values()) {
+            releaseTexture(id);
+        }
+        EMBEDDED_CACHE.clear();
+        for (SyncedTexture synced : SYNCED.values()) {
+            releaseTexture(synced.id());
+        }
+        SYNCED.clear();
     }
 
     public static ShyneNetwork.NetTextureDefinition outfitTexture(BbModelDefinition model, byte[] bytes) {
@@ -244,8 +269,15 @@ public final class BbModelTextures {
         }
         if (removed.isEmpty()) return;
         removed.removeIf(id -> SYNCED.values().stream().anyMatch(texture -> texture.id().equals(id)));
-        var textureManager = Minecraft.getInstance().getTextureManager();
-        for (Identifier id : removed) textureManager.release(id);
+        for (Identifier id : removed) releaseTexture(id);
+    }
+
+    private static void releaseTexture(Identifier id) {
+        if (id == null) return;
+        Minecraft client = Minecraft.getInstance();
+        if (client != null && client.getTextureManager() != null) {
+            client.getTextureManager().release(id);
+        }
     }
 
     private record CachedTexture(Identifier id, long modifiedAtMillis) {}

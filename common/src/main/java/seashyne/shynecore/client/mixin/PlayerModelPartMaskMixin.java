@@ -20,17 +20,17 @@ public abstract class PlayerModelPartMaskMixin {
         boolean player = VanillaRenderMask.visible(state, "PLAYER");
 
         model.head.visible = player && VanillaRenderMask.visible(state, "HEAD");
-        model.body.visible &= player && VanillaRenderMask.visible(state, "BODY");
-        model.leftArm.visible &= player && VanillaRenderMask.visible(state, "LEFT_ARM");
-        model.rightArm.visible &= player && VanillaRenderMask.visible(state, "RIGHT_ARM");
-        model.leftLeg.visible &= player && VanillaRenderMask.visible(state, "LEFT_LEG");
-        model.rightLeg.visible &= player && VanillaRenderMask.visible(state, "RIGHT_LEG");
+        model.body.visible = player && VanillaRenderMask.visible(state, "BODY");
+        model.leftArm.visible = player && VanillaRenderMask.visible(state, "LEFT_ARM");
+        model.rightArm.visible = player && VanillaRenderMask.visible(state, "RIGHT_ARM");
+        model.leftLeg.visible = player && VanillaRenderMask.visible(state, "LEFT_LEG");
+        model.rightLeg.visible = player && VanillaRenderMask.visible(state, "RIGHT_LEG");
 
-        model.hat.visible &= player && VanillaRenderMask.visible(state, "HEAD") && VanillaRenderMask.visible(state, "HAT");
-        model.jacket.visible &= player && VanillaRenderMask.visible(state, "BODY") && VanillaRenderMask.visible(state, "JACKET");
-        model.leftSleeve.visible &= player && VanillaRenderMask.visible(state, "LEFT_ARM") && VanillaRenderMask.visible(state, "LEFT_SLEEVE");
-        model.rightSleeve.visible &= player && VanillaRenderMask.visible(state, "RIGHT_ARM") && VanillaRenderMask.visible(state, "RIGHT_SLEEVE");
-        model.leftPants.visible &= player && VanillaRenderMask.visible(state, "LEFT_LEG") && VanillaRenderMask.visible(state, "LEFT_PANTS");
-        model.rightPants.visible &= player && VanillaRenderMask.visible(state, "RIGHT_LEG") && VanillaRenderMask.visible(state, "RIGHT_PANTS");
+        model.hat.visible = player && state.showHat && VanillaRenderMask.visible(state, "HEAD") && VanillaRenderMask.visible(state, "HAT");
+        model.jacket.visible = player && state.showJacket && VanillaRenderMask.visible(state, "BODY") && VanillaRenderMask.visible(state, "JACKET");
+        model.leftSleeve.visible = player && state.showLeftSleeve && VanillaRenderMask.visible(state, "LEFT_ARM") && VanillaRenderMask.visible(state, "LEFT_SLEEVE");
+        model.rightSleeve.visible = player && state.showRightSleeve && VanillaRenderMask.visible(state, "RIGHT_ARM") && VanillaRenderMask.visible(state, "RIGHT_SLEEVE");
+        model.leftPants.visible = player && state.showLeftPants && VanillaRenderMask.visible(state, "LEFT_LEG") && VanillaRenderMask.visible(state, "LEFT_PANTS");
+        model.rightPants.visible = player && state.showRightPants && VanillaRenderMask.visible(state, "RIGHT_LEG") && VanillaRenderMask.visible(state, "RIGHT_PANTS");
     }
 }

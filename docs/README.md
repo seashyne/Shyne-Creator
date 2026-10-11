@@ -21,6 +21,16 @@ docs/
 
 ## 📚 สารบัญและลิงก์ด่วน (Quick Navigation)
 
+### 🎓 0. ศูนย์รวมบทเรียน (Tutorials Hub)
+- [บทเรียนที่ 1: เริ่มต้นใช้งาน Shyne Creator สำหรับผู้เล่น (Player Basics)](tutorials/01_PLAYER_BASICS_TH.md)
+- [บทเรียนที่ 2: ออกแบบโมเดล 3D และ Animation ด้วย Blockbench](tutorials/02_BLOCKBENCH_MODELING_TH.md)
+- [บทเรียนที่ 3: สร้าง Avatar แบบ Zero-Lua (ไม่ต้องเขียนโค้ด)](tutorials/03_ZERO_LUA_AVATAR_TH.md)
+- [บทเรียนที่ 4: การเขียนสคริปต์ Lua ตั้งแต่เริ่มต้น (Scripting & Action Wheel)](tutorials/04_LUA_SCRIPTING_TH.md)
+- [บทเรียนที่ 5: ระบบออนไลน์และการซิงก์ท่าทางให้เพื่อนเห็น (Pings RPC)](tutorials/05_MULTIPLAYER_AND_PINGS_TH.md)
+- [บทเรียนที่ 6: ฟิสิกส์และการตกแต่งขั้นสูง (Spring Physics, HUD & Profiler)](tutorials/06_PHYSICS_AND_POLISH_TH.md)
+- [บทเรียนที่ 7: การสร้างพลังและสกิลต่อสู้ (Powers & Combat Skills)](tutorials/07_POWERS_AND_SKILLS_TH.md)
+- [บทเรียนที่ 8: สร้างไอเท็มและอาวุธ 3D ด้วย Blockbench (Custom 3D Items)](tutorials/08_CUSTOM_ITEMS_AND_3D_MODELS_TH.md)
+
 ### 1. 🚀 คู่มือเริ่มต้น (Guides)
 - [เริ่มใช้ Shyne ใน 1 นาที (สำหรับผู้เล่น)](guides/PLAYER_QUICKSTART_TH.md) — แนะนำการติดตั้งและการใช้งาน Avatar เบื้องต้น
 - [คู่มือสร้าง Avatar แรก (สำหรับ Creator)](guides/CREATOR_QUICKSTART_TH.md) — ขั้นตอนการปั้นโมเดลและส่งออกอวาตาร์
@@ -28,6 +38,7 @@ docs/
 - [Public Share & Cloud Export](guides/PUBLIC_SHARE.md) — การแชร์และส่งออก Avatar สาธารณะ
 
 ### 2. ⚡ เอกสาร API (API References)
+- [**Globals Reference (คู่มืออ้างอิง Globals ทั้งหมด)**](api/GLOBALS_REFERENCE_TH.md) — รวมตัวแปรและออบเจ็กต์ส่วนกลาง `_G` ทั้งหมดของ Figura และ Shyne
 - [**API Compatibility Matrix (Figura & Shyne)**](api/API_COMPATIBILITY_MATRIX.md) — ตารางตรวจสอบสถานะความเข้ากันได้ของ API ทุกตัว (สถานะ Support 100%)
 - [Shyne Lua API Standard 2.0](api/SHYNE_LUA_API_TH.md) — เอกสารอ้างอิง Lua API ตัวเต็ม (Client, Renderer, Camera, Events, Math, Vectors)
 - [Complete Unified API Reference](api/SHYNE_API_COMPLETE_TH.md) — รวมรวม API ทั้งหมดในที่เดียวพร้อมตัวอย่างโค้ด

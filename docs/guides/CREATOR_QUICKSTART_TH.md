@@ -104,6 +104,12 @@ HeadAccessory  [Attachment: Head]
 
 ชื่อ Animation มาตรฐาน เช่น `Idle`, `Walk`, `Sprint`, `Swim` และ `Blink` จะถูก Auto Animation Controller เลือกตามสถานะผู้เล่น
 
+### ระบบขยับปากพูดอัตโนมัติ (Mouth Speech Tracking — ใหม่ v2.15.0)
+
+Shyne Creator รองรับการขยับปากพูดตามไมค์หรือแชทโดยอัตโนมัติ:
+- **Zero-Lua โหมดอัตโนมัติ**: หากโมเดลมีชิ้นส่วน Cube หรือ Group ชื่อ `mouth_open`, `open_mouth` หรือ `mouth_closed` ระบบจะเปิด-ปิดปากสลับให้อัตโนมัติเมื่อผู้เล่นกำลังพูดหรือพิมพ์แชท
+- **ควบคุมด้วย Lua Script**: สามารถตรวจจับเสียงพูดได้ด้วย `voice.isSpeaking()` หรือ `host:isVoiceActive()` และ `host:isChatOpen()` เพื่อทำลูกเล่นหรือ Animation ที่ละเอียดขึ้น
+
 ## 4. Export เป็นแพ็ก Shyne
 
 1. เลือก `Tools → Validate Shyne Standard 2.0`

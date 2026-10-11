@@ -56,6 +56,39 @@ final class AvatarBehaviorTest {
     }
 
     @Test
+    void controllerFallsBackToIdleWhenMovingInWaterWithoutDedicatedSwimAnimation() {
+        BbModelDefinition modelOnlyIdle = new BbModelDefinition(
+            "tail", "tail", "Tail", Path.of("model.bbmodel"), 4, 16, 16, "", List.of(), List.of(), List.of(),
+            List.of(animation("Idle", true))
+        );
+        AvatarAutoAnimationController controller = new AvatarAutoAnimationController(modelOnlyIdle, AvatarBehavior.AUTO, 1L);
+
+        var inWaterMoving = new AvatarAutoAnimationController.Signals(true, false, false, false, true, false, false, false);
+        AvatarAutoAnimationController.Update update = controller.tick(inWaterMoving);
+        assertEquals("Idle", controller.activeStateAnimation());
+        assertTrue(update.plays().stream().anyMatch(play -> play.animation().equals("Idle")));
+    }
+
+    @Test
+    void controllerPlaysAutoplayEvenWhenNamedIdleWithoutConflict() {
+        BbModelDefinition modelOnlyIdle = new BbModelDefinition(
+            "tail", "tail", "Tail", Path.of("model.bbmodel"), 4, 16, 16, "", List.of(), List.of(), List.of(),
+            List.of(animation("Idle", true))
+        );
+        AvatarBehavior behavior = new AvatarBehavior("auto", List.of("Idle"), Map.of(), 5, AvatarBehavior.Blink.auto());
+        AvatarAutoAnimationController controller = new AvatarAutoAnimationController(modelOnlyIdle, behavior, 1L);
+
+        AvatarAutoAnimationController.Update update = controller.tick(AvatarAutoAnimationController.Signals.IDLE);
+        assertTrue(update.plays().stream().anyMatch(play -> play.animation().equals("Idle") && play.additive()));
+        // Since "Idle" was claimed as ambient autoplay, state animation does not duplicate it
+        assertEquals(null, controller.activeStateAnimation());
+
+        var inWaterMoving = new AvatarAutoAnimationController.Signals(true, false, false, false, true, false, false, false);
+        AvatarAutoAnimationController.Update waterUpdate = controller.tick(inWaterMoving);
+        assertTrue(waterUpdate.stops().isEmpty());
+    }
+
+    @Test
     void profilesHaveSafeModelFirstDefaults() {
         assertFalse(AvatarProfile.parse(null).replaceVanilla());
         assertTrue(AvatarProfile.parse("full-body").replaceVanilla());
@@ -99,6 +132,47 @@ final class AvatarBehaviorTest {
         assertFalse(seashyne.shynecore.client.avatar.bridge.AvatarModelHelper.isSpecialFiguraHiddenByDefault("root"));
     }
 
+    @Test
+    void controllerAutoInfersAccessoryAnimationsAsAmbientAutoplay() {
+        BbModelDefinition model = new BbModelDefinition(
+            "seashyne", "seashyne", "SeaShyne", Path.of("model.bbmodel"), 4, 16, 16, "", List.of(), List.of(), List.of(),
+            List.of(animationWithBones("Idle", true, "Bone_F", "Bone_B", "Fin_L", "Fin_R"))
+        );
+        AvatarAutoAnimationController controller = new AvatarAutoAnimationController(model, AvatarBehavior.AUTO, 1L);
+
+        AvatarAutoAnimationController.Update update = controller.tick(AvatarAutoAnimationController.Signals.IDLE);
+        assertTrue(update.plays().stream().anyMatch(play -> play.animation().equals("Idle") && play.additive()));
+        assertEquals(null, controller.activeStateAnimation());
+
+        var inWaterMoving = new AvatarAutoAnimationController.Signals(true, false, false, false, true, false, false, false);
+        AvatarAutoAnimationController.Update waterUpdate = controller.tick(inWaterMoving);
+        assertTrue(waterUpdate.stops().isEmpty());
+    }
+
+    @Test
+    void controllerLeavesHumanoidLimbAnimationsInStateSlots() {
+        BbModelDefinition model = new BbModelDefinition(
+            "humanoid", "humanoid", "Humanoid", Path.of("model.bbmodel"), 4, 16, 16, "", List.of(), List.of(), List.of(),
+            List.of(
+                animationWithBones("Idle", true, "Body", "LeftArm"),
+                animationWithBones("Walk", true, "Body", "LeftLeg", "RightLeg"),
+                animationWithBones("Ear Wiggle", true, "Ear_L", "Ear_R")
+            )
+        );
+        AvatarAutoAnimationController controller = new AvatarAutoAnimationController(model, AvatarBehavior.AUTO, 1L);
+
+        AvatarAutoAnimationController.Update idle = controller.tick(AvatarAutoAnimationController.Signals.IDLE);
+        assertTrue(idle.plays().stream().anyMatch(play -> play.animation().equals("Ear Wiggle") && play.additive()));
+        assertTrue(idle.plays().stream().anyMatch(play -> play.animation().equals("Idle") && !play.additive()));
+        assertEquals("Idle", controller.activeStateAnimation());
+
+        var moving = new AvatarAutoAnimationController.Signals(true, false, false, false, false, false, false, false);
+        AvatarAutoAnimationController.Update walk = controller.tick(moving);
+        assertEquals("Walk", controller.activeStateAnimation());
+        assertTrue(walk.plays().stream().anyMatch(play -> play.animation().equals("Walk")));
+        assertFalse(walk.stops().contains("Ear Wiggle"));
+    }
+
     private static BbModelDefinition model() {
         List<BbAnimationDefinition> animations = List.of(
             animation("Idle", true), animation("Walk", true), animation("Ear Wiggle", true), animation("Blink", false)
@@ -108,5 +182,13 @@ final class AvatarBehaviorTest {
 
     private static BbAnimationDefinition animation(String name, boolean looping) {
         return new BbAnimationDefinition(name, 1.0, looping, 0, Map.of(), List.of());
+    }
+
+    private static BbAnimationDefinition animationWithBones(String name, boolean looping, String... bones) {
+        Map<String, seashyne.shynecore.model.BbBoneAnimation> anims = new java.util.LinkedHashMap<>();
+        for (String b : bones) {
+            anims.put(b, new seashyne.shynecore.model.BbBoneAnimation(b, List.of(), List.of(), List.of(), false, false));
+        }
+        return new BbAnimationDefinition(name, 1.0, looping, anims.size(), Map.copyOf(anims), List.of(bones));
     }
 }

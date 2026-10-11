@@ -62,6 +62,10 @@ public record BbModelDefinition(
         return bones.stream().filter(b -> uuid != null && uuid.equals(b.uuid())).findFirst().orElse(null);
     }
 
+    public BbBoneDefinition findBoneByName(String name) {
+        return bones.stream().filter(b -> name != null && name.equalsIgnoreCase(b.name())).findFirst().orElse(null);
+    }
+
     public BbTextureDefinition primaryTexture() {
         if (textures == null || textures.isEmpty()) return null;
         if (primaryTextureRelativePath != null) {

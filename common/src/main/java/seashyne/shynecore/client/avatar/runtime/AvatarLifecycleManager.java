@@ -283,6 +283,8 @@ public final class AvatarLifecycleManager {
             ClientAnimationState.clearAvatarPartStates(entityId, previous.modelId());
             ClientAnimationState.removeLocalModel(previous.modelId());
             AvatarBoneTransformRegistry.clearEntity(entityId);
+            seashyne.shynecore.client.render.BbModelTextures.clearSyncedModel(previous.modelId());
+            seashyne.shynecore.client.render.BbModelTextures.clearLocalCache();
         }
         active = null;
         activeManifest = null;
@@ -424,6 +426,7 @@ public final class AvatarLifecycleManager {
     }
 
     public static void indexModelPaths(BbModelDefinition model, AvatarState state) {
+        state.aliasPath("model", "model");
         Map<String, Integer> boneNames = new HashMap<>();
         for (BbBoneDefinition bone : model.bones()) {
             boneNames.merge(bone.name().toLowerCase(Locale.ROOT), 1, Integer::sum);
@@ -458,6 +461,46 @@ public final class AvatarLifecycleManager {
             if (elementNames.getOrDefault(mesh.name().toLowerCase(Locale.ROOT), 0) == 1) {
                 state.aliasPath(mesh.name(), meshPath);
                 state.aliasPath("model." + mesh.name(), meshPath);
+            }
+        }
+
+        Map<String, List<String>> suffixToCanonicals = new HashMap<>();
+        Map<String, String> suffixToOriginal = new HashMap<>();
+        for (BbBoneDefinition bone : model.bones()) {
+            collectSuffixes(model.bonePath(bone.uuid()), suffixToCanonicals, suffixToOriginal);
+        }
+        for (var cube : model.cubes()) {
+            collectSuffixes(model.cubePath(cube), suffixToCanonicals, suffixToOriginal);
+        }
+        for (var mesh : model.meshes()) {
+            collectSuffixes(model.meshPath(mesh), suffixToCanonicals, suffixToOriginal);
+        }
+        for (var entry : suffixToCanonicals.entrySet()) {
+            if (entry.getValue().size() == 1) {
+                String canonical = entry.getValue().get(0);
+                String originalSuffix = suffixToOriginal.get(entry.getKey());
+                if (originalSuffix != null) {
+                    state.aliasPath(originalSuffix, canonical);
+                    state.aliasPath("model." + originalSuffix, canonical);
+                }
+            }
+        }
+    }
+
+    private static void collectSuffixes(String canonicalPath, Map<String, List<String>> suffixMap, Map<String, String> originalMap) {
+        if (canonicalPath == null || !canonicalPath.startsWith("model.")) return;
+        String withoutModel = canonicalPath.substring("model.".length());
+        String[] parts = withoutModel.split("\\.");
+        if (parts.length <= 1) return;
+        StringBuilder sb = new StringBuilder();
+        for (int i = parts.length - 1; i >= 0; i--) {
+            if (sb.length() > 0) sb.insert(0, ".");
+            sb.insert(0, parts[i]);
+            if (i < parts.length - 1) {
+                String suffix = sb.toString();
+                String key = suffix.toLowerCase(Locale.ROOT);
+                suffixMap.computeIfAbsent(key, k -> new ArrayList<>()).add(canonicalPath);
+                originalMap.putIfAbsent(key, suffix);
             }
         }
     }

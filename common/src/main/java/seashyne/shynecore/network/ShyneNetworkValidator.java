@@ -4,7 +4,7 @@ import seashyne.shynecore.avatar.AvatarAnimationClock;
 import seashyne.shynecore.avatar.AvatarValueValidator;
 import seashyne.shynecore.avatar.PngTextureValidator;
 import seashyne.shynecore.model.*;
-import seashyne.shynecore.network.ShyneNetwork.*;
+import seashyne.shynecore.network.ShyneNetworkCommon.*;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

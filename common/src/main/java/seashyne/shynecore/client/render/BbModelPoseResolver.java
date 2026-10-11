@@ -29,42 +29,73 @@ public final class BbModelPoseResolver {
     private BbModelPoseResolver() {}
 
     public static Map<String, BbModelEntityRenderer.BonePose> prepareAvatar(BbModelDefinition model, UUID entityId, BbModelVanillaPose.Snapshot vanillaPose) {
-    Map<String, BbModelEntityRenderer.BonePose> bonePoses = new HashMap<>(Math.max(16, model.bones().size() * 2));
-    var playback = ClientAnimationState.getPlayback(entityId);
-    List<AvatarAnimationLayer> layers = AvatarRuntime.animationLayers(entityId);
-    if (layers.isEmpty()) layers = ClientAnimationState.getRemoteAnimationLayers(entityId);
-    var activeAnimation = playback == null ? null : model.findAnimation(playback.animationName());
-    long now = System.currentTimeMillis();
-    AnimationExpressionContext expressionContext = expressionContext(entityId);
-    Set<String> visiting = new HashSet<>();
-    for (BbBoneDefinition bone : model.bones()) {
-        buildBonePose(model, bone, entityId, vanillaPose, bonePoses, visiting, playback, layers, activeAnimation, now, expressionContext);
+        Map<String, BbModelEntityRenderer.BonePose> bonePoses = new HashMap<>(Math.max(16, model.bones().size() * 2));
+        var playback = ClientAnimationState.getPlayback(entityId);
+        List<AvatarAnimationLayer> layers = AvatarRuntime.animationLayers(entityId);
+        if (layers.isEmpty()) layers = ClientAnimationState.getRemoteAnimationLayers(entityId);
+        var activeAnimation = playback == null ? null : model.findAnimation(playback.animationName());
+        long now = System.currentTimeMillis();
+        AnimationExpressionContext expressionContext = expressionContext(entityId);
+        String context = AvatarRenderContext.currentOverride();
+        BbBoneDefinition portraitBone = findSpecialRootBone(model, "portrait");
+        BbBoneDefinition skullBone = findSpecialRootBone(model, "skull");
+        Set<String> visiting = new HashSet<>();
+        for (BbBoneDefinition bone : model.bones()) {
+            buildBonePose(model, bone, entityId, vanillaPose, bonePoses, visiting, playback, layers, activeAnimation, now, expressionContext, context, portraitBone, skullBone);
+        }
+        return bonePoses;
     }
-    return bonePoses;
-}
 
-private static BbModelEntityRenderer.BonePose buildBonePose(
-    BbModelDefinition model,
-    BbBoneDefinition bone,
-    UUID entityId,
-    BbModelVanillaPose.Snapshot vanillaPose,
-    Map<String, BbModelEntityRenderer.BonePose> cache,
-    Set<String> visiting,
-    seashyne.shynecore.animation.AnimationPlayback playback,
-    List<AvatarAnimationLayer> layers,
-    seashyne.shynecore.model.BbAnimationDefinition activeAnimation,
-    long now,
-    AnimationExpressionContext expressionContext
-) {
-    BbModelEntityRenderer.BonePose cached = cache.get(bone.uuid());
-    if (cached != null) return cached;
-    if (!visiting.add(bone.uuid())) return BbModelEntityRenderer.BonePose.IDENTITY;
+    private static BbModelEntityRenderer.BonePose buildBonePose(
+        BbModelDefinition model,
+        BbBoneDefinition bone,
+        UUID entityId,
+        BbModelVanillaPose.Snapshot vanillaPose,
+        Map<String, BbModelEntityRenderer.BonePose> cache,
+        Set<String> visiting,
+        seashyne.shynecore.animation.AnimationPlayback playback,
+        List<AvatarAnimationLayer> layers,
+        seashyne.shynecore.model.BbAnimationDefinition activeAnimation,
+        long now,
+        AnimationExpressionContext expressionContext,
+        String context,
+        BbBoneDefinition portraitBone,
+        BbBoneDefinition skullBone
+    ) {
+        BbModelEntityRenderer.BonePose cached = cache.get(bone.uuid());
+        if (cached != null) return cached;
+        if (!visiting.add(bone.uuid())) return BbModelEntityRenderer.BonePose.IDENTITY;
 
-    BbModelEntityRenderer.BonePose parent = BbModelEntityRenderer.BonePose.IDENTITY;
-    if (bone.parentUuid() != null) {
-        BbBoneDefinition parentBone = model.findBoneByUuid(bone.parentUuid());
-        if (parentBone != null) {
-            parent = buildBonePose(model, parentBone, entityId, vanillaPose, cache, visiting, playback, layers, activeAnimation, now, expressionContext);
+        BbModelEntityRenderer.BonePose parent = BbModelEntityRenderer.BonePose.IDENTITY;
+        if (bone.parentUuid() != null) {
+            BbBoneDefinition parentBone = model.findBoneByUuid(bone.parentUuid());
+            if (parentBone != null) {
+                parent = buildBonePose(model, parentBone, entityId, vanillaPose, cache, visiting, playback, layers, activeAnimation, now, expressionContext, context, portraitBone, skullBone);
+            }
+        } else {
+        AvatarPartState rootModelPart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), "model");
+        if (rootModelPart != null) {
+            Matrix4f rootMatrix = new Matrix4f(parent.matrix());
+            if (rootModelPart.positionControlled()) {
+                rootMatrix.translate(rootModelPart.posX(), rootModelPart.posY(), rootModelPart.posZ());
+            }
+            if (rootModelPart.rotationControlled()) {
+                rootMatrix.rotateZYX(rootModelPart.rotZ() * BbModelEntityRenderer.DEG_TO_RAD, rootModelPart.rotY() * BbModelEntityRenderer.DEG_TO_RAD, rootModelPart.rotX() * BbModelEntityRenderer.DEG_TO_RAD);
+            }
+            if (rootModelPart.scaleControlled()) {
+                rootMatrix.scale(rootModelPart.scaleX(), rootModelPart.scaleY(), rootModelPart.scaleZ());
+            }
+            boolean rootVisible = parent.visible();
+            if (rootModelPart.visibilityControlled()) {
+                rootVisible = rootModelPart.visible();
+            }
+            int rootColor = parent.colorArgb();
+            boolean rootEmissive = parent.emissive();
+            if (rootModelPart.renderControlled()) {
+                rootColor = BbModelEntityRenderer.multiplyColor(rootColor, rootModelPart.colorArgb());
+                rootEmissive |= rootModelPart.emissive();
+            }
+            parent = new BbModelEntityRenderer.BonePose(rootMatrix, rootVisible, rootColor, rootEmissive);
         }
     }
 
@@ -107,8 +138,11 @@ private static BbModelEntityRenderer.BonePose buildBonePose(
         // A parent_type is a coordinate-space parent applied before the local Blockbench transform.
         // parent_type เป็น parent ของ coordinate space ต้องใช้ก่อน local transform เพื่อให้ pose และ animation ซ้อนกันได้.
         BbModelVanillaPose.PartTransform attachment = vanillaPose.forParent(vanillaAttachment);
+        Vector3f parentPivot = vanillaParentPivot(vanillaAttachment);
+        matrix.translate(parentPivot.x, parentPivot.y, parentPivot.z);
         if (!"rotation".equals(vanillaAttachmentMode)) matrix.translate(attachment.x(), attachment.y(), attachment.z());
         if (!"position".equals(vanillaAttachmentMode)) matrix.rotateZYX(attachment.zDegrees() * BbModelEntityRenderer.DEG_TO_RAD, attachment.yDegrees() * BbModelEntityRenderer.DEG_TO_RAD, attachment.xDegrees() * BbModelEntityRenderer.DEG_TO_RAD);
+        matrix.translate(-parentPivot.x, -parentPivot.y, -parentPivot.z);
     }
     Vector3f pivot = luaControlsPosition
         ? new Vector3f(bone.pivotX() + part.posX(), bone.pivotY() + part.posY(), bone.pivotZ() + part.posZ())
@@ -129,18 +163,10 @@ private static BbModelEntityRenderer.BonePose buildBonePose(
     if (part != null && part.additiveRotationControlled()) {
         rotation.add(part.additiveRotX(), part.additiveRotY(), part.additiveRotZ());
     }
-    boolean localVisible = bone.visible();
-    if (part != null) {
-        if (part.visibilityControlled()) localVisible = part.visible();
-        if (part.renderControlled()) {
-            colorArgb = BbModelEntityRenderer.multiplyColor(colorArgb, part.colorArgb());
-            emissive |= part.emissive();
-        }
-    }
-    if (part == null || !part.visibilityControlled()) {
-        if (isSpecialFiguraHiddenByDefault(bone.name())) {
-            localVisible = false;
-        }
+    boolean localVisible = resolveBoneVisibility(model, bone, part, context, portraitBone, skullBone, entityId);
+    if (part != null && part.renderControlled()) {
+        colorArgb = BbModelEntityRenderer.multiplyColor(colorArgb, part.colorArgb());
+        emissive |= part.emissive();
     }
     visible &= localVisible;
 
@@ -185,11 +211,17 @@ static BbModelAnimator.Transform blendAnimationLayers(BbModelDefinition model, B
 }
 
 public static AnimationExpressionContext expressionContext(UUID entityId) {
-    var client = Minecraft.getInstance();
-    var player = client.level == null ? null : client.level.getPlayerByUUID(entityId);
+    Minecraft client = null;
+    try {
+        client = Minecraft.getInstance();
+    } catch (Throwable ignored) {}
     AvatarState local = AvatarRuntime.active();
-    Map<String, Double> parameters = local != null && entityId.equals(local.boundEntityId())
-        ? local.animationParameters() : ClientAnimationState.getRemoteAnimationParameters(entityId);
+    Map<String, Double> parameters = local != null && entityId != null && entityId.equals(local.boundEntityId())
+        ? local.animationParameters() : (entityId != null ? ClientAnimationState.getRemoteAnimationParameters(entityId) : Map.of());
+    if (client == null || client.level == null) {
+        return new AnimationExpressionContext(0, 0, 0, 0, false, false, parameters);
+    }
+    var player = entityId == null ? null : client.level.getPlayerByUUID(entityId);
     if (player == null) return new AnimationExpressionContext(0, 0, 0, 0, false, false, parameters);
     double horizontalSpeed = Math.sqrt(player.getDeltaMovement().x * player.getDeltaMovement().x + player.getDeltaMovement().z * player.getDeltaMovement().z) * 20.0;
     return new AnimationExpressionContext(0, horizontalSpeed, player.yBodyRot, player.getXRot(), player.isInWaterOrRain(), player.isSwimming(), parameters);
@@ -202,10 +234,124 @@ private static float blendAngle(float from, float to, float weight) {
     return from + delta * weight;
 }
 
-static boolean isSpecialFiguraHiddenByDefault(String boneName) {
-    if (boneName == null) return false;
-    String normalized = boneName.trim().toLowerCase(java.util.Locale.ROOT).replace("_", "");
-    return "skull".equals(normalized) || "portrait".equals(normalized);
+    public static boolean hasSpecialRootBone(BbModelDefinition model, String key) {
+        return findSpecialRootBone(model, key) != null;
+    }
+
+    public static BbBoneDefinition findSpecialRootBone(BbModelDefinition model, String key) {
+        if (model == null || key == null) return null;
+        String normalizedTarget = normalizeSpecialBoneName(key);
+        for (BbBoneDefinition bone : model.bones()) {
+            if (normalizedTarget.equals(normalizeSpecialBoneName(bone.name()))) {
+                return bone;
+            }
+        }
+        return null;
+    }
+
+    private static String normalizeSpecialBoneName(String boneName) {
+        if (boneName == null) return "";
+        return boneName.trim().toLowerCase(java.util.Locale.ROOT).replace("_", "").replace("-", "").replace(" ", "");
+    }
+
+    static boolean resolveBoneVisibility(
+        BbModelDefinition model,
+        BbBoneDefinition bone,
+        AvatarPartState part,
+        String context,
+        BbBoneDefinition portraitBone,
+        BbBoneDefinition skullBone,
+        UUID entityId
+    ) {
+        if (part != null && part.visibilityControlled()) {
+            return part.visible();
+        }
+        if (isMouthOpenName(bone.name())) {
+            return seashyne.shynecore.voice.ShyneMicrophoneState.isSpeaking(entityId);
+        }
+        if (isMouthClosedName(bone.name())) {
+            return !seashyne.shynecore.voice.ShyneMicrophoneState.isSpeaking(entityId);
+        }
+        if (!bone.visible()) {
+            return false;
+        }
+
+        boolean isPortrait = portraitBone != null && BbModelRigResolver.belongsToBone(model, bone.uuid(), portraitBone.uuid());
+        boolean isSkull = skullBone != null && BbModelRigResolver.belongsToBone(model, bone.uuid(), skullBone.uuid());
+
+        if (AvatarRenderContext.PORTRAIT.equals(context)) {
+            if (portraitBone != null) {
+                // Dedicated portrait bone exists: only render the portrait hierarchy in portrait/paperdoll context.
+                // เมื่อมี portrait bust เฉพาะ ให้แสดงเฉพาะ hierarchy ของ portrait ใน context portrait/paperdoll เพื่อไม่ให้ทับซ้อนกับตัวละคร.
+                return isPortrait;
+            }
+            return !isSkull;
+        }
+
+        if (AvatarRenderContext.SKULL.equals(context)) {
+            if (skullBone != null) {
+                // Dedicated skull bone exists: only render the skull hierarchy in skull context.
+                return isSkull;
+            }
+            return !isPortrait;
+        }
+
+        // In standard world, third-person and first-person contexts: hide auxiliary portrait & skull by default.
+        // ใน context ทั่วไป ให้ซ่อน auxiliary bones (portrait และ skull) โดยค่าเริ่มต้น เว้นแต่สคริปต์สั่งเปิด.
+        return !isPortrait && !isSkull;
+    }
+
+    static boolean isSpecialFiguraHiddenByDefault(String boneName) {
+        return seashyne.shynecore.client.avatar.bridge.AvatarModelHelper.isSpecialFiguraHiddenByDefault(boneName);
+    }
+
+    public static boolean isMouthOpenName(String name) {
+        if (name == null) return false;
+        String clean = name.trim().toLowerCase(java.util.Locale.ROOT).replace("_", "").replace("-", "").replace(" ", "");
+        return clean.equals("mouthopen")
+            || clean.equals("openmouth")
+            || clean.equals("mouthtalking")
+            || clean.equals("talkmouth")
+            || clean.equals("mouthtalk")
+            || clean.equals("talkingmouth")
+            || clean.equals("mouthspeaking")
+            || clean.equals("speakingmouth");
+    }
+
+    public static boolean isMouthClosedName(String name) {
+        if (name == null) return false;
+        String clean = name.trim().toLowerCase(java.util.Locale.ROOT).replace("_", "").replace("-", "").replace(" ", "");
+        return clean.equals("mouthclosed")
+            || clean.equals("closedmouth")
+            || clean.equals("mouthclose")
+            || clean.equals("closemouth")
+            || clean.equals("mouthidle")
+            || clean.equals("idlemouth");
+    }
+
+    public static boolean resolveElementVisibility(UUID entityId, String name, boolean defaultVisible, AvatarPartState part) {
+        if (part != null && part.visibilityControlled()) {
+            return part.visible();
+        }
+        if (isMouthOpenName(name)) {
+            return seashyne.shynecore.voice.ShyneMicrophoneState.isSpeaking(entityId);
+        }
+        if (isMouthClosedName(name)) {
+            return !seashyne.shynecore.voice.ShyneMicrophoneState.isSpeaking(entityId);
+        }
+        return defaultVisible;
+    }
+
+static Vector3f vanillaParentPivot(String parentType) {
+    return switch (parentType == null ? "" : parentType.toLowerCase(java.util.Locale.ROOT)) {
+        case "head" -> new Vector3f(0f, 24f, 0f);
+        case "body", "torso" -> new Vector3f(0f, 24f, 0f);
+        case "rightarm" -> new Vector3f(-5f, 22f, 0f);
+        case "leftarm" -> new Vector3f(5f, 22f, 0f);
+        case "rightleg" -> new Vector3f(-1.9f, 12f, 0f);
+        case "leftleg" -> new Vector3f(1.9f, 12f, 0f);
+        default -> new Vector3f(0f, 0f, 0f);
+    };
 }
 
 }

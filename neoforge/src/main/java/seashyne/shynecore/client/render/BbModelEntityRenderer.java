@@ -89,12 +89,35 @@ public final class BbModelEntityRenderer {
             if (entity == null) return;
 
             UUID entityId = entity.getUUID();
-            if (client.player != null && !entityId.equals(client.player.getUUID())
-                && ShyneClientSettings.isRemoteAvatarHidden(entityId)) return;
+            boolean isLocalPlayer = client.player != null && entityId.equals(client.player.getUUID());
+            if (!isLocalPlayer && ShyneClientSettings.isRemoteAvatarHidden(entityId)) return;
             AttachedModelState attachment = ClientAnimationState.getAttachment(entityId);
             if (attachment == null || !attachment.visible()) return;
             BbModelDefinition model = ClientAnimationState.getModel(attachment.modelId());
             if (model == null || !model.hasGeometry()) return;
+            AvatarPartState rootModelPart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), "model");
+            if (rootModelPart != null && rootModelPart.visibilityControlled() && !rootModelPart.visible()) return;
+
+            // Distance culling and Dynamic LOD
+            double distSqr = Double.MAX_VALUE;
+            if (client.gameRenderer != null && client.gameRenderer.mainCamera() != null) {
+                var camPos = client.gameRenderer.mainCamera().position();
+                distSqr = entity.distanceToSqr(camPos.x, camPos.y, camPos.z);
+            } else if (client.player != null) {
+                distSqr = entity.distanceToSqr(client.player);
+            }
+
+            double maxDist = ShyneClientSettings.avatarMaxRenderDistance;
+            if (!isLocalPlayer && distSqr > (maxDist * maxDist)) {
+                AvatarState active = AvatarRuntime.active();
+                if (active != null && entityId.equals(active.boundEntityId())) {
+                    AvatarProfiler.recordGeometry(0, model.cubes().size() + model.meshes().size());
+                }
+                return;
+            }
+
+            double lodDist = ShyneClientSettings.avatarLodDistance;
+            boolean applyLod = !isLocalPlayer && ShyneClientSettings.avatarLodEnabled && (distSqr > (lodDist * lodDist));
 
             poseStack.pushPose();
             poseStack.translate(-attachment.offsetX(), -attachment.offsetY(), attachment.offsetZ());
@@ -123,12 +146,12 @@ public final class BbModelEntityRenderer {
                 collector.order(1).submitCustomGeometry(
                     poseStack,
                     RenderTypes.entityCutout(texture),
-                    (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, null, 0f, 1f, 1f, 1f, false, hiddenFirstPersonBones)
+                    (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, null, 0f, 1f, 1f, 1f, false, hiddenFirstPersonBones, applyLod)
                 );
                 collector.order(2).submitCustomGeometry(
                     poseStack,
                     RenderTypes.entityTranslucent(texture),
-                    (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, null, 0f, 1f, 1f, 1f, true, hiddenFirstPersonBones)
+                    (pose, vertices) -> renderModel(pose, vertices, model, entityId, passLight, passTextureIndex, textureCount, uvWidth, uvHeight, bonePoses, null, 0f, 1f, 1f, 1f, true, hiddenFirstPersonBones, applyLod)
                 );
             }
             poseStack.popPose();
@@ -170,7 +193,34 @@ public final class BbModelEntityRenderer {
         boolean translucentPass,
         Set<String> hiddenBoneUuids
     ) {
+        renderModel(pose, vertices, model, entityId, lightCoords, targetTextureIndex, textureCount,
+            textureWidth, textureHeight, bonePoses, onlyBoneUuid, modelOffsetX, subsetScaleX,
+            subsetScaleY, subsetScaleZ, translucentPass, hiddenBoneUuids, false);
+    }
+
+    static void renderModel(
+        PoseStack.Pose pose,
+        VertexConsumer vertices,
+        BbModelDefinition model,
+        UUID entityId,
+        int lightCoords,
+        int targetTextureIndex,
+        int textureCount,
+        int textureWidth,
+        int textureHeight,
+        Map<String, BonePose> bonePoses,
+        String onlyBoneUuid,
+        float modelOffsetX,
+        float subsetScaleX,
+        float subsetScaleY,
+        float subsetScaleZ,
+        boolean translucentPass,
+        Set<String> hiddenBoneUuids,
+        boolean applyLod
+    ) {
         long profileStarted = System.nanoTime();
+        int renderedGeometry = 0;
+        int culledGeometry = 0;
         Matrix4f modelToWorld = new Matrix4f(pose.pose())
             .translate(0.0f, 1.5f, 0.0f)
             .scale(1.0f / 16.0f, -1.0f / 16.0f, 1.0f / 16.0f);
@@ -188,14 +238,20 @@ public final class BbModelEntityRenderer {
             publishBoneTransforms(model, entityId, modelToWorld, bonePoses);
         }
 
+        AvatarPartState rootModelPart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), "model");
+        boolean rootModelVisible = rootModelPart == null || !rootModelPart.visibilityControlled() || rootModelPart.visible();
+        if (!rootModelVisible) return;
+        boolean hasDedicatedPortrait = AvatarRenderContext.PORTRAIT.equals(AvatarRenderContext.currentOverride())
+            && BbModelPoseResolver.hasSpecialRootBone(model, "portrait");
+
         for (BbCubeDefinition cube : model.cubes()) {
             if (onlyBoneUuid != null && !belongsToBone(model, cube.parentBoneUuid(), onlyBoneUuid)) continue;
+            if (cube.parentBoneUuid() == null && hasDedicatedPortrait) continue;
             if (cube.parentBoneUuid() != null && hiddenBoneUuids.contains(cube.parentBoneUuid())) continue;
             BonePose bonePose = cube.parentBoneUuid() == null ? BonePose.IDENTITY : bonePoses.getOrDefault(cube.parentBoneUuid(), BonePose.IDENTITY);
             if (!bonePose.visible) continue;
             AvatarPartState cubePart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.cubePath(cube));
-            boolean cubeVisible = cube.visible();
-            if (cubePart != null && cubePart.visibilityControlled()) cubeVisible = cubePart.visible();
+            boolean cubeVisible = BbModelPoseResolver.resolveElementVisibility(entityId, cube.name(), cube.visible(), cubePart);
             if (!cubeVisible) continue;
 
             Matrix4f transform = new Matrix4f(modelToWorld).mul(bonePose.matrix);
@@ -213,18 +269,23 @@ public final class BbModelEntityRenderer {
                 colorArgb = multiplyColor(colorArgb, cubePart.colorArgb());
                 emissive |= cubePart.emissive();
             }
+            if (applyLod && isMicroDetail(cube)) {
+                culledGeometry++;
+                continue;
+            }
             boolean translucent = resolvePartTranslucent(cubePart, colorArgb);
             if (translucent != translucentPass) continue;
             BbModelGeometryRenderer.emitCube(vertices, transform, cube, targetTextureIndex, textureCount, textureWidth, textureHeight, resolvePartLight(cubePart, emissive, lightCoords), colorArgb);
+            renderedGeometry++;
         }
         for (BbMeshDefinition mesh : model.meshes()) {
             if (onlyBoneUuid != null && !belongsToBone(model, mesh.parentBoneUuid(), onlyBoneUuid)) continue;
+            if (mesh.parentBoneUuid() == null && hasDedicatedPortrait) continue;
             if (mesh.parentBoneUuid() != null && hiddenBoneUuids.contains(mesh.parentBoneUuid())) continue;
             BonePose bonePose = mesh.parentBoneUuid() == null ? BonePose.IDENTITY : bonePoses.getOrDefault(mesh.parentBoneUuid(), BonePose.IDENTITY);
             if (!bonePose.visible) continue;
             AvatarPartState meshPart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.meshPath(mesh));
-            boolean meshVisible = mesh.visible();
-            if (meshPart != null && meshPart.visibilityControlled()) meshVisible = meshPart.visible();
+            boolean meshVisible = BbModelPoseResolver.resolveElementVisibility(entityId, mesh.name(), mesh.visible(), meshPart);
             if (!meshVisible) continue;
 
             Matrix4f transform = new Matrix4f(modelToWorld).mul(bonePose.matrix);
@@ -243,15 +304,38 @@ public final class BbModelEntityRenderer {
                 colorArgb = multiplyColor(colorArgb, meshPart.colorArgb());
                 emissive |= meshPart.emissive();
             }
+            if (applyLod && isMicroMesh(mesh)) {
+                culledGeometry++;
+                continue;
+            }
             boolean translucent = resolvePartTranslucent(meshPart, colorArgb);
             if (translucent != translucentPass) continue;
             BbModelGeometryRenderer.emitMesh(vertices, transform, mesh, targetTextureIndex, textureCount, textureWidth, textureHeight,
                 resolvePartLight(meshPart, emissive, lightCoords), colorArgb);
+            renderedGeometry++;
         }
         AvatarState profiled = AvatarRuntime.active();
         if (profiled != null && entityId.equals(profiled.boundEntityId())) {
             AvatarProfiler.record(AvatarProfiler.Category.MODEL_RENDER, System.nanoTime() - profileStarted);
+            AvatarProfiler.recordGeometry(renderedGeometry, culledGeometry);
         }
+    }
+
+    static boolean isMicroDetail(BbCubeDefinition cube) {
+        if (cube == null) return false;
+        String name = cube.name() == null ? "" : cube.name().toLowerCase(java.util.Locale.ROOT);
+        if (name.contains("detail") || name.contains("micro") || name.contains("lod_skip")) return true;
+        float dx = Math.abs(cube.toX() - cube.fromX());
+        float dy = Math.abs(cube.toY() - cube.fromY());
+        float dz = Math.abs(cube.toZ() - cube.fromZ());
+        float volume = dx * dy * dz;
+        return volume > 0f && volume <= 8.0f;
+    }
+
+    static boolean isMicroMesh(BbMeshDefinition mesh) {
+        if (mesh == null) return false;
+        String name = mesh.name() == null ? "" : mesh.name().toLowerCase(java.util.Locale.ROOT);
+        return name.contains("detail") || name.contains("micro") || name.contains("lod_skip");
     }
 
     static int resolvePartLight(AvatarPartState part, boolean emissive, int defaultLight) {
@@ -314,6 +398,7 @@ public final class BbModelEntityRenderer {
     static float minimumScale(float actual, float expected) { return BbModelRigResolver.minimumScale(actual, expected); }
     static BbBoneDefinition findFirstPersonArm(BbModelDefinition model, HumanoidArm arm) { return BbModelRigResolver.findFirstPersonArm(model, arm); }
     static boolean isDedicatedFirstPersonArm(BbBoneDefinition bone) { return BbModelRigResolver.isDedicatedFirstPersonArm(bone); }
+    static boolean isDedicatedFirstPersonArm(BbModelDefinition model, BbBoneDefinition bone) { return BbModelRigResolver.isDedicatedFirstPersonArm(model, bone); }
     static Set<String> hiddenFirstPersonBones(BbModelDefinition model) { return BbModelRigResolver.hiddenFirstPersonBones(model); }
     static boolean hasDrawableGeometry(BbModelDefinition model, UUID entityId, String rootBoneUuid, Map<String, BonePose> bonePoses) { return BbModelRigResolver.hasDrawableGeometry(model, entityId, rootBoneUuid, bonePoses); }
     static String automaticPoseKey(BbModelDefinition model, BbBoneDefinition bone) { return BbModelRigResolver.automaticPoseKey(model, bone); }

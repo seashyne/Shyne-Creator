@@ -67,10 +67,20 @@ function events.clear(name)
   if name == nil then events._handlers = {} else events._handlers[event_name(name)] = nil end
 end
 
+local _dispatch_depth = 0
+local MAX_DISPATCH_DEPTH = 32
+
 --- Dispatches an event to all internal and public subscribers.
 ---@param name string Event name
 ---@param payload table|nil Event payload table
 function events._dispatch(name, payload)
+  if _dispatch_depth >= MAX_DISPATCH_DEPTH then
+    if _shyne_report_error then
+      _shyne_report_error("event_recursion", tostring(name), "Maximum event dispatch depth exceeded (" .. tostring(MAX_DISPATCH_DEPTH) .. ")")
+    end
+    return
+  end
+  _dispatch_depth = _dispatch_depth + 1
   name = event_name(name)
   payload = payload or { type = name }
 
@@ -87,6 +97,22 @@ function events._dispatch(name, payload)
     local ok, message = pcall(callback, payload)
     if not ok then _shyne_report_error("event", name .. "#" .. tostring(index), tostring(message)) end
   end
+
+  -- 3. Direct function handlers (e.g. function events.tick() or function events.render())
+  local direct = rawget(events, name)
+  if type(direct) == "function" then
+    local ok, message = pcall(direct, payload and (payload.delta or payload.partial_tick) or payload)
+    if not ok then _shyne_report_error("event_direct", name, tostring(message)) end
+  end
+  local upper_name = string.upper(name)
+  if upper_name ~= name then
+    local upper_direct = rawget(events, upper_name)
+    if type(upper_direct) == "function" then
+      local ok, message = pcall(upper_direct, payload and (payload.delta or payload.partial_tick) or payload)
+      if not ok then _shyne_report_error("event_direct", upper_name, tostring(message)) end
+    end
+  end
+  _dispatch_depth = _dispatch_depth - 1
 end
 
 -- ------------------------------------------------------------------------------
@@ -176,10 +202,14 @@ end)
 events._internal.avatar_unload = events._internal.avatar_unload or {}
 table.insert(events._internal.avatar_unload, function() task.clear() end)
 
--- Render hook for forwarding skull context to skull_render
+-- Render hook for forwarding special render contexts
 events._internal.render = events._internal.render or {}
 table.insert(events._internal.render, function(payload)
   if payload and (payload.context == "SKULL" or payload.is_skull) then
     events._dispatch("skull_render", payload)
+  elseif payload and (payload.context == "ARROW" or payload.is_arrow) then
+    events._dispatch("arrow_render", payload)
+  elseif payload and (payload.context == "HELD_ITEM" or payload.is_held_item) then
+    events._dispatch("item_render", payload)
   end
 end)

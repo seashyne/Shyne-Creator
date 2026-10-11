@@ -49,7 +49,7 @@ public static boolean renderArm(PoseStack poseStack, SubmitNodeCollector collect
     if (model == null || !model.hasGeometry()) return false;
 
     BbBoneDefinition armBone = BbModelEntityRenderer.findFirstPersonArm(model, arm);
-    boolean dedicatedFirstPersonArm = armBone != null && BbModelEntityRenderer.isDedicatedFirstPersonArm(armBone);
+    boolean dedicatedFirstPersonArm = armBone != null && BbModelEntityRenderer.isDedicatedFirstPersonArm(model, armBone);
     boolean replaceFirstPersonArm = dedicatedFirstPersonArm
         || AvatarRuntime.shouldHideLocalPlayer()
         || !AvatarRuntime.isVanillaPartVisible(arm == HumanoidArm.RIGHT ? "RIGHT_ARM" : "LEFT_ARM")
@@ -103,7 +103,7 @@ private static void renderFirstPersonModel(
     float vanillaPivotX = arm == HumanoidArm.RIGHT ? -5.0f : 5.0f;
     float vanillaPivotY = 2.0f;
     float vanillaPivotZ = 0.0f;
-    float vanillaRotZ = arm == HumanoidArm.RIGHT ? 0.1f : -0.1f;
+    float vanillaRotZ = 0.0f;
 
     Matrix4f modelToWorld = new Matrix4f(pose.pose())
         .translate(vanillaPivotX / 16.0f, vanillaPivotY / 16.0f, vanillaPivotZ / 16.0f)
@@ -116,8 +116,7 @@ private static void renderFirstPersonModel(
         BbModelEntityRenderer.BonePose bonePose = cube.parentBoneUuid() == null ? BbModelEntityRenderer.BonePose.IDENTITY : bonePoses.getOrDefault(cube.parentBoneUuid(), BbModelEntityRenderer.BonePose.IDENTITY);
         if (!bonePose.visible()) continue;
         AvatarPartState cubePart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.cubePath(cube));
-        boolean cubeVisible = cube.visible();
-        if (cubePart != null && cubePart.visibilityControlled()) cubeVisible = cubePart.visible();
+        boolean cubeVisible = BbModelPoseResolver.resolveElementVisibility(entityId, cube.name(), cube.visible(), cubePart);
         if (!cubeVisible) continue;
 
         Matrix4f transform = new Matrix4f(modelToWorld).mul(bonePose.matrix());
@@ -144,8 +143,7 @@ private static void renderFirstPersonModel(
         BbModelEntityRenderer.BonePose bonePose = mesh.parentBoneUuid() == null ? BbModelEntityRenderer.BonePose.IDENTITY : bonePoses.getOrDefault(mesh.parentBoneUuid(), BbModelEntityRenderer.BonePose.IDENTITY);
         if (!bonePose.visible()) continue;
         AvatarPartState meshPart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.meshPath(mesh));
-        boolean meshVisible = mesh.visible();
-        if (meshPart != null && meshPart.visibilityControlled()) meshVisible = meshPart.visible();
+        boolean meshVisible = BbModelPoseResolver.resolveElementVisibility(entityId, mesh.name(), mesh.visible(), meshPart);
         if (!meshVisible) continue;
 
         Matrix4f transform = new Matrix4f(modelToWorld).mul(bonePose.matrix());

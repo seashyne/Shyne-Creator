@@ -17,6 +17,14 @@ final class ShyneApiStandardTest {
         assertEquals("2.0", explicit.version());
         assertFalse(explicit.automatic());
 
+        ShyneApiStandard.Selection standardSelect = ShyneApiStandard.select("standard");
+        assertEquals(ShyneApiStandard.LATEST, standardSelect.version());
+        assertTrue(standardSelect.automatic());
+
+        ShyneApiStandard.Selection shyneSelect = ShyneApiStandard.select("shyne");
+        assertEquals(ShyneApiStandard.LATEST, shyneSelect.version());
+        assertTrue(shyneSelect.automatic());
+
         assertThrows(IllegalArgumentException.class, () -> ShyneApiStandard.select("1.3"));
         assertThrows(IllegalArgumentException.class, () -> ShyneApiStandard.modulesFor("1.3"));
     }

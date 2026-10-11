@@ -146,8 +146,8 @@ public final class AvatarSnapshotSync {
         List<ShyneNetwork.NetAvatarPart> parts = new ArrayList<>();
         Map<String, AvatarPartState> visibleParts = active.syncPolicy().filterParts(active.parts());
         for (var entry : visibleParts.entrySet()) {
-            AvatarPartState p = entry.getValue();
-            parts.add(new ShyneNetwork.NetAvatarPart(entry.getKey(), p.visible(), p.posX(), p.posY(), p.posZ(), p.rotX(), p.rotY(), p.rotZ(), p.scaleX(), p.scaleY(), p.scaleZ(), p.positionControlled(), p.rotationControlled(), p.scaleControlled(), p.additiveRotX(), p.additiveRotY(), p.additiveRotZ(), p.additiveRotationControlled(), p.colorArgb(), p.emissive(), p.vanillaParent(), p.vanillaParentControlled(), p.vanillaAttachmentMode()));
+            var p = entry.getValue();
+            parts.add(new ShyneNetwork.NetAvatarPart(entry.getKey(), p.visible(), p.posX(), p.posY(), p.posZ(), p.rotX(), p.rotY(), p.rotZ(), p.scaleX(), p.scaleY(), p.scaleZ(), p.positionControlled(), p.rotationControlled(), p.scaleControlled(), p.additiveRotX(), p.additiveRotY(), p.additiveRotZ(), p.additiveRotationControlled(), p.colorArgb(), p.emissive(), p.vanillaParent(), p.vanillaParentControlled(), p.vanillaAttachmentMode(), p.visibilityControlled()));
         }
         return new ShyneNetwork.NetAvatarSnapshot(
             playerId,

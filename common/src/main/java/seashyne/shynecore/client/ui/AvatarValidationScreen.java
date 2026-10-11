@@ -25,7 +25,7 @@ public final class AvatarValidationScreen extends Screen {
     private static final int MUTED = 0xFF91A0B7;
 
     private final Screen parent;
-    private final int requestedPage;
+    private int requestedPage;
     private final boolean refreshOnOpen;
     private boolean refreshRequested;
     private List<Line> lines = List.of();
@@ -57,16 +57,17 @@ public final class AvatarValidationScreen extends Screen {
         page = Math.min(requestedPage, pages - 1);
 
         int footerY = panelY + panelHeight - 30;
-        addRenderableWidget(Button.builder(Component.literal("‹"), button -> openPage(page - 1))
-            .bounds(panelX + 14, footerY, 30, 20).build()).active = page > 0;
-        addRenderableWidget(Button.builder(Component.literal("›"), button -> openPage(page + 1))
-            .bounds(panelX + 48, footerY, 30, 20).build()).active = page + 1 < pages;
-        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.validation.rescan"), button -> rescan())
-            .bounds(panelX + panelWidth - 242, footerY, 78, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.validation.folder"), button -> openFolder())
-            .bounds(panelX + panelWidth - 160, footerY, 72, 20).build());
+        int btnWidth = Math.min(84, Math.max(64, (panelWidth - 140) / 4));
+        int right = panelX + panelWidth - 14;
         addRenderableWidget(Button.builder(Component.translatable("gui.back"), button -> onClose())
-            .bounds(panelX + panelWidth - 84, footerY, 70, 20).build());
+            .bounds(right - btnWidth, footerY, btnWidth, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.validation.folder"), button -> openFolder())
+            .bounds(right - btnWidth * 2 - 4, footerY, btnWidth, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.validation.rescan"), button -> rescan())
+            .bounds(right - btnWidth * 3 - 8, footerY, btnWidth, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Importer"), button -> {
+            if (minecraft != null) minecraft.gui.setScreen(new AvatarImporterScreen(this));
+        }).bounds(right - btnWidth * 4 - 12, footerY, btnWidth, 20).build());
 
         if (refreshOnOpen && !refreshRequested) {
             refreshRequested = true;
@@ -123,7 +124,23 @@ public final class AvatarValidationScreen extends Screen {
             graphics.text(font, Component.literal(clipped), panelX + 14, y, line.color(), false);
             y += 12;
         }
-        graphics.text(font, Component.translatable("screen.shyne_core.validation.page", page + 1, pages), panelX + 88, panelY + panelHeight - 24, MUTED, false);
+        Component scrollHint = pages > 1
+            ? Component.literal("Scroll ↕  " + (page + 1) + " / " + pages)
+            : Component.translatable("screen.shyne_core.validation.page", page + 1, pages);
+        graphics.text(font, scrollHint, panelX + 14, panelY + panelHeight - 24, MUTED, false);
+
+        if (pages > 1) {
+            int trackX = panelX + panelWidth - 8;
+            int trackTop = panelY + 50;
+            int trackBottom = panelY + panelHeight - 36;
+            int trackHeight = trackBottom - trackTop;
+            if (trackHeight > 10) {
+                graphics.fill(trackX, trackTop, trackX + 3, trackBottom, 0x33445A78);
+                int thumbHeight = Math.max(8, trackHeight / pages);
+                int thumbY = trackTop + (int) ((trackHeight - thumbHeight) * ((float) page / (pages - 1)));
+                graphics.fill(trackX, thumbY, trackX + 3, thumbY + thumbHeight, ACCENT);
+            }
+        }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
@@ -135,7 +152,23 @@ public final class AvatarValidationScreen extends Screen {
             ShyneCore.LOGGER.error("[AvatarValidation] Could not open Avatar folder: {}", error.getMessage());
         }
     }
-    private void openPage(int value) { if (minecraft != null) minecraft.gui.setScreen(new AvatarValidationScreen(parent, value, false)); }
+    private void openPage(int value) {
+        this.requestedPage = Math.max(0, Math.min(value, pages - 1));
+        this.page = this.requestedPage;
+        rebuildWidgets();
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (verticalAmount != 0 && pages > 1) {
+            int newPage = Math.max(0, Math.min(pages - 1, page + (verticalAmount < 0 ? 1 : -1)));
+            if (newPage != page) {
+                openPage(newPage);
+                return true;
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
     private void rescan() { if (minecraft != null) minecraft.gui.setScreen(new AvatarValidationScreen(parent, 0, true)); }
     @Override public void onClose() { if (minecraft != null) minecraft.gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return true; }

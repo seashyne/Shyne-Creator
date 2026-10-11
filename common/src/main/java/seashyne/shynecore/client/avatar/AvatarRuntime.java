@@ -6,6 +6,7 @@ import seashyne.shynecore.client.config.ShyneClientSettings;
 import seashyne.shynecore.client.render.AvatarBoneTransformRegistry;
 import seashyne.shynecore.client.render.AvatarRenderContext;
 import seashyne.shynecore.client.state.ClientAnimationState;
+import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.model.BbModelDefinition;
 import seashyne.shynecore.network.ShyneNetwork;
 
@@ -60,6 +61,9 @@ public final class AvatarRuntime {
         lifecycle.tickNativePhysics(client.player);
         if (lifecycle.script() != null) {
             lifecycle.script().tick(client);
+            if (client.level != null) {
+                lifecycle.script().worldTick(client);
+            }
             lifecycle.dispatchMicrophoneEvent();
         }
         AvatarAnimationManager.pruneAnimationLayers(lifecycle.active());
@@ -69,6 +73,18 @@ public final class AvatarRuntime {
         AvatarFileWatcher.tick(client);
         seashyne.shynecore.client.avatar.sound.AvatarCustomSoundManager.cleanupStoppedSources();
         seashyne.shynecore.client.avatar.sound.AvatarAudioStreamManager.tick();
+    }
+
+    public static void arrowRender(float partialTick, String arrowEntityId) {
+        if (lifecycle.script() != null) {
+            lifecycle.script().arrowRender(partialTick, arrowEntityId);
+        }
+    }
+
+    public static void itemRender(String itemId, String mode, boolean leftHand) {
+        if (lifecycle.script() != null) {
+            lifecycle.script().itemRender(itemId, mode, leftHand);
+        }
     }
 
     // Accessors
@@ -154,44 +170,84 @@ public final class AvatarRuntime {
     }
 
     public static void dispatchKeyInput(int key, int scanCode, int action, int modifiers) {
-        String type = action == 0 ? "key_release" : action == 2 ? "key_repeat" : "key_press";
-        lifecycle.dispatchInputEvent(type, key, scanCode, action, modifiers, 0.0, 0.0, "");
+        try {
+            String type = action == 0 ? "key_release" : action == 2 ? "key_repeat" : "key_press";
+            lifecycle.dispatchInputEvent(type, key, scanCode, action, modifiers, 0.0, 0.0, "");
+        } catch (Throwable t) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] dispatchKeyInput failed: {}", t.getMessage());
+        }
     }
 
     public static void dispatchCharacterInput(int codePoint, int modifiers) {
-        lifecycle.dispatchInputEvent("char_typed", codePoint, 0, 1, modifiers, 0.0, 0.0, new String(Character.toChars(codePoint)));
+        try {
+            lifecycle.dispatchInputEvent("char_typed", codePoint, 0, 1, modifiers, 0.0, 0.0, new String(Character.toChars(codePoint)));
+        } catch (Throwable t) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] dispatchCharacterInput failed: {}", t.getMessage());
+        }
     }
 
     public static void dispatchMouseButton(int button, int action, int modifiers) {
-        lifecycle.dispatchInputEvent(action == 0 ? "mouse_release" : "mouse_press", button, 0, action, modifiers, 0.0, 0.0, "");
+        try {
+            lifecycle.dispatchInputEvent(action == 0 ? "mouse_release" : "mouse_press", button, 0, action, modifiers, 0.0, 0.0, "");
+        } catch (Throwable t) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] dispatchMouseButton failed: {}", t.getMessage());
+        }
     }
 
     public static void dispatchMouseScroll(double horizontal, double vertical) {
-        lifecycle.dispatchInputEvent("mouse_scroll", 0, 0, 0, 0, horizontal, vertical, "");
+        try {
+            lifecycle.dispatchInputEvent("mouse_scroll", 0, 0, 0, 0, horizontal, vertical, "");
+        } catch (Throwable t) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] dispatchMouseScroll failed: {}", t.getMessage());
+        }
     }
 
     public static void dispatchMouseMove(double xpos, double ypos, double xrel, double yrel) {
-        lifecycle.dispatchInputEvent("mouse_move", 0, 0, 0, 0, xpos, ypos, "");
+        try {
+            lifecycle.dispatchInputEvent("mouse_move", 0, 0, 0, 0, xpos, ypos, "");
+        } catch (Throwable t) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] dispatchMouseMove failed: {}", t.getMessage());
+        }
     }
 
     public static void dispatchItemUse(String itemId, String hand, String action, int particleCount) {
-        lifecycle.dispatchItemUseEvent(itemId, hand, action, particleCount);
+        try {
+            lifecycle.dispatchItemUseEvent(itemId, hand, action, particleCount);
+        } catch (Throwable t) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] dispatchItemUse failed: {}", t.getMessage());
+        }
     }
 
     public static void dispatchChatReceive(String text, String json, String senderUuid, String senderName) {
-        lifecycle.dispatchChatReceiveEvent(text, json, senderUuid, senderName);
+        try {
+            lifecycle.dispatchChatReceiveEvent(text, json, senderUuid, senderName);
+        } catch (Throwable t) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] dispatchChatReceive failed: {}", t.getMessage());
+        }
     }
 
     public static void dispatchEntityDamage(float amount, String sourceType, String attackerId, boolean isLocalPlayer) {
-        lifecycle.dispatchEntityDamageEvent(amount, sourceType, attackerId, isLocalPlayer);
+        try {
+            lifecycle.dispatchEntityDamageEvent(amount, sourceType, attackerId, isLocalPlayer);
+        } catch (Throwable t) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] dispatchEntityDamage failed: {}", t.getMessage());
+        }
     }
 
     public static void dispatchTotemPop(String entityId, boolean isLocalPlayer) {
-        lifecycle.dispatchTotemPopEvent(entityId, isLocalPlayer);
+        try {
+            lifecycle.dispatchTotemPopEvent(entityId, isLocalPlayer);
+        } catch (Throwable t) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] dispatchTotemPop failed: {}", t.getMessage());
+        }
     }
 
     public static void channelPacket(String senderUuid, String channel, String payloadJson) {
-        lifecycle.channelPacket(senderUuid, channel, payloadJson);
+        try {
+            lifecycle.channelPacket(senderUuid, channel, payloadJson);
+        } catch (Throwable t) {
+            ShyneCore.LOGGER.error("[AvatarRuntime] channelPacket failed: {}", t.getMessage());
+        }
     }
 
     public static boolean isVanillaPartVisible(String key) { return isVanillaPartVisible(null, key); }

@@ -55,10 +55,13 @@ public final class AvatarProfilerScreen extends Screen {
         value(graphics, "Memory", bytes(snapshot.avatarBytes()), panelX + 460, summaryY, 0xFFF3F7FF);
 
         var quota = snapshot.quota();
-        value(graphics, "Dyn Textures", (quota != null ? quota.dynamicTextures() + "/" + quota.maxDynamicTextures() : "0/16") + " (" + bytes(quota != null ? quota.dynamicTextureBytes() : 0) + ")", panelX + 12, summaryY + 28, 0xFFF3F7FF);
-        value(graphics, "Particles", (quota != null ? quota.particlesPerSecond() + "/s" + (quota.particlesDroppedPerSecond() > 0 ? " (drop " + quota.particlesDroppedPerSecond() + ")" : "") : "0/s"), panelX + 180, summaryY + 28, (quota != null && quota.particlesDroppedPerSecond() > 0) ? 0xFFFF6B7A : 0xFFF3F7FF);
-        value(graphics, "Sounds", (quota != null ? quota.soundsPerSecond() + "/s" + (quota.soundsDroppedPerSecond() > 0 ? " (drop " + quota.soundsDroppedPerSecond() + ")" : "") : "0/s"), panelX + 340, summaryY + 28, (quota != null && quota.soundsDroppedPerSecond() > 0) ? 0xFFFF6B7A : 0xFFF3F7FF);
-        value(graphics, "Tasks", AvatarRenderTaskRegistry.lastRendered() + "/" + snapshot.taskCount(), panelX + 460, summaryY + 28, AvatarRenderTaskRegistry.lastCulled() > 0 ? 0xFFFFB86B : 0xFFF3F7FF);
+        value(graphics, "Dyn Textures", (quota != null ? quota.dynamicTextures() + "/" + quota.maxDynamicTextures() : "0/16"), panelX + 12, summaryY + 28, 0xFFF3F7FF);
+        value(graphics, "Particles", (quota != null ? quota.particlesPerSecond() + "/s" : "0/s"), panelX + 125, summaryY + 28, (quota != null && quota.particlesDroppedPerSecond() > 0) ? 0xFFFF6B7A : 0xFFF3F7FF);
+        value(graphics, "Sounds", (quota != null ? quota.soundsPerSecond() + "/s" : "0/s"), panelX + 225, summaryY + 28, (quota != null && quota.soundsDroppedPerSecond() > 0) ? 0xFFFF6B7A : 0xFFF3F7FF);
+        value(graphics, "Tasks", AvatarRenderTaskRegistry.lastRendered() + "/" + snapshot.taskCount(), panelX + 320, summaryY + 28, AvatarRenderTaskRegistry.lastCulled() > 0 ? 0xFFFFB86B : 0xFFF3F7FF);
+        int totalGeo = snapshot.geometryRendered() + snapshot.geometryCulled();
+        String geoText = totalGeo > 0 ? snapshot.geometryRendered() + "/" + totalGeo : (snapshot.cubes() + "c");
+        value(graphics, "Geometry", geoText, panelX + 440, summaryY + 28, snapshot.geometryCulled() > 0 ? 0xFFFFB86B : 0xFF65F2B3);
 
         graphics.text(this.font, Component.translatable("screen.shyne_core.profiler.metrics").withStyle(ChatFormatting.AQUA), panelX + 12, panelY + 112, 0xFFFFFFFF, false);
         int row = 0;

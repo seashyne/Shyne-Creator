@@ -271,6 +271,10 @@ public final class ClientLuaAvatarRuntime {
         callEvent("TICK", eventPayload("tick"));
     }
 
+    public void worldTick(Minecraft client) {
+        callEvent("WORLD_TICK", eventPayload("world_tick"));
+    }
+
     public void render(float partialTick, String context) {
         callEvent("RENDER", renderEventPayload("render", partialTick, context));
     }
@@ -285,6 +289,20 @@ public final class ClientLuaAvatarRuntime {
 
     public void postWorldRender(float partialTick) {
         callEvent("POST_WORLD_RENDER", renderEventPayload("post_world_render", partialTick, AvatarRenderContext.WORLD));
+    }
+
+    public void arrowRender(float partialTick, String arrowEntityId) {
+        LuaTable event = renderEventPayload("arrow_render", partialTick, AvatarRenderContext.WORLD);
+        event.set("arrow", LuaValue.valueOf(arrowEntityId == null ? "" : arrowEntityId));
+        callEvent("ARROW_RENDER", event);
+    }
+
+    public void itemRender(String itemId, String mode, boolean leftHand) {
+        LuaTable event = eventPayload("item_render");
+        event.set("item", LuaValue.valueOf(itemId == null ? "" : itemId));
+        event.set("mode", LuaValue.valueOf(mode == null ? "NONE" : mode));
+        event.set("left", LuaValue.valueOf(leftHand));
+        callEvent("ITEM_RENDER", event);
     }
 
     public void microphone(ShyneMicrophoneState.Snapshot snapshot) {
@@ -429,7 +447,7 @@ public final class ClientLuaAvatarRuntime {
                     return;
                 }
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             ShyneCore.LOGGER.error("[AvatarLua] event {} failed: {}", key, e.getMessage(), e);
             systemBridge.reportRuntimeError("event", key, e.getMessage());
         } finally {

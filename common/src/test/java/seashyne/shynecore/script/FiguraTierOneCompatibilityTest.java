@@ -231,10 +231,86 @@ final class FiguraTierOneCompatibilityTest {
             end)
             events._dispatch("render", { delta = 0.5, context = "SKULL", is_skull = true })
 
+            local world_tick_ok = false
+            events.WORLD_TICK:register(function()
+                world_tick_ok = true
+            end)
+            events._dispatch("world_tick", {})
+
+            local direct_tick_ok = false
+            function events.tick()
+                direct_tick_ok = true
+            end
+            events._dispatch("tick", {})
+
+            local arrow_ok = false
+            events.ARROW_RENDER:register(function(delta, arrow, ev)
+                if delta == 0.25 and arrow == "arrow_1" and ev.arrow == "arrow_1" then
+                    arrow_ok = true
+                end
+            end)
+            events._dispatch("arrow_render", { delta = 0.25, arrow = "arrow_1" })
+
+            local item_render_ok = false
+            events.ITEM_RENDER:register(function(item, mode, pos, rot, scale, left, ev)
+                if item == "minecraft:bow" and mode == "THIRD_PERSON_RIGHT_HAND" and left == false then
+                    item_render_ok = true
+                end
+            end)
+            events._dispatch("item_render", { item = "minecraft:bow", mode = "THIRD_PERSON_RIGHT_HAND", left = false })
+
+            local ev_list = events:getEvents()
+            local list_ok = type(ev_list) == "table" and #ev_list >= 20
+
             return mouse_ok and use_ok and chat_ok and dmg_ok and totem_ok and skull_ok
+                and world_tick_ok and direct_tick_ok and arrow_ok and item_render_ok and list_ok
             """, "figura-extended-events-parity-test").call();
 
         assertTrue(result.toboolean(), "All extended Figura events must dispatch and map payload correctly");
+    }
+
+    @Test
+    void matrixAlgebraAndExtendedVectorMathParity() throws Exception {
+        LuaSandbox.Environment environment = LuaSandbox.create();
+        Globals globals = environment.globals();
+        installBootstrapMocks(environment, new LuaTable());
+        runBootstrap(environment);
+
+        LuaValue result = globals.load("""
+            -- 1. Vector Swizzling & Operations
+            local v3 = vectors.vec3(1, 2, 3)
+            local zyx = v3.zyx
+            local swizzle_ok = zyx.x == 3 and zyx.y == 2 and zyx.z == 1
+            local v3_norm = v3:normalized()
+            local v3_len = math.abs(v3_norm:length() - 1.0) < 0.0001
+            local v3_lerp = v3:lerp(vectors.vec3(3, 4, 5), 0.5)
+            local lerp_ok = v3_lerp.x == 2 and v3_lerp.y == 3 and v3_lerp.z == 4
+
+            -- 2. 2x2 Matrix
+            local m2 = matrices.mat2():rotate(90)
+            local v2_rot = m2 * vectors.vec2(1, 0)
+            local m2_ok = math.abs(v2_rot.x) < 0.001 and math.abs(v2_rot.y - 1) < 0.001
+            local m2_det = math.abs(m2:determinant() - 1.0) < 0.001
+
+            -- 3. 3x3 Matrix
+            local m3 = matrices.mat3():rotateY(90)
+            local v3_rot = m3 * vectors.vec3(1, 0, 0)
+            local m3_ok = math.abs(v3_rot.z - 1) < 0.001 or math.abs(v3_rot.z - (-1)) < 0.001
+            local m3_det = math.abs(m3:determinant() - 1.0) < 0.001
+
+            -- 4. 4x4 Matrix
+            local m4 = matrices.mat4():translate(10, 20, 30):scale(2, 2, 2)
+            local v4_pt = m4 * vectors.vec3(1, 1, 1)
+            local m4_trans_ok = v4_pt.x == 12 and v4_pt.y == 22 and v4_pt.z == 32
+            local m4_inv = m4:inverted()
+            local roundtrip = m4_inv * v4_pt
+            local m4_inv_ok = math.abs(roundtrip.x - 1) < 0.001 and math.abs(roundtrip.y - 1) < 0.001 and math.abs(roundtrip.z - 1) < 0.001
+            local m4_det = math.abs(m4:determinant() - 8.0) < 0.001
+
+            return swizzle_ok and v3_len and lerp_ok and m2_ok and m2_det and m3_ok and m3_det and m4_trans_ok and m4_inv_ok and m4_det
+            """, "figura-matrix-algebra-parity-test").call();
+
+        assertTrue(result.toboolean(), "Figura vectors and matrices algebra must compute transformations and inversions accurately");
     }
 
     @Test

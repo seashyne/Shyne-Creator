@@ -66,12 +66,25 @@
     const autoplay = [];
     let blink = null;
 
-    animationList().forEach((animation) => {
+    const animList = animationList();
+    const hasWalk = animList.some((a) => {
+      const n = animationName(a).toLowerCase();
+      return n === 'walk' || n === 'move' || n === 'run' || a.shyne_state === 'walk';
+    });
+
+    animList.forEach((animation) => {
       const name = animationName(animation);
       if (!name) return;
       const state = String(animation.shyne_state || 'none');
       if (state !== 'none') animations[state] = name;
-      if (animation.shyne_autoplay === true) autoplay.push(name);
+
+      const isExplicitAutoplay = animation.shyne_autoplay === true;
+      const isAccessoryKeyword = /tail|ear|wing|fin|halo|horn|wiggle|wag|ambient|breath|float|spin|sparkle/i.test(name);
+      const isOnlyIdleAccessory = (name.toLowerCase() === 'idle' || name.toLowerCase() === 'stand') && !hasWalk && animList.length === 1;
+
+      if (isExplicitAutoplay || (state === 'none' && isAccessoryKeyword) || isOnlyIdleAccessory) {
+        autoplay.push(name);
+      }
       if (animation.shyne_blink === true) blink = name;
     });
 
@@ -94,7 +107,7 @@
     const behavior = buildBehavior();
     const manifest = explicit
       ? {
-          standard: '2.0',
+          standard: 'standard',
           id: cleanId(configuredId || name),
           name,
           profile,
@@ -109,7 +122,7 @@
     }
     if (projectValue('shyne_use_lua', false) === true) {
       manifest.main = baseName(projectValue('shyne_main', 'script.lua') || 'script.lua');
-      manifest.api = '2.0';
+      manifest.api = 'standard';
     }
     return manifest;
   }
@@ -244,10 +257,10 @@
     const lines = [];
     if (problems.length) lines.push('Errors:', ...problems.map((value) => `• ${value}`));
     if (warnings.length) lines.push('Warnings:', ...warnings.map((value) => `• ${value}`));
-    if (!problems.length && !warnings.length) lines.push('Standard 2.0 metadata is ready to export.');
+    if (!problems.length && !warnings.length) lines.push('Shyne Standard metadata is ready to export.');
     if (typeof Blockbench !== 'undefined' && (showSuccess || problems.length)) {
       Blockbench.showMessageBox({
-        title: problems.length ? 'Shyne validation failed' : 'Shyne Standard 2.0',
+        title: problems.length ? 'Shyne validation failed' : 'Shyne Standard',
         message: lines.join('\n')
       });
     }
@@ -419,7 +432,7 @@
 
   if (typeof Plugin === 'undefined' || typeof Plugin.register !== 'function') return;
   Plugin.register(PLUGIN_ID, {
-    title: 'Shyne Standard 2.0',
+    title: 'Shyne Standard',
     author: 'Shyne Creator',
     description: 'Native model-first metadata, validation, compact avatar.json, and one-click Shyne package export. No Figura dependency.',
     icon: 'accessibility_new',
@@ -429,8 +442,8 @@
     onload() {
       installProperties();
       if (typeof Action === 'function') {
-        validateAction = new Action('shyne_validate_standard_2', {
-          name: 'Validate Shyne Standard 2.0', icon: 'fact_check', click() { validateProject(true); }
+        validateAction = new Action('shyne_validate_standard', {
+          name: 'Validate Shyne Standard', icon: 'fact_check', click() { validateProject(true); }
         });
         exportAction = new Action('shyne_export_avatar_manifest', {
           name: 'Export Shyne avatar.json', icon: 'save', click: exportManifest

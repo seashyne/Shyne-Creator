@@ -43,8 +43,20 @@ final class BbModelJsonHelper {
     }
 
     static boolean safeBoolean(JsonElement el, boolean def) {
-        try { return el == null || el.isJsonNull() ? def : el.getAsBoolean(); }
-        catch (Exception ignored) { return def; }
+        if (el == null || el.isJsonNull()) return def;
+        try {
+            if (el.isJsonPrimitive()) {
+                var prim = el.getAsJsonPrimitive();
+                if (prim.isBoolean()) return prim.getAsBoolean();
+                if (prim.isNumber()) return prim.getAsNumber().intValue() != 0;
+                String str = prim.getAsString().trim().toLowerCase(java.util.Locale.ROOT);
+                if ("true".equals(str) || "1".equals(str)) return true;
+                if ("false".equals(str) || "0".equals(str)) return false;
+            }
+            return el.getAsBoolean();
+        } catch (Exception ignored) {
+            return def;
+        }
     }
 
     static String raw(JsonElement element, String fallback) {

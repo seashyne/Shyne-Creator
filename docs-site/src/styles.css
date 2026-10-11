@@ -213,9 +213,14 @@ body {
 .hero-actions a { font-size:14px; height:52px; }
 .primary { background:#67dcf5; color:#071018; box-shadow:6px 6px 0 #214b5c; }
 .secondary { background:#131c2a; border-color:#3b4759; color:#e4ebf5; }
+.download-cta { background:#132030; border:1px solid #3d607e; color:#7ce4fa; box-shadow:5px 5px 0 #0d1723; transition:.2s; }
+.download-cta:hover { background:#1c2e44; border-color:#7ce4fa; color:#fff; transform:translate(-1px,-1px); box-shadow:6px 6px 0 #0d1723; }
 .compat { color:#98a5b8; font-size:11px; }
 .compat b { color:#e3eaf4; font-size:11px; }
 .path { border-color:#30394a; }
+.whats-new-section { border-top:1px solid #30394a; padding:60px 6vw 75px; }
+.section-link { display:inline-flex; align-items:center; gap:8px; color:var(--cyan); font:600 12px 'Chakra Petch'; padding:8px 14px; background:rgba(103,220,245,.08); border:1px solid rgba(103,220,245,.28); border-radius:4px; transition:.2s; }
+.section-link:hover { background:rgba(103,220,245,.18); border-color:var(--cyan); color:#fff; transform:translateX(2px); }
 .section-heading p { color:#67dcf5; font-size:10px; }
 .section-heading h2 { color:#f0f4fa; font-size:32px; }
 .path-card { background:linear-gradient(145deg,#151e2d,#101722); border-color:#354055; padding:27px; }
@@ -634,4 +639,192 @@ footer p,footer a { font-size:11px; }
   .model-showcase-grid { grid-template-columns:1fr; }.model-showcase-card { min-height:0; padding:17px; }.model-card-copy h3 { font-size:21px; }
   .showcase-install { margin:0 20px 55px; padding:27px 22px; grid-template-columns:1fr; gap:23px; }.showcase-install h2 { font-size:26px; }.showcase-install ol { grid-template-columns:1fr; }.showcase-install li { min-height:0; gap:16px; }
   .showcase-community { margin:0 20px 55px; padding:28px 22px; gap:24px; }.showcase-community h2 { font-size:27px; }.showcase-community>a { width:100%; justify-content:center; }
+}
+
+/* Tutorials Hub */
+.tutorials-page { overflow:hidden; }
+.tutorials-hero {
+  padding:65px 7vw 45px;
+  background:radial-gradient(circle at 75% 20%,rgba(203,255,69,.12),transparent 35%),linear-gradient(135deg,#12151c,#0a0b0e);
+  border-bottom:1px solid var(--line);
+}
+.tutorials-hero-copy { max-width:760px; }
+.tutorials-hero-copy .overline { margin:0 0 14px; color:var(--lime); font:700 11px 'Chakra Petch'; letter-spacing:.15em; }
+.tutorials-hero-copy h1 { margin:0 0 16px; font:700 clamp(40px,5vw,64px)/1.05 'Noto Sans Thai',sans-serif; letter-spacing:-.03em; }
+.tutorials-hero-copy h1 span { color:var(--lime); }
+.tutorials-hero-copy p { margin:0; color:#b0b4bd; font-size:16px; line-height:1.8; }
+
+.tutorials-section { padding:48px 7vw 80px; max-width:1400px; margin:auto; }
+.tutorials-filter-bar {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:36px;
+  align-items:center;
+}
+.topic-tab-btn {
+  border:1px solid #30333b;
+  background:#13151a;
+  color:#a5a9b2;
+  padding:8px 16px;
+  font:600 12px 'Chakra Petch';
+  cursor:pointer;
+  transition:.18s;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.topic-tab-btn:hover { color:#fff; border-color:#525763; background:#1b1e25; }
+.topic-tab-btn.active {
+  color:#090b07;
+  background:var(--lime);
+  border-color:var(--lime);
+  box-shadow:3px 3px 0 #394613;
+}
+
+.tutorials-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(360px,1fr));
+  gap:22px;
+}
+.tutorial-card {
+  border:1px solid #2f333c;
+  background:linear-gradient(145deg,#14171d,#0e1014);
+  padding:26px;
+  display:flex;
+  flex-direction:column;
+  transition:all .22s cubic-bezier(.16,1,.3,1);
+  position:relative;
+  box-shadow:6px 7px 0 rgba(0,0,0,.45);
+}
+.tutorial-card:hover {
+  transform:translateY(-4px);
+  border-color:var(--lime);
+  box-shadow:8px 11px 0 rgba(203,255,69,.22);
+}
+.tutorial-card-meta {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:16px;
+  font:600 11px 'Chakra Petch';
+}
+.topic-pill {
+  padding:4px 9px;
+  background:rgba(203,255,69,.08);
+  border:1px solid rgba(203,255,69,.25);
+  color:var(--lime);
+  font-size:10px;
+  letter-spacing:.08em;
+}
+.difficulty-badge {
+  padding:3px 8px;
+  font-size:10px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+}
+.diff-easy { background:rgba(96,230,162,.12); color:#60e6a2; border:1px solid rgba(96,230,162,.3); }
+.diff-medium { background:rgba(85,231,255,.12); color:var(--cyan); border:1px solid rgba(85,231,255,.3); }
+.diff-hard { background:rgba(157,120,255,.12); color:var(--violet); border:1px solid rgba(157,120,255,.3); }
+
+.tutorial-card-icon {
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  background:#1c2028;
+  border:1px solid #363b46;
+  color:var(--lime);
+  margin-bottom:18px;
+}
+.tutorial-card h3 {
+  margin:0 0 10px;
+  font:700 20px/1.3 'Noto Sans Thai',sans-serif;
+  color:#f4f6fa;
+}
+.tutorial-card p {
+  margin:0 0 24px;
+  color:#9aa0ad;
+  font-size:13px;
+  line-height:1.7;
+  flex:1;
+}
+.tutorial-card-foot {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-top:1px solid #262931;
+  padding-top:16px;
+  margin-top:auto;
+}
+.tutorial-duration {
+  color:#737885;
+  font:500 11px 'Chakra Petch';
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+.tutorial-start-btn {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  color:var(--lime);
+  font:700 12px 'Chakra Petch';
+  transition:.15s;
+}
+.tutorial-start-btn:hover {
+  transform:translateX(4px);
+  color:#fff;
+}
+
+.tutorials-roadmap {
+  margin-top:55px;
+  padding:34px 38px;
+  border:1px solid #374154;
+  background:radial-gradient(circle at 90% 20%,rgba(85,231,255,.09),transparent 40%),linear-gradient(135deg,#131b28,#0e141f);
+  box-shadow:8px 9px 0 rgba(0,0,0,.5);
+}
+.tutorials-roadmap h2 {
+  margin:0 0 8px;
+  font:700 28px/1.2 'Noto Sans Thai',sans-serif;
+}
+.tutorials-roadmap h2 span { color:var(--cyan); }
+.tutorials-roadmap>p {
+  margin:0 0 26px;
+  color:#a7b4c4;
+  font-size:14px;
+}
+.roadmap-steps {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:14px;
+}
+.roadmap-step {
+  padding:18px;
+  background:#131c29;
+  border:1px solid #2a394e;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.roadmap-step b {
+  color:var(--cyan);
+  font:700 16px 'Chakra Petch';
+}
+.roadmap-step span {
+  font:700 13px 'Noto Sans Thai',sans-serif;
+  color:#eef4fa;
+}
+.roadmap-step small {
+  color:#8d9ea3;
+  font-size:11px;
+  line-height:1.5;
+}
+
+@media(max-width:768px) {
+  .tutorials-hero { padding:42px 20px 32px; }
+  .tutorials-section { padding:32px 20px 60px; }
+  .tutorials-grid { grid-template-columns:1fr; }
+  .tutorials-roadmap { padding:24px 20px; }
 }

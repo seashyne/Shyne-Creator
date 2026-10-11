@@ -286,7 +286,9 @@ public final class ClientAnimationState {
             if (snapshot.parts() != null) {
                 for (ShyneNetwork.NetAvatarPart part : snapshot.parts()) {
                     AvatarPartState state = new AvatarPartState();
-                    state.setVisible(part.visible());
+                    if (part.visibilityControlled()) {
+                        state.setVisible(part.visible());
+                    }
                     if (part.positionControlled() || nonZero(part.posX()) || nonZero(part.posY()) || nonZero(part.posZ())) {
                         state.setPosition(part.posX(), part.posY(), part.posZ());
                     }

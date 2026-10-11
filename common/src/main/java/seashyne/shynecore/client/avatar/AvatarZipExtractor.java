@@ -48,10 +48,20 @@ public final class AvatarZipExtractor {
                 cleanDirectory(targetDir);
                 Files.createDirectories(targetDir);
 
+                long totalExtractedBytes = 0;
+                int totalEntries = 0;
+                final long maxBytes = 128L * 1024L * 1024L; // 128 MB maximum uncompressed size
+                final int maxEntries = 1024; // 1024 files maximum
+
                 try (InputStream fileIn = Files.newInputStream(zipPath);
                      ZipInputStream zipIn = new ZipInputStream(fileIn)) {
                     ZipEntry entry;
+                    byte[] buffer = new byte[8192];
                     while ((entry = zipIn.getNextEntry()) != null) {
+                        totalEntries++;
+                        if (totalEntries > maxEntries) {
+                            throw new IOException("Avatar archive contains too many files (> " + maxEntries + ")");
+                        }
                         String name = entry.getName();
                         Path entryPath = targetDir.resolve(name).normalize();
                         if (!entryPath.startsWith(targetDir)) {
@@ -65,7 +75,14 @@ public final class AvatarZipExtractor {
                                 Files.createDirectories(entryPath.getParent());
                             }
                             try (OutputStream out = Files.newOutputStream(entryPath)) {
-                                zipIn.transferTo(out);
+                                int read;
+                                while ((read = zipIn.read(buffer)) != -1) {
+                                    totalExtractedBytes += read;
+                                    if (totalExtractedBytes > maxBytes) {
+                                        throw new IOException("Avatar archive exceeded maximum uncompressed size of 128 MB");
+                                    }
+                                    out.write(buffer, 0, read);
+                                }
                             }
                         }
                         zipIn.closeEntry();

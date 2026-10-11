@@ -8,7 +8,7 @@ import {
   Layers, Menu, MessageCircle, Palette, Play, Search, ShieldCheck, Sparkles, Users, Workflow, Wrench, X, Zap,
   type LucideIcon,
 } from 'lucide-react'
-import { docs, fileToSlug, minecraftVersion, version, type DocIcon, type DocItem } from './content'
+import { docs, fileToSlug, minecraftVersion, tutorials, version, type DocIcon, type DocItem } from './content'
 
 const CURSEFORGE_URL = 'https://www.curseforge.com/minecraft/mc-mods/shyne-creator'
 const YOUTUBE_URL = 'https://www.youtube.com/@seashyne'
@@ -64,7 +64,7 @@ const iconMap: Record<DocIcon, LucideIcon> = {
   shield: ShieldCheck, users: Users, wrench: Wrench, workflow: Workflow,
 }
 
-const categories = ['เริ่มต้น', 'Blockbench', 'สร้าง Avatar', 'API และระบบ', 'เผยแพร่และพัฒนา'] as const
+const categories = ['เริ่มต้น', 'บทเรียน', 'Blockbench', 'สร้าง Avatar', 'API และระบบ', 'เผยแพร่และพัฒนา'] as const
 
 function Brand() {
   return <Link className="brand" to="/" aria-label="Shyne Creator หน้าหลัก">
@@ -85,7 +85,7 @@ function AppShell() {
     setMenuOpen(false)
     window.scrollTo({ top: 0, behavior: 'instant' })
     const activeDoc = docs.find((doc) => location.pathname === `/docs/${doc.slug}`)
-    const pageName = activeDoc?.title || (location.pathname === '/api' ? 'API Reference' : location.pathname === '/showcase' ? 'Model Showcase' : 'Documentation')
+    const pageName = activeDoc?.title || (location.pathname === '/tutorials' ? 'ศูนย์รวมบทเรียน (Tutorials)' : location.pathname === '/api' ? 'API Reference' : location.pathname === '/showcase' ? 'Model Showcase' : 'Documentation')
     document.title = `${pageName} — Shyne Creator`
   }, [location.pathname])
 
@@ -115,9 +115,12 @@ function AppShell() {
       <Brand />
       <nav className="topnav" aria-label="เมนูหลัก">
         <NavLink to="/docs/overview">คู่มือ</NavLink>
+        <NavLink to="/tutorials">บทเรียน</NavLink>
+        <NavLink to="/docs/script-recipes">ตัวอย่างสคริปต์</NavLink>
         <NavLink to="/docs/blockbench-plugin">Blockbench</NavLink>
         <NavLink to="/api">API</NavLink>
         <NavLink to="/showcase">Showcase</NavLink>
+        <NavLink to="/docs/changelog">อัปเดต v{version}</NavLink>
       </nav>
       <div className="header-actions">
         <button className="search-button" onClick={() => setSearchOpen(true)}><Search size={16}/><span>ค้นหาเอกสาร</span><kbd>⌘ K</kbd></button>
@@ -135,6 +138,7 @@ function AppShell() {
     <main className={isHome ? 'home-main' : 'content-main'}>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/tutorials" element={<TutorialsPage />} />
         <Route path="/docs/:slug" element={<DocPage />} />
         <Route path="/api" element={<ApiPage />} />
         <Route path="/showcase" element={<ShowcasePage />} />
@@ -171,25 +175,116 @@ function DocsSidebar({ open }: { open: boolean }) {
 
 function HomePage() {
   const paths = [
+    { icon: BookOpen, eyebrow: 'TUTORIALS HUB', title: 'ศูนย์รวมบทเรียน', text: 'คู่มือแยกตาม 6 หัวข้อ ตั้งแต่เริ่มต้นโมเดล 3D จนถึงสคริปต์และการซิงก์ออนไลน์', color: 'lime', href: '/tutorials' },
     { icon: Gamepad2, eyebrow: 'PLAYER START', title: 'ใช้ Avatar', text: 'ติดตั้ง เปิดคลัง ดาวน์โหลดหรือเพิ่ม Avatar แล้วเลือกใช้ในเกม', color: 'cyan', href: '/docs/player-quickstart' },
     { icon: Box, eyebrow: 'MODEL FIRST', title: 'สร้างด้วย Blockbench', text: 'รู้จักหน้าจอ ทำโมเดล ใส่ Texture และ Export โดยไม่ต้องเขียน Lua', color: 'lime', href: '/docs/blockbench-plugin' },
     { icon: Wrench, eyebrow: 'SERVER & PACKS', title: 'สร้าง Content Pack', text: 'ต่อยอด skill, item และระบบเกมสำหรับโลกหรือเซิร์ฟเวอร์', color: 'violet', href: '/docs/creator-sdk' },
   ]
+
+  const highlights = [
+    {
+      icon: BookOpen,
+      tag: 'TUTORIALS HUB',
+      title: 'Interactive Tutorials',
+      desc: 'ศูนย์รวมบทเรียนแยกตาม 6 หัวข้อ: พื้นฐานผู้เล่น, โมเดล Blockbench, Zero-Lua, สคริปต์ Lua, Pings ออนไลน์ และ Spring Physics',
+      color: 'lime',
+    },
+    {
+      icon: MessageCircle,
+      tag: 'VOICE & CHAT',
+      title: 'Mouth Speech Tracking',
+      desc: 'ตรวจจับเสียงพูดไมโครโฟนหรือแชทเพื่อขยับเปิด-ปิดปากอัตโนมัติ (Zero-Lua) พร้อม API ควบคุมผ่านสคริปต์ Figura: voice.isSpeaking(), host:isVoiceActive()',
+      color: 'cyan',
+    },
+    {
+      icon: Layers,
+      tag: 'MODERN UX',
+      title: 'Smooth Wheel Scrolling',
+      desc: 'เลื่อนดูคลัง Avatar และชุดคอสตูมด้วยลูกกลิ้งเมาส์ (Mouse Wheel) ได้อย่างลื่นไหล ไม่ต้องกดปุ่มเปลี่ยนหน้า พร้อมแถบ Scrollbar เรืองแสง',
+      color: 'lime',
+    },
+    {
+      icon: Zap,
+      tag: 'PERFORMANCE',
+      desc: 'ตัดการเรนเดอร์โมเดลระยะไกล (Distance Culling) และ Dynamic LOD อัตโนมัติ ช่วยลดอาการแล็กในเซิร์ฟเวอร์ที่มีผู้เล่นจำนวนมาก',
+      color: 'violet',
+    },
+    {
+      icon: Boxes,
+      tag: 'ONE-CLICK MIGRATION',
+      title: 'Avatar Importer',
+      desc: 'คำสั่ง /shyne avatar import <folder> แปลงโมเดลจาก Figura และ Blockbench สู่ Shyne Standard พร้อมสร้าง ATTRIBUTION.md คุ้มครองสิทธิ์',
+      color: 'cyan',
+    },
+    {
+      icon: Sparkles,
+      tag: 'RIGGING & ATTACHMENT',
+      title: 'Tail & Bone Alignment',
+      desc: 'ปรับปรุง Root Coordinate Space ให้โมเดลหางและชิ้นส่วนต่อพ่วง (Child Limb Accessories) แนบสนิทกับตัวละคร Minecraft ไม่เลื่อนหลุดตำแหน่ง',
+      color: 'lime',
+    },
+    {
+      icon: ShieldCheck,
+      tag: 'STABILITY',
+      desc: 'ป้องกันปัญหา StackOverflowError จากการคลิกเมาส์และจำกัดความลึกของ Lua Event Recursion ป้องกันตัวเกมเด้งได้อย่างสมบูรณ์แบบ',
+      color: 'violet',
+    },
+  ]
+
   return <>
-    <div className="announcement"><span>เริ่มที่นี่</span> ติดตั้งแล้วแต่ยังใช้ไม่เป็น? <Link to="/docs/player-quickstart">เปิดคู่มือ 1 นาที <ArrowRight size={14}/></Link></div>
+    <div className="announcement">
+      <span>ใหม่ v{version}</span> ศูนย์รวมบทเรียน (Tutorials Hub) 6 หัวข้อ, ปากขยับตามเสียงพูด และค้นหา Avatar อัตโนมัติ{' '}
+      <Link to="/tutorials">
+        เปิดดูบทเรียนทั้งหมด <ArrowRight size={14} />
+      </Link>
+    </div>
     <section className="hero">
       <div className="hero-copy">
         <p className="overline">PLAYER & CREATOR DOCUMENTATION <i></i></p>
         <h1>ติดตั้งแล้ว<br/>เริ่มใช้ได้เลย<span>.</span></h1>
-        <p className="lead">Shyne Creator {version} คือระบบ Avatar และ Content Pack สำหรับ Minecraft 26.3 บน Fabric และ NeoForge—จัดการ Avatar ในเครื่อง สำรองขึ้น Cloud และค้นหา Avatar ที่เผยแพร่สาธารณะได้จากในเกม</p>
-        <div className="hero-actions"><Link className="primary" to="/docs/player-quickstart">เริ่มใช้ Shyne <ArrowRight size={18}/></Link><a className="download-cta" href={CURSEFORGE_URL} target="_blank" rel="noreferrer"><Download size={18}/> ดาวน์โหลด</a><Link className="secondary" to="/docs/installation"><BookOpen size={18}/> วิธีติดตั้ง</Link></div>
-        <div className="hero-note"><Check size={16}/><span>เลือกใช้ Avatar จากไฟล์หรือ ZIP, สำรอง/กู้คืนด้วย Cloud และดาวน์โหลด Public Avatar ได้หลังลงชื่อเข้าใช้ Minecraft</span></div>
+        <p className="lead">Shyne Creator {version} คือระบบ Avatar และ Content Pack สำหรับ Minecraft {minecraftVersion} บน Fabric และ NeoForge—ขยับปากพูดตามไมค์ & แชทอัตโนมัติ, เลื่อนดูคลังด้วยลูกกลิ้งเมาส์, นำเข้าโมเดลด้วย /shyne avatar import, จัดการ Avatar ในเครื่อง และสำรองขึ้น Cloud ได้จากในเกม</p>
+        <div className="hero-actions">
+          <Link className="primary" to="/docs/player-quickstart">เริ่มใช้ Shyne <ArrowRight size={18}/></Link>
+          <a className="download-cta" href={CURSEFORGE_URL} target="_blank" rel="noreferrer"><Download size={18}/> ดาวน์โหลด v{version}</a>
+          <Link className="secondary" to="/docs/changelog"><Sparkles size={18}/> มีอะไรใหม่ใน {version}</Link>
+        </div>
+        <div className="hero-note">
+          <Check size={16}/>
+          <span>อัปเดต v{version}: ปากขยับตามเสียงพูดไมค์/แชท, เลื่อนดูคลังด้วยเมาส์ (Mouse Wheel), Distance Culling & LOD ลดแล็ก และจุดยึดหางตรงตำแหน่ง 100%</span>
+        </div>
         <div className="compat"><span>VERSION</span><b>{version}</b><i></i><b>MINECRAFT {minecraftVersion}</b><small>JAVA 25</small></div>
       </div>
       <div className="hero-visual">
         <Suspense fallback={<div className="model-viewer model-fallback"><img src="shyne-icon.png" alt=""/><span>กำลังเตรียมตัวอย่าง 3D</span></div>}><ModelViewer /></Suspense>
       </div>
     </section>
+
+    <section className="path whats-new-section">
+      <div className="section-heading">
+        <div>
+          <p>WHAT'S NEW IN V{version}</p>
+          <h2>ไฮไลต์การอัปเดตเวอร์ชัน {version}</h2>
+        </div>
+        <Link to="/docs/changelog" className="section-link">
+          เปิดอ่าน Changelog ทั้งหมด <ArrowRight size={14} />
+        </Link>
+      </div>
+      <div className="card-grid">
+        {highlights.map(({ icon: Icon, tag, title, desc, color }) => (
+          <div className={`path-card ${color}`} key={title}>
+            <div className="card-top">
+              <span className="card-icon"><Icon size={20} /></span>
+              <small>{tag}</small>
+            </div>
+            <p>FEATURE</p>
+            <h3>{title}</h3>
+            <div className="rule"></div>
+            <span>{desc}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+
     <section className="path">
       <div className="section-heading"><div><p>CHOOSE YOUR PATH</p><h2>เริ่มในแบบที่เหมาะกับคุณ</h2></div><span>01 / GET STARTED</span></div>
       <div className="card-grid">{paths.map(({ icon: Icon, eyebrow, title, text, color, href }, index) => <Link to={href} className={`path-card ${color}`} key={title}>
@@ -253,6 +348,111 @@ function QuickstartOverview() {
 
 function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const tutorialTopics = ['ทั้งหมด', 'เริ่มต้น', 'Blockbench 3D', 'Zero-Lua', 'เขียนสคริปต์ Lua', 'ระบบออนไลน์', 'ฟิสิกส์ & กราฟิก', 'พลัง & ไอเท็ม'] as const
+
+function TutorialsPage() {
+  const [activeTopic, setActiveTopic] = useState<string>('ทั้งหมด')
+
+  const filteredTutorials = useMemo(() => {
+    if (activeTopic === 'ทั้งหมด') return tutorials
+    return tutorials.filter((t) => t.topic === activeTopic)
+  }, [activeTopic])
+
+  return <section className="listing-page tutorials-page">
+    <div className="tutorials-hero">
+      <div className="tutorials-hero-copy">
+        <p className="overline">TUTORIALS & WORKSHOPS <i></i></p>
+        <h1>ศูนย์รวมบทเรียน<br/><span>Shyne Creator</span></h1>
+        <p>คู่มือและบทเรียนครบ 8 บทเรียน ตั้งแต่เริ่มต้นติดตั้ง ออกแบบโมเดลใน Blockbench สร้างแบบ Zero-Lua สคริปต์ขั้นสูง ฟิสิกส์ ไปจนถึงสร้างพลังต่อสู้และไอเท็ม 3D</p>
+      </div>
+    </div>
+
+    <div className="tutorials-section">
+      <div className="tutorials-filter-bar" role="tablist" aria-label="เลือกหมวดหมู่บทเรียน">
+        {tutorialTopics.map((topic) => (
+          <button
+            key={topic}
+            className={`topic-tab-btn ${activeTopic === topic ? 'active' : ''}`}
+            onClick={() => setActiveTopic(topic)}
+            role="tab"
+            aria-selected={activeTopic === topic}
+          >
+            {topic}
+          </button>
+        ))}
+      </div>
+
+      <div className="tutorials-grid">
+        {filteredTutorials.map((tut) => {
+          const Icon = iconMap[tut.icon] || BookOpen
+          const diffClass = tut.difficulty === 'พื้นฐาน' ? 'diff-easy' : tut.difficulty === 'ปานกลาง' ? 'diff-medium' : 'diff-hard'
+          return (
+            <article className="tutorial-card" key={tut.id}>
+              <div className="tutorial-card-meta">
+                <span className="topic-pill">{tut.topic}</span>
+                <span className={`difficulty-badge ${diffClass}`}>
+                  ● {tut.difficulty}
+                </span>
+              </div>
+              <div className="tutorial-card-icon">
+                <Icon size={24} />
+              </div>
+              <h3>{tut.title}</h3>
+              <p>{tut.description}</p>
+              <div className="tutorial-card-foot">
+                <span className="tutorial-duration">
+                  <Play size={13} /> {tut.duration}
+                </span>
+                <Link to={`/docs/${tut.slug}`} className="tutorial-start-btn">
+                  เริ่มอ่านบทเรียน <ArrowRight size={14} />
+                </Link>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+
+      <div className="tutorials-roadmap">
+        <h2>เส้นทางการเรียนรู้ <span>(Learning Roadmap)</span></h2>
+        <p>ลำดับขั้นตอนที่แนะนำสำหรับผู้เริ่มต้นเพื่อสร้าง Avatar ได้อย่างเชี่ยวชาญ</p>
+        <div className="roadmap-steps">
+          <div className="roadmap-step">
+            <b>01</b>
+            <span>ติดตั้ง & ลองเล่น</span>
+            <small>ใส่ Mod ใน Fabric/NeoForge และวางไฟล์ .zip พร้อมเปิดคลัง</small>
+          </div>
+          <div className="roadmap-step">
+            <b>02</b>
+            <span>สร้างโมเดล 3D</span>
+            <small>ออกแบบใน Blockbench และตั้งชื่อกระดูกให้ตรงกับ Vanilla</small>
+          </div>
+          <div className="roadmap-step">
+            <b>03</b>
+            <span>Zero-Lua Avatar</span>
+            <small>เปิด Auto Animation, ปากขยับตามเสียงพูด และ Masking</small>
+          </div>
+          <div className="roadmap-step">
+            <b>04</b>
+            <span>เขียนสคริปต์ & Pings</span>
+            <small>สร้าง Action Wheel 8 ช่อง และคำสั่งซิงก์ออนไลน์</small>
+          </div>
+          <div className="roadmap-step">
+            <b>05</b>
+            <span>Physics & HUD</span>
+            <small>ใส่ Spring Physics ให้หางและหู พร้อมวาด HUD สกิล</small>
+          </div>
+          <div className="roadmap-step">
+            <b>06</b>
+            <span>พลัง & ไอเท็ม 3D</span>
+            <small>สร้างสกิลกระสุนเวทมนตร์ คทา 3D และคลิกขวาร่ายเวท</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <Footer />
+  </section>
 }
 
 function ApiPage() {

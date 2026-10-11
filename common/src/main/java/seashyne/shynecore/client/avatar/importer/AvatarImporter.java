@@ -59,8 +59,14 @@ public final class AvatarImporter {
             } catch (Exception ignored) {}
         }
 
+        JsonObject metadataJson = null;
         Path metadataPath = rootDir.resolve("metadata.json");
-        boolean hasMetadata = Files.isRegularFile(metadataPath);
+        if (Files.isRegularFile(metadataPath)) {
+            try (Reader reader = Files.newBufferedReader(metadataPath, StandardCharsets.UTF_8)) {
+                metadataJson = JsonParser.parseReader(reader).getAsJsonObject();
+            } catch (Exception ignored) {}
+        }
+        boolean hasMetadata = metadataJson != null || Files.isRegularFile(metadataPath);
 
         // Find primary model
         Path modelPath = findPrimaryModel(rootDir, manifestJson);
@@ -71,9 +77,9 @@ public final class AvatarImporter {
         // Determine Source Type
         AvatarImportReport.SourceType sourceType = determineSourceType(manifestJson, hasMetadata, scriptPath, modelPath);
 
-        String avatarId = extractAvatarId(rootDir, manifestJson);
-        String avatarName = extractAvatarName(rootDir, manifestJson);
-        String author = extractAuthor(manifestJson);
+        String avatarId = extractAvatarId(rootDir, manifestJson, metadataJson);
+        String avatarName = extractAvatarName(rootDir, manifestJson, metadataJson);
+        String author = extractAuthor(manifestJson, metadataJson);
 
         // Parse Model Stats
         AvatarImportReport.ModelStats modelStats = analyzeModel(modelPath, avatarId);
@@ -144,7 +150,13 @@ public final class AvatarImporter {
     }
 
     private static AvatarImportReport.SourceType determineSourceType(JsonObject manifest, boolean hasMetadata, Path script, Path model) {
-        if (manifest != null && manifest.has("standard") && "2.0".equals(manifest.get("standard").getAsString())) {
+        if (manifest != null && manifest.has("standard")) {
+            String std = manifest.get("standard").getAsString();
+            if ("standard".equalsIgnoreCase(std) || "2.0".equals(std) || "shyne".equalsIgnoreCase(std)) {
+                return AvatarImportReport.SourceType.SHYNE_AVATAR;
+            }
+        }
+        if (manifest != null && (manifest.has("profile") || manifest.has("behavior") || manifest.has("api"))) {
             return AvatarImportReport.SourceType.SHYNE_AVATAR;
         }
         if (hasMetadata || (manifest != null && (manifest.has("authors") || manifest.has("ignoredFiles") || manifest.has("autoAnimate")))) {
@@ -162,28 +174,40 @@ public final class AvatarImporter {
         return AvatarImportReport.SourceType.UNKNOWN;
     }
 
-    private static String extractAvatarId(Path rootDir, JsonObject manifest) {
+    private static String extractAvatarId(Path rootDir, JsonObject manifest, JsonObject metadata) {
         if (manifest != null && manifest.has("id") && manifest.get("id").isJsonPrimitive()) {
             return manifest.get("id").getAsString();
+        }
+        if (metadata != null && metadata.has("id") && metadata.get("id").isJsonPrimitive()) {
+            return metadata.get("id").getAsString();
         }
         String folderName = rootDir.getFileName().toString();
         return folderName.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_.-]", "_");
     }
 
-    private static String extractAvatarName(Path rootDir, JsonObject manifest) {
+    private static String extractAvatarName(Path rootDir, JsonObject manifest, JsonObject metadata) {
         if (manifest != null && manifest.has("name") && manifest.get("name").isJsonPrimitive()) {
             return manifest.get("name").getAsString();
+        }
+        if (metadata != null && metadata.has("name") && metadata.get("name").isJsonPrimitive()) {
+            return metadata.get("name").getAsString();
         }
         return rootDir.getFileName().toString();
     }
 
-    private static String extractAuthor(JsonObject manifest) {
-        if (manifest == null) return "";
-        if (manifest.has("author") && manifest.get("author").isJsonPrimitive()) {
-            return manifest.get("author").getAsString();
+    private static String extractAuthor(JsonObject manifest, JsonObject metadata) {
+        String fromManifest = extractAuthorSingle(manifest);
+        if (!fromManifest.isBlank()) return fromManifest;
+        return extractAuthorSingle(metadata);
+    }
+
+    private static String extractAuthorSingle(JsonObject json) {
+        if (json == null) return "";
+        if (json.has("author") && json.get("author").isJsonPrimitive()) {
+            return json.get("author").getAsString();
         }
-        if (manifest.has("authors")) {
-            JsonElement authors = manifest.get("authors");
+        if (json.has("authors")) {
+            JsonElement authors = json.get("authors");
             if (authors.isJsonArray()) {
                 List<String> list = new ArrayList<>();
                 for (JsonElement e : authors.getAsJsonArray()) {
@@ -445,6 +469,277 @@ public final class AvatarImporter {
         }
 
         return recs;
+    }
+
+    public record ConversionOptions(
+        boolean generateCredits,
+        boolean declareAutoPermissions,
+        boolean overwriteExistingManifest,
+        String customAuthor,
+        String customLicense
+    ) {
+        public static final ConversionOptions DEFAULT = new ConversionOptions(true, true, false, null, null);
+    }
+
+    public record ConversionResult(
+        boolean success,
+        Path targetDir,
+        AvatarImportReport report,
+        String message
+    ) {
+        public static ConversionResult success(Path targetDir, AvatarImportReport report, String message) {
+            return new ConversionResult(true, targetDir, report, message);
+        }
+
+        public static ConversionResult failure(Path targetDir, AvatarImportReport report, String message) {
+            return new ConversionResult(false, targetDir, report, message);
+        }
+    }
+
+    public static ConversionResult convert(Path sourceDir) {
+        return convert(sourceDir, sourceDir, ConversionOptions.DEFAULT);
+    }
+
+    public static ConversionResult convert(Path sourceDir, Path targetDir, ConversionOptions options) {
+        if (sourceDir == null || !Files.isDirectory(sourceDir)) {
+            return ConversionResult.failure(sourceDir, emptyReport("unknown", "Source directory does not exist"), "Source directory does not exist");
+        }
+        if (options == null) {
+            options = ConversionOptions.DEFAULT;
+        }
+
+        Path effectiveDir = targetDir != null ? targetDir : sourceDir;
+        try {
+            if (!effectiveDir.equals(sourceDir)) {
+                Files.createDirectories(effectiveDir);
+                copyDirectoryRecursively(sourceDir, effectiveDir);
+            }
+
+            AvatarImportReport report = analyze(effectiveDir);
+            if (report.errorCount() > 0 && report.modelStats().cubeCount() == 0 && report.modelStats().meshCount() == 0) {
+                if (report.issues().stream().anyMatch(i -> "MISSING_MODEL".equals(i.code()))) {
+                    return ConversionResult.failure(effectiveDir, report, "Cannot import avatar: No 3D model (.bbmodel) found in project.");
+                }
+            }
+
+            Path manifestPath = effectiveDir.resolve("avatar.json");
+            JsonObject manifestJson = null;
+            if (Files.isRegularFile(manifestPath) && !options.overwriteExistingManifest()) {
+                try (Reader r = Files.newBufferedReader(manifestPath, StandardCharsets.UTF_8)) {
+                    manifestJson = JsonParser.parseReader(r).getAsJsonObject();
+                } catch (Exception ignored) {}
+            }
+            if (manifestJson == null) {
+                manifestJson = new JsonObject();
+            }
+
+            String avatarId = report.avatarId();
+            if (avatarId == null || avatarId.isBlank() || "unknown".equalsIgnoreCase(avatarId)) {
+                avatarId = effectiveDir.getFileName().toString().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_.-]", "_");
+            }
+
+            String avatarName = report.avatarName();
+            if (avatarName == null || avatarName.isBlank() || "unknown".equalsIgnoreCase(avatarName)) {
+                avatarName = effectiveDir.getFileName().toString();
+            }
+
+            String author = options.customAuthor();
+            if (author == null || author.isBlank()) {
+                author = report.author();
+            }
+            if (author == null || author.isBlank()) {
+                author = "Unknown Creator";
+            }
+
+            String license = options.customLicense();
+            if (license == null || license.isBlank()) {
+                license = "Custom / All Rights Reserved to Original Creator";
+            }
+
+            Path modelPath = findPrimaryModel(effectiveDir, manifestJson);
+            String modelRel = modelPath != null ? effectiveDir.relativize(modelPath).toString().replace('\\', '/') : "model.bbmodel";
+
+            Path scriptPath = findPrimaryScript(effectiveDir, manifestJson);
+            String scriptRel = scriptPath != null ? effectiveDir.relativize(scriptPath).toString().replace('\\', '/') : null;
+
+            manifestJson.addProperty("standard", "standard");
+            manifestJson.addProperty("id", avatarId);
+            manifestJson.addProperty("name", avatarName);
+            if (!manifestJson.has("version")) manifestJson.addProperty("version", "1.0.0");
+            manifestJson.addProperty("author", author);
+
+            if (!manifestJson.has("description") || manifestJson.get("description").getAsString().isBlank()) {
+                manifestJson.addProperty("description", "Converted from " + report.sourceType() + " with Shyne Creator Importer.");
+            }
+
+            manifestJson.addProperty("model", modelRel);
+            if (scriptRel != null) {
+                manifestJson.addProperty("main", scriptRel);
+            }
+            if (!manifestJson.has("replaceVanilla")) manifestJson.addProperty("replaceVanilla", false);
+            if (!manifestJson.has("onlineSync")) manifestJson.addProperty("onlineSync", true);
+
+            String importSourceStr = report.sourceType() == AvatarImportReport.SourceType.FIGURA_AVATAR ? "figura"
+                : (report.sourceType() == AvatarImportReport.SourceType.BLOCKBENCH_MODEL ? "blockbench" : "custom");
+            manifestJson.addProperty("importSource", importSourceStr);
+
+            // Auto-permissions declaration
+            Set<String> perms = new LinkedHashSet<>();
+            if (manifestJson.has("permissions") && manifestJson.get("permissions").isJsonArray()) {
+                for (JsonElement el : manifestJson.getAsJsonArray("permissions")) {
+                    if (el.isJsonPrimitive()) perms.add(el.getAsString().toLowerCase(Locale.ROOT));
+                }
+            }
+
+            if (options.declareAutoPermissions()) {
+                Set<String> apis = report.scriptStats().detectedApis();
+                if (apis.contains("particles")) perms.add(AvatarPermission.PARTICLE.id());
+                if (apis.contains("sounds")) perms.add(AvatarPermission.SOUND.id());
+                if (apis.contains("nameplate")) perms.add(AvatarPermission.NAMEPLATE.id());
+                if (apis.contains("data")) perms.add(AvatarPermission.DATA_STORAGE.id());
+                if (apis.contains("network") || apis.contains("pings")) perms.add(AvatarPermission.NETWORK.id());
+                if (apis.contains("camera")) perms.add(AvatarPermission.CAMERA.id());
+
+                for (AvatarLintIssue issue : report.issues()) {
+                    if (issue.code().startsWith("MISSING_PERMISSION_")) {
+                        String perm = issue.code().substring("MISSING_PERMISSION_".length()).toLowerCase(Locale.ROOT);
+                        perms.add(perm);
+                    }
+                }
+            }
+
+            JsonArray permissionsArray = new JsonArray();
+            for (String p : perms) {
+                permissionsArray.add(p);
+            }
+            manifestJson.add("permissions", permissionsArray);
+
+            // Creator Attribution Block
+            JsonObject attribution = new JsonObject();
+            attribution.addProperty("originalAuthor", author);
+            attribution.addProperty("sourcePlatform", report.sourceType() == AvatarImportReport.SourceType.FIGURA_AVATAR ? "Figura" : (report.sourceType() == AvatarImportReport.SourceType.BLOCKBENCH_MODEL ? "Blockbench" : "Custom"));
+            attribution.addProperty("sourceType", report.sourceType().name());
+            attribution.addProperty("convertedBy", "Shyne Creator Importer 2.13.0");
+            attribution.addProperty("convertedAt", java.time.Instant.now().toString());
+            attribution.addProperty("license", license);
+            attribution.addProperty("notice", "All intellectual property, 3D geometry, textures, animations, and scripts belong to the original creator. Converted for compatibility with Shyne Creator MultiLoader runtime.");
+            manifestJson.add("attribution", attribution);
+
+            // Save avatar.json
+            Files.writeString(manifestPath, GSON.toJson(manifestJson), StandardCharsets.UTF_8);
+
+            // Write ATTRIBUTION.md if requested
+            if (options.generateCredits()) {
+                StringBuilder cred = new StringBuilder();
+                cred.append("# Avatar Creator Attribution & License Notice\n\n");
+                cred.append("- **Avatar Name:** ").append(avatarName).append(" (`").append(avatarId).append("`)\n");
+                cred.append("- **Original Creator / Author:** ").append(author).append("\n");
+                cred.append("- **Source Platform:** ").append(attribution.get("sourcePlatform").getAsString()).append("\n");
+                cred.append("- **Import Tool:** Shyne Creator Importer 2.13.0 (Avatar Standard 2.0)\n");
+                cred.append("- **License:** ").append(license).append("\n\n");
+                cred.append("## Copyright & Attribution Policy\n\n");
+                cred.append("This avatar was converted for compatibility with the Shyne Creator MultiLoader runtime.\n");
+                cred.append("All copyrights, intellectual property, 3D geometry, textures, animations, and scripts\n");
+                cred.append("remain the property of the original creator.\n\n");
+                cred.append("The Shyne runtime operates as a clean-room compatibility layer providing multi-loader\n");
+                cred.append("support across Fabric and NeoForge without copying or distributing third-party proprietary binaries.\n");
+                Files.writeString(effectiveDir.resolve("ATTRIBUTION.md"), cred.toString(), StandardCharsets.UTF_8);
+            }
+
+            // Export markdown report
+            Files.writeString(effectiveDir.resolve("avatar_import_report.md"), report.toMarkdown(), StandardCharsets.UTF_8);
+
+            // Re-run analysis on the freshly converted package
+            AvatarImportReport updatedReport = analyze(effectiveDir);
+            return ConversionResult.success(effectiveDir, updatedReport, "Successfully imported '" + avatarName + "' into Shyne Avatar Standard 2.0!");
+        } catch (Exception e) {
+            return ConversionResult.failure(effectiveDir, emptyReport(effectiveDir.getFileName().toString(), e.getMessage()), "Conversion failed: " + e.getMessage());
+        }
+    }
+
+    private static void copyDirectoryRecursively(Path source, Path target) throws IOException {
+        try (Stream<Path> stream = Files.walk(source)) {
+            for (Path src : stream.toList()) {
+                if (src.getFileName().toString().startsWith(".") || src.getFileName().toString().equalsIgnoreCase(".extracted")) {
+                    continue;
+                }
+                Path dest = target.resolve(source.relativize(src));
+                if (Files.isDirectory(src)) {
+                    Files.createDirectories(dest);
+                } else if (Files.isRegularFile(src)) {
+                    Files.createDirectories(dest.getParent());
+                    Files.copy(src, dest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        }
+    }
+
+    public static List<Path> scanUnimported(Path avatarsDir) {
+        if (avatarsDir == null || !Files.isDirectory(avatarsDir)) {
+            return List.of();
+        }
+        List<Path> candidates = new ArrayList<>();
+        try (Stream<Path> stream = Files.list(avatarsDir)) {
+            for (Path sub : stream.filter(Files::isDirectory).toList()) {
+                String name = sub.getFileName().toString();
+                if (name.startsWith(".") || name.equalsIgnoreCase(".extracted")) continue;
+                Path manifest = sub.resolve("avatar.json");
+                if (!Files.isRegularFile(manifest)) {
+                    boolean hasContent = false;
+                    try (Stream<Path> contentStream = Files.walk(sub, 2)) {
+                        hasContent = contentStream.anyMatch(p -> {
+                            String fn = p.getFileName().toString().toLowerCase(Locale.ROOT);
+                            return fn.endsWith(".bbmodel") || fn.endsWith(".lua");
+                        });
+                    } catch (Exception ignored) {}
+                    if (hasContent) {
+                        candidates.add(sub);
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        candidates.sort(Comparator.comparing(Path::toString, String.CASE_INSENSITIVE_ORDER));
+        return List.copyOf(candidates);
+    }
+
+    public static Optional<Path> findAvatarDirectory(Path avatarsDir, String query) {
+        if (avatarsDir == null || query == null || query.isBlank() || !Files.isDirectory(avatarsDir)) {
+            return Optional.empty();
+        }
+        String q = query.trim().toLowerCase(Locale.ROOT);
+        Path direct = avatarsDir.resolve(query.trim());
+        if (Files.isDirectory(direct)) return Optional.of(direct);
+
+        try (Stream<Path> stream = Files.list(avatarsDir)) {
+            for (Path sub : stream.filter(Files::isDirectory).toList()) {
+                String folderName = sub.getFileName().toString().toLowerCase(Locale.ROOT);
+                if (folderName.equals(q)) return Optional.of(sub);
+
+                Path manifestPath = sub.resolve("avatar.json");
+                if (Files.isRegularFile(manifestPath)) {
+                    try (Reader reader = Files.newBufferedReader(manifestPath, StandardCharsets.UTF_8)) {
+                        JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+                        if (json.has("id") && json.get("id").getAsString().equalsIgnoreCase(q)) {
+                            return Optional.of(sub);
+                        }
+                        if (json.has("name") && json.get("name").getAsString().equalsIgnoreCase(q)) {
+                            return Optional.of(sub);
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+        } catch (Exception ignored) {}
+        return Optional.empty();
+    }
+
+    public static Path exportReport(Path avatarDir) throws IOException {
+        if (avatarDir == null || !Files.isDirectory(avatarDir)) {
+            throw new IOException("Avatar directory does not exist");
+        }
+        AvatarImportReport report = analyze(avatarDir);
+        Path reportPath = avatarDir.resolve("avatar_import_report.md");
+        Files.writeString(reportPath, report.toMarkdown(), StandardCharsets.UTF_8);
+        return reportPath;
     }
 
     private static AvatarImportReport emptyReport(String id, String problem) {

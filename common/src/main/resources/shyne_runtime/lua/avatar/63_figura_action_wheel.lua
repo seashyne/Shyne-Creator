@@ -35,11 +35,14 @@ function action_mt:setOnRightClick(fn) return self:onRightClick(fn) end
 function action_mt:onScroll(fn) self._onScroll = fn; return self end
 function action_mt:setOnScroll(fn) return self:onScroll(fn) end
 function action_mt:toggled(t) self._toggled = t and true or false; return self end
-function action_mt:onToggle(fn) self._onToggle = fn; return self end
+function action_mt:onToggle(fn) self._onToggle = fn; self:_update(); return self end
 function action_mt:setOnToggle(fn) return self:onToggle(fn) end
 
+local _updating = false
 function action_mt:_update()
+  if _updating then return end
   if type(_avatar_action_register) == "function" and self._title ~= "" then
+    _updating = true
     local page_name = self._page and self._page.id or "main"
     local id = self.id or (page_name .. "_" .. self._title:gsub("%s+", "_"):lower())
     local col = nil
@@ -64,17 +67,29 @@ function action_mt:_update()
       false,
       self._onToggle == nil,
       function()
-        if self._onToggle then self._toggled = not self._toggled; self._onToggle(self._toggled); self:_update() end
-        if self._onLeftClick then self._onLeftClick() end
+        if self._onToggle then
+          self._toggled = not self._toggled
+          local ok, err = pcall(self._onToggle, self._toggled)
+          if not ok and _shyne_report_error then _shyne_report_error("action_toggle", id, tostring(err)) end
+          self:_update()
+        end
+        if self._onLeftClick then
+          local ok, err = pcall(self._onLeftClick)
+          if not ok and _shyne_report_error then _shyne_report_error("action_left_click", id, tostring(err)) end
+        end
       end,
       self._item or "",
-      self._onRightClick and function() self._onRightClick() end or nil,
+      self._onRightClick and function()
+        local ok, err = pcall(self._onRightClick)
+        if not ok and _shyne_report_error then _shyne_report_error("action_right_click", id, tostring(err)) end
+      end or nil,
       self._onToggle ~= nil,
       self._toggled == true,
       col,
       hcol
     )
     self._registered = true
+    _updating = false
   end
 end
 

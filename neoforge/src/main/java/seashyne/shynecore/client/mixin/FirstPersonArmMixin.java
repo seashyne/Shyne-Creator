@@ -46,7 +46,11 @@ public abstract class FirstPersonArmMixin {
             rendered = false;
         }
         if (!rendered) {
-            renderer.renderRightHand(poseStack, collector, light, texture, sleeve);
+            boolean shouldRenderVanilla = AvatarRuntime.isVanillaPartVisible("RIGHT_ARM")
+                && !AvatarRuntime.shouldHideLocalPlayer();
+            if (shouldRenderVanilla) {
+                renderer.renderRightHand(poseStack, collector, light, texture, sleeve);
+            }
         }
     }
 
@@ -65,7 +69,11 @@ public abstract class FirstPersonArmMixin {
             rendered = false;
         }
         if (!rendered) {
-            renderer.renderLeftHand(poseStack, collector, light, texture, sleeve);
+            boolean shouldRenderVanilla = AvatarRuntime.isVanillaPartVisible("LEFT_ARM")
+                && !AvatarRuntime.shouldHideLocalPlayer();
+            if (shouldRenderVanilla) {
+                renderer.renderLeftHand(poseStack, collector, light, texture, sleeve);
+            }
         }
     }
 }

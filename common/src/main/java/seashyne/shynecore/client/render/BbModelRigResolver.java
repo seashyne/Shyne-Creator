@@ -80,10 +80,11 @@ private static String normalizeBoneName(String name) {
     return name == null ? "" : name.toLowerCase(java.util.Locale.ROOT).replace("_", "").replace("-", "").replace(" ", "");
 }
 
-private static BbBoneDefinition findHumanoidArm(BbModelDefinition model, HumanoidArm arm) {
+static BbBoneDefinition findHumanoidArm(BbModelDefinition model, HumanoidArm arm) {
     BbBoneDefinition leftNamed = null;
     BbBoneDefinition rightNamed = null;
     for (BbBoneDefinition bone : model.bones()) {
+        if (isDedicatedFirstPersonArm(model, bone)) continue;
         if (isHumanoidArmBone(bone, HumanoidArm.LEFT)) leftNamed = bone;
         if (isHumanoidArmBone(bone, HumanoidArm.RIGHT)) rightNamed = bone;
     }
@@ -119,8 +120,8 @@ public static BbBoneDefinition findFirstPersonArm(BbModelDefinition model, Human
     BbBoneDefinition leftCandidate = null;
     BbBoneDefinition rightCandidate = null;
     for (BbBoneDefinition bone : model.bones()) {
-        if (isFirstPersonArmBone(bone, HumanoidArm.LEFT)) leftCandidate = bone;
-        if (isFirstPersonArmBone(bone, HumanoidArm.RIGHT)) rightCandidate = bone;
+        if (isCandidateFirstPersonArm(model, bone, HumanoidArm.LEFT)) leftCandidate = bone;
+        if (isCandidateFirstPersonArm(model, bone, HumanoidArm.RIGHT)) rightCandidate = bone;
     }
     if (leftCandidate != null && rightCandidate != null && Math.abs(leftCandidate.pivotX() - rightCandidate.pivotX()) > 0.01f) {
         // Minecraft's physical right limb is negative model X, matching normal-arm resolution.
@@ -132,6 +133,25 @@ public static BbBoneDefinition findFirstPersonArm(BbModelDefinition model, Human
     BbBoneDefinition semanticCandidate = arm == HumanoidArm.LEFT ? leftCandidate : rightCandidate;
     if (semanticCandidate != null) return semanticCandidate;
     return findHumanoidArm(model, arm);
+}
+
+private static boolean isCandidateFirstPersonArm(BbModelDefinition model, BbBoneDefinition bone, HumanoidArm arm) {
+    if (bone == null) return false;
+    if (isFirstPersonArmBone(bone, arm)) return true;
+    return isInsideFirstPersonSubtree(model, bone) && isHumanoidArmBone(bone, arm);
+}
+
+public static boolean isInsideFirstPersonSubtree(BbModelDefinition model, BbBoneDefinition bone) {
+    if (model == null || bone == null) return false;
+    String parentUuid = bone.parentUuid();
+    Set<String> visited = new HashSet<>();
+    while (parentUuid != null && visited.add(parentUuid)) {
+        BbBoneDefinition parent = model.findBoneByUuid(parentUuid);
+        if (parent == null) break;
+        if (isFirstPersonSubtreeRoot(parent)) return true;
+        parentUuid = parent.parentUuid();
+    }
+    return false;
 }
 
 private static boolean isFirstPersonArmBone(BbBoneDefinition bone, HumanoidArm arm) {
@@ -153,6 +173,12 @@ public static boolean isDedicatedFirstPersonArm(BbBoneDefinition bone) {
     return isFirstPersonArmBone(bone, HumanoidArm.LEFT) || isFirstPersonArmBone(bone, HumanoidArm.RIGHT);
 }
 
+public static boolean isDedicatedFirstPersonArm(BbModelDefinition model, BbBoneDefinition bone) {
+    if (bone == null) return false;
+    if (isDedicatedFirstPersonArm(bone)) return true;
+    return isInsideFirstPersonSubtree(model, bone) && (isHumanoidArmBone(bone, HumanoidArm.LEFT) || isHumanoidArmBone(bone, HumanoidArm.RIGHT));
+}
+
 public static boolean isFirstPersonSubtreeRoot(BbBoneDefinition bone) {
     if (bone == null) return false;
     String name = normalizeBoneName(bone.name());
@@ -166,7 +192,7 @@ public static boolean isFirstPersonSubtreeRoot(BbBoneDefinition bone) {
 public static Set<String> hiddenFirstPersonBones(BbModelDefinition model) {
     Set<String> hidden = new HashSet<>();
     for (BbBoneDefinition bone : model.bones()) {
-        if (isDedicatedFirstPersonArm(bone) || isFirstPersonSubtreeRoot(bone)) {
+        if (isDedicatedFirstPersonArm(model, bone) || isFirstPersonSubtreeRoot(bone)) {
             addBoneSubtree(model, bone.uuid(), hidden);
         }
     }
@@ -186,6 +212,8 @@ private static void addBoneSubtree(BbModelDefinition model, String rootUuid, Set
 }
 
 public static boolean hasDrawableGeometry(BbModelDefinition model, UUID entityId, String rootBoneUuid, Map<String, BbModelEntityRenderer.BonePose> bonePoses) {
+    AvatarPartState rootModelPart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), "model");
+    if (rootModelPart != null && rootModelPart.visibilityControlled() && !rootModelPart.visible()) return false;
     for (BbCubeDefinition cube : model.cubes()) {
         if (!belongsToBone(model, cube.parentBoneUuid(), rootBoneUuid)) continue;
         BbModelEntityRenderer.BonePose bonePose = cube.parentBoneUuid() == null ? BbModelEntityRenderer.BonePose.IDENTITY : bonePoses.getOrDefault(cube.parentBoneUuid(), BbModelEntityRenderer.BonePose.IDENTITY);
@@ -213,8 +241,13 @@ public static String automaticPoseKey(BbModelDefinition model, BbBoneDefinition 
     String name = normalizeBoneName(bone.name());
     boolean arm = name.equals("leftarm") || name.equals("rightarm");
     boolean leg = name.equals("leftleg") || name.equals("rightleg");
-    boolean vanillaPart = arm || leg || name.equals("head") || name.equals("body") || name.equals("torso");
+    boolean isBodyAlias = name.startsWith("body") || name.startsWith("torso");
+    boolean vanillaPart = arm || leg || name.equals("head") || isBodyAlias;
     if (vanillaPart && hasSameNamedDescendant(model, bone, name)) return "";
+    if (isInsideFirstPersonSubtree(model, bone)) return "";
+    if (isBodyAlias) {
+        return hasBodyAncestor(model, bone) ? "" : "body";
+    }
     if (!arm && !leg) return name;
 
     String oppositeName = name.startsWith("left")
@@ -222,6 +255,7 @@ public static String automaticPoseKey(BbModelDefinition model, BbBoneDefinition 
         : "left" + name.substring("right".length());
     BbBoneDefinition opposite = model.bones().stream()
         .filter(candidate -> normalizeBoneName(candidate.name()).equals(oppositeName))
+        .filter(candidate -> !isDedicatedFirstPersonArm(model, candidate))
         .findFirst()
         .orElse(null);
     if (opposite == null || Math.abs(bone.pivotX() - opposite.pivotX()) <= 0.01f) return name;
@@ -242,6 +276,18 @@ private static boolean hasSameNamedDescendant(BbModelDefinition model, BbBoneDef
             BbBoneDefinition parent = model.findBoneByUuid(parentUuid);
             parentUuid = parent == null ? null : parent.parentUuid();
         }
+    }
+    return false;
+}
+
+private static boolean hasBodyAncestor(BbModelDefinition model, BbBoneDefinition bone) {
+    String parentUuid = bone.parentUuid();
+    while (parentUuid != null) {
+        BbBoneDefinition parent = model.findBoneByUuid(parentUuid);
+        if (parent == null) break;
+        String parentName = normalizeBoneName(parent.name());
+        if (parentName.startsWith("body") || parentName.startsWith("torso")) return true;
+        parentUuid = parent.parentUuid();
     }
     return false;
 }

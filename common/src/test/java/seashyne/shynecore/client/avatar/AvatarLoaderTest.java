@@ -67,6 +67,14 @@ final class AvatarLoaderTest {
         // When standard is empty string
         Files.writeString(root.resolve("avatar.json"), "{\"name\":\"TestBlank\",\"standard\":\"\"}");
         assertEquals("2.0", AvatarLoader.loadManifest(root).standard());
+
+        // When standard is "standard"
+        Files.writeString(root.resolve("avatar.json"), "{\"name\":\"TestStandard\",\"standard\":\"standard\"}");
+        assertEquals("2.0", AvatarLoader.loadManifest(root).standard());
+
+        // When standard is "shyne"
+        Files.writeString(root.resolve("avatar.json"), "{\"name\":\"TestShyne\",\"standard\":\"shyne\"}");
+        assertEquals("2.0", AvatarLoader.loadManifest(root).standard());
     }
 
     @Test
@@ -123,6 +131,30 @@ final class AvatarLoaderTest {
 
         IOException error = assertThrows(IOException.class, () -> AvatarLoader.loadManifest(root));
         assertTrue(error.getMessage().contains("expected 2.0"));
+    }
+
+    @Test
+    void standardKeywordLoadsSuccessfully() throws Exception {
+        Path root = temp.resolve("standard-keyword-avatar");
+        Files.createDirectories(root);
+        Files.writeString(root.resolve("avatar.json"), "{\"standard\":\"standard\",\"name\":\"Clean Standard\",\"api\":\"standard\"}");
+        Files.writeString(root.resolve("model.bbmodel"), "{}");
+
+        AvatarManifest manifest = AvatarLoader.loadManifest(root);
+        assertEquals("Clean Standard", manifest.name());
+        assertEquals(ShyneApiStandard.LATEST, manifest.api());
+    }
+
+    @Test
+    void omittedStandardDefaultsToStandardSuccessfully() throws Exception {
+        Path root = temp.resolve("no-version-avatar");
+        Files.createDirectories(root);
+        Files.writeString(root.resolve("avatar.json"), "{\"name\":\"No Version Avatar\"}");
+        Files.writeString(root.resolve("model.bbmodel"), "{}");
+
+        AvatarManifest manifest = AvatarLoader.loadManifest(root);
+        assertEquals("No Version Avatar", manifest.name());
+        assertEquals(ShyneApiStandard.LATEST, manifest.api());
     }
 
     @Test
