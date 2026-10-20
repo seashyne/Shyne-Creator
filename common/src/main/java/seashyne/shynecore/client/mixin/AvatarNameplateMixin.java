@@ -20,7 +20,8 @@ public abstract class AvatarNameplateMixin {
         if (!(entity instanceof Player)) return;
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
-        boolean local = client.player.getUUID().equals(entity.getUUID());
+        boolean local = (client.player != null && client.player.getUUID().equals(entity.getUUID()))
+            || seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayer(entity);
         String text = local ? AvatarRuntime.localNameplateText() : ClientAnimationState.getRemoteNameplateText(entity.getUUID());
         if (!text.isBlank()) {
             AvatarNameplateStyle style = local ? AvatarRuntime.localNameplateStyle() : ClientAnimationState.getRemoteNameplateStyle(entity.getUUID());
@@ -37,7 +38,8 @@ public abstract class AvatarNameplateMixin {
         if (!(entity instanceof Player)) return;
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
-        boolean local = client.player.getUUID().equals(entity.getUUID());
+        boolean local = (client.player != null && client.player.getUUID().equals(entity.getUUID()))
+            || seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayer(entity);
         Boolean visible = local
             ? Boolean.valueOf(AvatarRuntime.localNameplateVisible())
             : ClientAnimationState.getRemoteNameplateVisible(entity.getUUID());

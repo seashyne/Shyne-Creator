@@ -32,7 +32,7 @@
 ### สำหรับผู้ใช้ Fabric
 1. ดาวน์โหลดและติดตั้ง **Fabric Loader 26.3**
 2. ดาวน์โหลด **Fabric API** สำหรับ Minecraft 26.3
-3. ดาวน์โหลดม็อด **`shyne-creator-fabric-2.16.0.jar`** จาก [CurseForge](https://www.curseforge.com/minecraft/mc-mods/shyne-creator)
+3. ดาวน์โหลดม็อด **`shyne-creator-fabric-2.17.0.jar`** จาก [CurseForge](https://www.curseforge.com/minecraft/mc-mods/shyne-creator)
 4. นำทั้งสองไฟล์ไปใส่ในโฟลเดอร์:
    ```text
    .minecraft/mods/
@@ -40,7 +40,7 @@
 
 ### สำหรับผู้ใช้ NeoForge
 1. ดาวน์โหลดและติดตั้งตัวติดตั้ง **NeoForge 26.3**
-2. ดาวน์โหลดม็อด **`shyne-creator-neoforge-2.16.0.jar`** จาก [CurseForge](https://www.curseforge.com/minecraft/mc-mods/shyne-creator)
+2. ดาวน์โหลดม็อด **`shyne-creator-neoforge-2.17.0.jar`** จาก [CurseForge](https://www.curseforge.com/minecraft/mc-mods/shyne-creator)
 3. นำไฟล์ไปใส่ในโฟลเดอร์ `.minecraft/mods/`
 
 ---

@@ -57,7 +57,9 @@ public abstract class PlayerModelMaskMixin {
         }
 
         AvatarState active = AvatarRuntime.active();
-        if (active != null && entity.getUUID().equals(active.boundEntityId()) && active.shadowRadius() >= 0f) {
+        boolean isLocal = (active != null && entity.getUUID().equals(active.boundEntityId()))
+            || seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayer(entity);
+        if (isLocal && active != null && active.shadowRadius() >= 0f) {
             state.shadowRadius = active.shadowRadius();
         }
     }

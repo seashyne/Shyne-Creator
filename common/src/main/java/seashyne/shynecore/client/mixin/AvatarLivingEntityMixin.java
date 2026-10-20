@@ -28,7 +28,8 @@ public abstract class AvatarLivingEntityMixin {
     private void shyne$dispatchDamageEvent(DamageSource source, CallbackInfo ci) {
         LivingEntity self = (LivingEntity) (Object) this;
         Minecraft client = Minecraft.getInstance();
-        boolean isLocal = client.player != null && self.getUUID().equals(client.player.getUUID());
+        boolean isLocal = (client.player != null && self.getUUID().equals(client.player.getUUID()))
+            || seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayer(self);
         String msgId = source != null ? source.getMsgId() : "generic";
         Entity attacker = source != null ? source.getEntity() : null;
         String attackerId = attacker != null ? attacker.getUUID().toString() : "";
@@ -40,7 +41,8 @@ public abstract class AvatarLivingEntityMixin {
         if (eventId == EntityEvent.PROTECTED_FROM_DEATH) {
             LivingEntity self = (LivingEntity) (Object) this;
             Minecraft client = Minecraft.getInstance();
-            boolean isLocal = client.player != null && self.getUUID().equals(client.player.getUUID());
+            boolean isLocal = (client.player != null && self.getUUID().equals(client.player.getUUID()))
+            || seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayer(self);
             AvatarRuntime.dispatchTotemPop(self.getUUID().toString(), isLocal);
         }
     }

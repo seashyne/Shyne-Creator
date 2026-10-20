@@ -86,8 +86,15 @@ public final class BbModelEntityRenderer {
 
             UUID entityId = entity.getUUID();
             boolean isLocalPlayer = client.player != null && entityId.equals(client.player.getUUID());
+            boolean isReplayPlayer = !isLocalPlayer && seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayer(entity);
+            if (isReplayPlayer) {
+                isLocalPlayer = true;
+            }
             if (!isLocalPlayer && ShyneClientSettings.isRemoteAvatarHidden(entityId)) return;
             AttachedModelState attachment = ClientAnimationState.getAttachment(entityId);
+            if (attachment == null && isReplayPlayer) {
+                attachment = seashyne.shynecore.client.compat.ReplayCompat.resolveReplayAttachment(entityId);
+            }
             if (attachment == null || !attachment.visible()) return;
             BbModelDefinition model = ClientAnimationState.getModel(attachment.modelId());
             if (model == null || !model.hasGeometry()) return;
@@ -133,7 +140,7 @@ public final class BbModelEntityRenderer {
                 BbTextureDefinition definition = model.texture(textureIndex);
                 int uvWidth = definition == null ? model.textureWidth() : definition.width();
                 int uvHeight = definition == null ? model.textureHeight() : definition.height();
-                Identifier texture = client.player != null && entityId.equals(client.player.getUUID())
+                Identifier texture = isLocalPlayer
                     ? BbModelTextures.resolveLocalAvatar(model, textureIndex)
                     : BbModelTextures.resolve(model, textureIndex);
                 boolean emissive = definition != null && isEmissiveTexture(definition.name());

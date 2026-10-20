@@ -1,3 +1,23 @@
+## Shyne Creator v2.17.0
+
+### Flashback & Replay Mod Compatibility Bridge, Replay Entity Binding & Animation Sync
+
+- **Flashback & Replay Mod Compatibility Bridge**: Added comprehensive compatibility support for the **Flashback** replay mod (`com.moulberry.flashback`) and Replay Mod recording/playback engines:
+  - Custom Shyne 3D Blockbench models and skins now render seamlessly on replay actor entities and recorded players during playback, eliminating missing avatar/fallback skin issues in cinematic replays.
+  - Introduced `ReplayCompat` engine to safely detect replay playback states, extract original player UUIDs and profiles, and resolve attachment models without hard dependencies or class loading overhead.
+- **Replay Entity Binding & Animation Synchronization**:
+  - Replay entities and playback dummies receive full timeline-synchronized animation ticks and pose interpolation matching the recorded gameplay.
+  - Replay local player camera views now properly resolve local avatar textures, emissive maps, and dynamic scale.
+- **Vanilla Masking & Nameplate Mixin Parity**:
+  - Extended `PlayerModelMaskMixin`, `AvatarNameplateMixin`, and `AvatarLivingEntityMixin` to recognize replay player instances, ensuring vanilla armor, body parts, and nametags toggle according to avatar definitions in replay footage.
+  - Dual-loader Fabric & NeoForge parity with identical rendering and entity binding guarantees.
+
+- **สะพานเชื่อมความเข้ากันได้กับ Flashback และ Replay Mod**:
+  - แก้ไขปัญหา Avatar ของ Shyne Creator ไม่แสดงผลหรือเป็นสกินว่างเปล่าในการบันทึกและเล่น Replay ด้วยม็อด **Flashback** (`com.moulberry.flashback`) และ Replay Mod
+  - เพิ่มระบบ `ReplayCompat` ตรวจสอบและดึงข้อมูล UUID / โปรไฟล์ผู้เล่นดั้งเดิมจาก Replay Entity ได้อย่างแม่นยำและปลอดภัย
+  - ซิงก์ Animation และการขยับของชิ้นส่วนโมเดลตามไทม์ไลน์ใน Replay อย่างสมบูรณ์ โมเดลไม่ค้างหรือแข็งทื่อ
+  - ปรับปรุง Mixin ซ่อนโมเดล Vanilla, ป้ายชื่อ และ Renderer ทั้ง Fabric และ NeoForge ให้รองรับการบันทึกภาพ Replay 100%
+
 ## Shyne Creator v2.16.0
 
 ### Comprehensive Themed Tutorials Hub, Shyne Standard Unification & Security Hardening

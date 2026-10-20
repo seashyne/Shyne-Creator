@@ -1,4 +1,4 @@
-# Shyne Creator Kit 2.16.0
+# Shyne Creator Kit 2.17.0
 
 ชุดนี้ใช้สำหรับ **ผู้สร้าง Avatar** บน Shyne Avatar Standard 2.0 ไม่ใช่ตัวม็อดสำหรับใส่ในโฟลเดอร์ `mods`
 

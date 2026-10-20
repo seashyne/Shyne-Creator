@@ -62,7 +62,10 @@ public final class AvatarAnimationManager {
     }
 
     public static List<AvatarAnimationLayer> animationLayers(AvatarState active, UUID entityId) {
-        if (active == null || entityId == null || !entityId.equals(active.boundEntityId())) return List.of();
+        if (active == null || entityId == null) return List.of();
+        boolean matches = entityId.equals(active.boundEntityId())
+            || seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayerUuid(entityId);
+        if (!matches) return List.of();
         return active.sortedAnimationLayers();
     }
 

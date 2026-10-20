@@ -57,8 +57,15 @@ public final class AvatarRuntime {
             initialized = true;
             activateFirstAvailable(client);
         }
-        lifecycle.tickAutomaticAnimations(client.player, lifecycle.activeModel());
-        lifecycle.tickNativePhysics(client.player);
+        net.minecraft.world.entity.player.Player animationTarget = client.player;
+        if (seashyne.shynecore.client.compat.ReplayCompat.isReplayActive()) {
+            net.minecraft.world.entity.player.Player replayPlayer = seashyne.shynecore.client.compat.ReplayCompat.findReplayLocalPlayer(client);
+            if (replayPlayer != null) {
+                animationTarget = replayPlayer;
+            }
+        }
+        lifecycle.tickAutomaticAnimations(animationTarget, lifecycle.activeModel());
+        lifecycle.tickNativePhysics(animationTarget);
         if (lifecycle.script() != null) {
             lifecycle.script().tick(client);
             if (client.level != null) {
@@ -258,7 +265,8 @@ public final class AvatarRuntime {
         UUID localId = client.player == null ? null : client.player.getUUID();
         AvatarState active = lifecycle.active();
         boolean localRequest = playerId == null || playerId.equals(localId)
-            || (active != null && playerId.equals(active.boundEntityId()));
+            || (active != null && playerId.equals(active.boundEntityId()))
+            || seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayerUuid(playerId);
         if (localRequest) {
             if (active == null) return true;
             return resolvedVanillaVisibility(active.vanillaVisibility(), active.replaceVanilla(), canonical);
