@@ -183,66 +183,61 @@ function HomePage() {
 
   const highlights = [
     {
-      icon: BookOpen,
-      tag: 'TUTORIALS HUB',
-      title: 'Interactive Tutorials',
-      desc: 'ศูนย์รวมบทเรียนแยกตาม 6 หัวข้อ: พื้นฐานผู้เล่น, โมเดล Blockbench, Zero-Lua, สคริปต์ Lua, Pings ออนไลน์ และ Spring Physics',
+      icon: Layers,
+      tag: 'IN-GAME CONTROLS',
+      title: 'Zero-Friction Layer Toggles',
+      desc: 'ปุ่มลัดเปิด/ปิดปีก (Elytra), ชุดเกราะ (Armor), ผ้าคลุม (Cape) และของสวมหัว (Head) ในหน้า Wardrobe และ Avatar Manager ทันที พร้อมซิงก์ให้เพื่อนเห็นอัตโนมัติ',
       color: 'lime',
     },
     {
-      icon: MessageCircle,
-      tag: 'VOICE & CHAT',
-      title: 'Mouth Speech Tracking',
-      desc: 'ตรวจจับเสียงพูดไมโครโฟนหรือแชทเพื่อขยับเปิด-ปิดปากอัตโนมัติ (Zero-Lua) พร้อม API ควบคุมผ่านสคริปต์ Figura: voice.isSpeaking(), host:isVoiceActive()',
+      icon: Download,
+      tag: 'DRAG & DROP',
+      title: 'Drag & Drop Installation',
+      desc: 'ลากไฟล์ .zip, โฟลเดอร์ Avatar หรือไฟล์ .bbmodel และ .png วางลงในจอเกมเพื่อติดตั้งและนำเข้าอวาตาร์ได้ทันทีโดยไม่ต้องเปิดโฟลเดอร์ใน Windows',
       color: 'cyan',
     },
     {
-      icon: Layers,
-      tag: 'MODERN UX',
-      title: 'Smooth Wheel Scrolling',
-      desc: 'เลื่อนดูคลัง Avatar และชุดคอสตูมด้วยลูกกลิ้งเมาส์ (Mouse Wheel) ได้อย่างลื่นไหล ไม่ต้องกดปุ่มเปลี่ยนหน้า พร้อมแถบ Scrollbar เรืองแสง',
-      color: 'lime',
-    },
-    {
-      icon: Zap,
-      tag: 'PERFORMANCE',
-      desc: 'ตัดการเรนเดอร์โมเดลระยะไกล (Distance Culling) และ Dynamic LOD อัตโนมัติ ช่วยลดอาการแล็กในเซิร์ฟเวอร์ที่มีผู้เล่นจำนวนมาก',
+      icon: Gamepad2,
+      tag: 'COMPATIBILITY',
+      title: 'First-Person Body Mods',
+      desc: 'ตรวจจับและเข้ากันได้ 100% กับ FirstPersonModel, RealCamera และ Shoulder Surfing Reloaded ซ่อนเฉพาะหัวไม่บังสายตา แต่โชว์ตัว แขน ขา และปีก 3D ครบถ้วน',
       color: 'violet',
     },
     {
       icon: Boxes,
-      tag: 'ONE-CLICK MIGRATION',
-      title: 'Avatar Importer',
-      desc: 'คำสั่ง /shyne avatar import <folder> แปลงโมเดลจาก Figura และ Blockbench สู่ Shyne Standard พร้อมสร้าง ATTRIBUTION.md คุ้มครองสิทธิ์',
+      tag: 'FIGURA COMPAT',
+      title: 'Built-in Library Shims',
+      desc: 'ระบบจำลองไลบรารียอดนิยมของ Figura ในตัว (GSAnimBlend, EZAnims, KattArmor) ใช้งานโมเดลสำเร็จรูปได้ทันทีโดยไม่ต้องโหลด lib ภายนอก',
       color: 'cyan',
     },
     {
-      icon: Sparkles,
-      tag: 'RIGGING & ATTACHMENT',
-      title: 'Tail & Bone Alignment',
-      desc: 'ปรับปรุง Root Coordinate Space ให้โมเดลหางและชิ้นส่วนต่อพ่วง (Child Limb Accessories) แนบสนิทกับตัวละคร Minecraft ไม่เลื่อนหลุดตำแหน่ง',
+      icon: Workflow,
+      tag: 'SMART DYNAMICS',
+      title: 'Anti-Clip Physics',
+      desc: 'ฟิสิกส์ยกหางและชายเสื้อขึ้นเมื่อย่อตัว (Sneak) หรือขี่พาหนะ (Riding) ป้องกันจมทะลุพื้น และล็อกมุมสะบัดไม่ให้ผมหรือผ้าคลุมทะลุเข้ากลางลำตัว',
       color: 'lime',
     },
     {
       icon: ShieldCheck,
-      tag: 'STABILITY',
-      desc: 'ป้องกันปัญหา StackOverflowError จากการคลิกเมาส์และจำกัดความลึกของ Lua Event Recursion ป้องกันตัวเกมเด้งได้อย่างสมบูรณ์แบบ',
+      tag: 'SECURITY & SPEED',
+      title: 'Zero Central Dependency',
+      desc: 'สื่อสารผ่านเซิร์ฟเวอร์ Minecraft โดยตรง ไร้คอขวดเซิร์ฟเวอร์กลาง และปลอดภัยสูงสุดด้วย Lua Sandbox ตัดสิทธิ์ OS/IO และบีบอัด GZIP ชิ้นละ 48KB',
       color: 'violet',
     },
   ]
 
   return <>
     <div className="announcement">
-      <span>ใหม่ v{version}</span> ศูนย์รวมบทเรียน (Tutorials Hub) 6 หัวข้อ, ปากขยับตามเสียงพูด และค้นหา Avatar อัตโนมัติ{' '}
-      <Link to="/tutorials">
-        เปิดดูบทเรียนทั้งหมด <ArrowRight size={14} />
+      <span>ใหม่ v{version}</span> ปุ่มลัดเปิด/ปิดชิ้นส่วนในเกม, ลากไฟล์ติดตั้งทันใจ, รองรับ FirstPerson 3D และฟิสิกส์กันทะลุพื้น{' '}
+      <Link to="/docs/changelog">
+        เปิดดู Changelog ทั้งหมด <ArrowRight size={14} />
       </Link>
     </div>
     <section className="hero">
       <div className="hero-copy">
         <p className="overline">PLAYER & CREATOR DOCUMENTATION <i></i></p>
         <h1>ติดตั้งแล้ว<br/>เริ่มใช้ได้เลย<span>.</span></h1>
-        <p className="lead">Shyne Creator {version} คือระบบ Avatar และ Content Pack สำหรับ Minecraft {minecraftVersion} บน Fabric และ NeoForge—ขยับปากพูดตามไมค์ & แชทอัตโนมัติ, เลื่อนดูคลังด้วยลูกกลิ้งเมาส์, นำเข้าโมเดลด้วย /shyne avatar import, จัดการ Avatar ในเครื่อง และสำรองขึ้น Cloud ได้จากในเกม</p>
+        <p className="lead">Shyne Creator {version} คือระบบ Avatar และ Content Pack สำหรับ Minecraft {minecraftVersion} บน Fabric และ NeoForge—เปิด/ปิดเลเยอร์ปีกและเกราะได้ทันใจ, ลากไฟล์ .zip หรือ .bbmodel วางลงในเกม, รองรับม็อด FirstPersonModel 3D, และปลอดภัยสูงสุดด้วย Sandbox ไร้เซิร์ฟเวอร์กลาง</p>
         <div className="hero-actions">
           <Link className="primary" to="/docs/player-quickstart">เริ่มใช้ Shyne <ArrowRight size={18}/></Link>
           <a className="download-cta" href={CURSEFORGE_URL} target="_blank" rel="noreferrer"><Download size={18}/> ดาวน์โหลด v{version}</a>
@@ -250,7 +245,7 @@ function HomePage() {
         </div>
         <div className="hero-note">
           <Check size={16}/>
-          <span>อัปเดต v{version}: ปากขยับตามเสียงพูดไมค์/แชท, เลื่อนดูคลังด้วยเมาส์ (Mouse Wheel), Distance Culling & LOD ลดแล็ก และจุดยึดหางตรงตำแหน่ง 100%</span>
+          <span>อัปเดต v{version}: Quick Layer Toggles, Drag & Drop ในเกม, FirstPersonModel Compat, Figura Lib Shims และ Smart Anti-Clip Physics</span>
         </div>
         <div className="compat"><span>VERSION</span><b>{version}</b><i></i><b>MINECRAFT {minecraftVersion}</b><small>JAVA 25</small></div>
       </div>

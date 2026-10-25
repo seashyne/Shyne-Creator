@@ -20,6 +20,8 @@ import security from '../../docs/legal/SECURITY.md?raw'
 import multiplayer from '../../docs/architecture/MULTIPLAYER_TESTING.md?raw'
 import sdk from '../../docs/standards/CREATOR_SDK_TH.md?raw'
 import architecture from '../../docs/architecture/ARCHITECTURE_TH.md?raw'
+import architectureReport from '../../docs/architecture/ARCHITECTURE_REPORT_TH.md?raw'
+import licenseDoc from '../../docs/legal/LICENSE_TH.md?raw'
 import compatMatrix from '../../docs/api/API_COMPATIBILITY_MATRIX.md?raw'
 import changelog from '../../CHANGELOG.md?raw'
 import scriptRecipes from '../../docs/guides/SCRIPT_RECIPES_TH.md?raw'
@@ -179,14 +181,12 @@ const installation = `# ติดตั้ง Shyne Creator
 Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}** บน Fabric และ NeoForge โดยม็อดทั้งสอง Loader ใช้ Mod ID \`shyne_creator\`, Shyne API Standard และ network protocol ชุดเดียวกัน
 
 > **ไฮไลต์การอัปเดตรุ่น ${version}**:
-> - 📚 **Interactive Tutorials Hub**: ศูนย์รวมบทเรียนแยกตาม 6 หัวข้อ ทั้งเริ่มต้น, Blockbench 3D, Zero-Lua, เขียนสคริปต์ Lua, ระบบออนไลน์ Pings, และ Physics & Profiler
-> - 🛡️ **Decompression Bomb Protection**: เสริมระบบรักษาความปลอดภัย ป้องกัน Zip Bomb จำกัดขนาดแตกไฟล์ 128 MB และไม่เกิน 1,024 ไฟล์
-> - 📁 **Multi-Path Avatar Auto-Discovery**: สแกนค้นหา Avatar อัตโนมัติจาก \`shyne-mods/avatars/\`, \`shyne_creator/avatars/\`, และโฟลเดอร์ของ Figura
-> - 🌟 **Unified Shyne Standard**: ปรับปรุงชื่อเรียกและโครงสร้างทั้งหมดให้เป็น Shyne Standard หนึ่งเดียว ไร้ความสับสนเรื่องเลขเวอร์ชัน
-> - 🎙️ **Mouth Speech Tracking**: ปากขยับเปิด-ปิดตามเสียงพูดไมค์หรือแชทอัตโนมัติ (Zero-Lua) พร้อมสคริปต์ควบคุม \`voice.isSpeaking()\`, \`host:isVoiceActive()\`
-> - 📜 **Modern Wheel Scrolling**: เลื่อนดูคลังอวตารและชุดคอสตูมด้วยลูกกลิ้งเมาส์ (Mouse Wheel) ได้อย่างลื่นไหล พร้อมแถบ Scrollbar เรืองแสง
-> - ⚡ **Distance Culling & LOD**: ลดภาระเครื่องด้วยการตัดเรนเดอร์โมเดลระยะไกลและระบบคืนหน่วยความจำอัตโนมัติ เฟรมเรตไม่ตก
-> - 📦 **One-Click Importer**: คำสั่ง \`/shyne avatar import <folder>\` นำเข้าโมเดลจาก Figura และ Blockbench สู่ Shyne Standard พร้อมสร้าง \`ATTRIBUTION.md\` อัตโนมัติ
+> - 🎛️ **Zero-Friction In-Game Layer Toggles**: ปุ่มลัดเปิด/ปิดปีก (Elytra), ชุดเกราะ (Armor), ผ้าคลุม (Cape) และของสวมหัว (Head) ในหน้า Outfit Wardrobe และ Avatar Manager ทันที พร้อมซิงก์ให้เพื่อนในเซิร์ฟเวอร์เห็นตรงกัน
+> - 📂 **Drag & Drop Installation**: ลากไฟล์ \`.zip\`, โฟลเดอร์ Avatar หรือไฟล์ \`.bbmodel\` และ \`.png\` วางลงในจอเกมเพื่อติดตั้งและนำเข้าได้ทันที
+> - 🎥 **First-Person Body Mod Compatibility**: ตรวจจับและรองรับ FirstPersonModel, RealCamera, และ Shoulder Surfing Reloaded ซ่อนเฉพาะหัวไม่บังสายตา แต่แสดงลำตัว แขน ขา และปีก 3D ครบถ้วน
+> - 🧩 **Built-in Figura Library Shims**: มีไลบรารีจำลอง \`gsanimblend\`, \`ezanims\`, \`kattarmor\` ในตัว รองรับโมเดลสำเร็จรูปจากชุมชน Figura ได้ทันที
+> - 🌊 **Smart Anti-Clip Physics**: ฟิสิกส์ยกหางและชายเสื้อขึ้นอัตโนมัติเมื่อย่อตัว (Sneak) หรือขี่พาหนะ (Riding) ป้องกันจมทะลุพื้น และล็อกมุมสะบัดไม่ให้ผมหรือผ้าคลุมทะลุเข้ากลางลำตัว
+> - 🛡️ **Zero Central Dependency & Secure Sandbox**: ส่งข้อมูลผ่าน Minecraft Server ของห้องโดยตรง ไร้คอขวดเซิร์ฟเวอร์กลาง และปลอดภัยสูงสุดด้วย Lua Sandbox ตัดสิทธิ์ OS/IO 100%
 
 > Shyne Creator เป็นระบบสำหรับใช้ Avatar และ Content Pack ไม่ใช่ม็อดที่เพิ่ม Avatar หรือสกิลมาให้ทันทีหลังติดตั้ง หากต้องการเริ่มเล่น ให้ติดตั้งตัวม็อดแล้วอ่าน [เริ่มใช้ Shyne ใน 1 นาที](PLAYER_QUICKSTART_TH.md)
 
@@ -196,8 +196,8 @@ Shyne Creator **${version}** รองรับ Minecraft **${minecraftVersion}*
 
 | คุณต้องการทำอะไร | ไฟล์ที่ต้องใช้ | CurseForge File ID |
 | --- | --- | --- |
-| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-${version}.jar\` พร้อม Fabric API | [9127326](https://www.curseforge.com/minecraft/mc-mods/shyne-creator/files/9127326) |
-| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-${version}.jar\` | [9127327](https://www.curseforge.com/minecraft/mc-mods/shyne-creator/files/9127327) |
+| เล่นและใช้ Avatar บน Fabric | \`shyne-creator-fabric-${version}.jar\` พร้อม Fabric API | [9316795](https://www.curseforge.com/minecraft/mc-mods/shyne-creator/files/9316795) |
+| เล่นและใช้ Avatar บน NeoForge | \`shyne-creator-neoforge-${version}.jar\` | [9316794](https://www.curseforge.com/minecraft/mc-mods/shyne-creator/files/9316794) |
 | สร้าง Avatar ด้วย Blockbench | Shyne Creator Kit — **ห้ามนำไปใส่ในโฟลเดอร์ mods** | — |
 
 ## ความต้องการของระบบ
@@ -290,7 +290,9 @@ export const docs: DocItem[] = [
   { slug: 'multiplayer-testing', title: 'Multiplayer Test Matrix', shortTitle: 'ทดสอบ Multiplayer', description: 'รายการตรวจ release และหลักฐานที่ต้องเก็บก่อนเผยแพร่', category: 'เผยแพร่และพัฒนา', icon: 'users', content: multiplayer },
   { slug: 'creator-sdk', title: 'Shyne Creator SDK', shortTitle: 'Creator SDK', description: 'โครงม็อด Gameplay, custom item, Avatar และข้อมูลที่ sync', category: 'เผยแพร่และพัฒนา', icon: 'wrench', content: sdk, api: true },
   { slug: 'architecture', title: 'Shyne Creator Architecture', shortTitle: 'สถาปัตยกรรม', description: 'ขอบเขต common, Fabric, NeoForge และลำดับ renderer', category: 'เผยแพร่และพัฒนา', icon: 'workflow', content: architecture },
+  { slug: 'architecture-report', title: 'แผนผังสถาปัตยกรรมและการทำงาน (Architecture Report)', shortTitle: 'แผนผังสถาปัตยกรรม', description: 'รายงานโครงสร้างการทำงานทุกระบบ แผนภาพไดอะแกรม และความปลอดภัยของ Shyne Creator', category: 'เผยแพร่และพัฒนา', icon: 'workflow', content: architectureReport },
   { slug: 'compatibility-matrix', title: 'API Compatibility Matrix', shortTitle: 'Compatibility Matrix', description: 'ระดับการรองรับ API ของ Shyne Creator เทียบกับ Figura และมาตรฐาน Shyne 2.0', category: 'เผยแพร่และพัฒนา', icon: 'workflow', content: compatMatrix, api: true },
+  { slug: 'license', title: 'สัญญาอนุญาตและลิขสิทธิ์ (License & Terms)', shortTitle: 'สัญญาอนุญาต', description: 'สัญญาอนุญาต MPL-2.0, ข้อกำหนดเครื่องหมายการค้า และสิทธิ์ของครีเอเตอร์', category: 'เผยแพร่และพัฒนา', icon: 'shield', content: licenseDoc },
   { slug: 'changelog', title: 'ประวัติการอัปเดต (Changelog)', shortTitle: 'ประวัติการอัปเดต', description: 'รายละเอียดฟีเจอร์และการปรับปรุงในแต่ละเวอร์ชันของ Shyne Creator', category: 'เริ่มต้น', icon: 'book', content: changelog },
 ]
 
@@ -313,6 +315,7 @@ export const fileToSlug: Record<string, string> = {
   'SHYNE_LUA_API_TH.md': 'lua-api', 'CUSTOM_RENDER_API_TH.md': 'render-api', 'SHYNE_GAMEPLAY_API_TH.md': 'gameplay-api', 'POWER_ASSET_PACKAGE_TH.md': 'asset-package', 'SHYNE_API_COMPLETE_TH.md': 'api-reference',
   'AVATAR_CLOUD.md': 'cloud', 'CLOUD_API.md': 'cloud-api', 'SECURITY.md': 'security', 'PUBLIC_SHARE.md': 'public-share',
   'MULTIPLAYER_TESTING.md': 'multiplayer-testing', 'CREATOR_SDK_TH.md': 'creator-sdk', 'ARCHITECTURE_TH.md': 'architecture',
+  'ARCHITECTURE_REPORT_TH.md': 'architecture-report', 'LICENSE_TH.md': 'license',
   'API_COMPATIBILITY_MATRIX.md': 'compatibility-matrix', 'CHANGELOG.md': 'changelog', 'SCRIPT_RECIPES_TH.md': 'script-recipes',
   '01_PLAYER_BASICS_TH.md': 'tutorial-player-basics',
   '02_BLOCKBENCH_MODELING_TH.md': 'tutorial-blockbench-modeling',
