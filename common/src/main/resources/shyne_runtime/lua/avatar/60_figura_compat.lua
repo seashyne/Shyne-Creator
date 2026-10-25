@@ -23,6 +23,84 @@ figura = figura or {
 -- 1. FIGURA EVENT BUS ADAPTERS (events.TICK, events.RENDER, etc.)
 -- ------------------------------------------------------------------------------
 
+--- Enhance string metatable so string item IDs can also be read with .id, :getId(), etc.
+local str_mt = (debug and debug.getmetatable and debug.getmetatable("")) or getmetatable("")
+if str_mt then
+  local old_str_index = str_mt.__index
+  str_mt.__index = function(s, k)
+    if k == "id" then return s end
+    if k == "getId" then return function() return s end end
+    if k == "name" then return s end
+    if k == "getName" then return function() return s end end
+    if k == "count" then return 1 end
+    if k == "getCount" then return function() return 1 end end
+    if k == "isDamageable" then return function() return false end end
+    if k == "hasGlint" then return function() return false end end
+    if k == "hasTag" then return function() return false end end
+    if k == "getTag" then return function() return {} end end
+    if type(old_str_index) == "function" then return old_str_index(s, k) end
+    if type(old_str_index) == "table" then return old_str_index[k] end
+    return string[k]
+  end
+end
+
+--- Creates a safe item proxy mimicking Figura's ItemStack object
+local function make_item_proxy(raw)
+  if not raw or raw.empty then
+    local p = {
+      id = "minecraft:air",
+      count = 0,
+      empty = true,
+      name = "Air",
+      damage = 0,
+      max_damage = 0,
+      glint = false
+    }
+    function p:getId() return self.id end
+    function p:getCount() return 0 end
+    function p:getName() return "Air" end
+    function p:isDamageable() return false end
+    function p:getDamage() return 0 end
+    function p:getMaxDamage() return 0 end
+    function p:hasGlint() return false end
+    function p:hasTag() return false end
+    function p:getTag() return {} end
+    return setmetatable(p, {
+      __tostring = function() return "minecraft:air" end,
+      __eq = function(a, b)
+        local id_b = type(b) == "table" and b.id or tostring(b)
+        return a.id == id_b
+      end
+    })
+  end
+  local id = raw.id or "minecraft:air"
+  local p = {
+    id = id,
+    count = raw.count or 1,
+    empty = raw.empty or false,
+    name = raw.name or "",
+    damage = raw.damage or 0,
+    max_damage = raw.max_damage or 0,
+    glint = raw.glint or false
+  }
+  function p:getId() return self.id end
+  function p:getCount() return self.count end
+  function p:getName() return self.name end
+  function p:isDamageable() return (self.max_damage or 0) > 0 end
+  function p:getDamage() return self.damage or 0 end
+  function p:getMaxDamage() return self.max_damage or 0 end
+  function p:hasGlint() return self.glint or false end
+  function p:hasTag() return false end
+  function p:getTag() return {} end
+  return setmetatable(p, {
+    __tostring = function() return id end,
+    __eq = function(a, b)
+      local id_b = type(b) == "table" and b.id or tostring(b)
+      return a.id == id_b
+    end
+  })
+end
+
 --- Creates a Figura-compatible event emitter proxy wrapping Shyne's event bus.
 ---@param event_name string
 ---@return table Emitter object with register, remove, and clear methods
@@ -74,7 +152,11 @@ local function make_figura_event_emitter(...)
         return fn(delta, arrow, payload)
       end
       if primary == "item_render" then
-        local item = payload and payload.item or nil
+        local raw_item = payload and payload.item or ""
+        local item = raw_item
+        if type(item) == "table" and not item.id then
+          item = make_item_proxy(item)
+        end
         local mode = payload and payload.mode or "NONE"
         local pos = payload and payload.pos or nil
         local rot = payload and payload.rot or nil
@@ -125,43 +207,41 @@ local function make_figura_event_emitter(...)
   return emitter
 end
 
-events.TICK = make_figura_event_emitter("tick")
-events.WORLD_TICK = make_figura_event_emitter("world_tick")
-events.RENDER = make_figura_event_emitter("render")
-events.POST_RENDER = make_figura_event_emitter("post_render")
-events.WORLD_RENDER = make_figura_event_emitter("world_render")
-events.POST_WORLD_RENDER = make_figura_event_emitter("post_world_render")
-events.ENTITY_INIT = make_figura_event_emitter("entity_init")
-events.DAMAGE = make_figura_event_emitter("damage")
-events.CHAT_SEND_MESSAGE = make_figura_event_emitter("chat_send_message")
-events.CHAT_RECEIVE_MESSAGE = make_figura_event_emitter("chat_receive", "chat_receive_message")
-events.KEY_PRESS = make_figura_event_emitter("key_press")
-events.KEY_RELEASE = make_figura_event_emitter("key_release")
-events.KEY_REPEAT = make_figura_event_emitter("key_repeat")
-events.MOUSE_PRESS = make_figura_event_emitter("mouse_press")
-events.MOUSE_RELEASE = make_figura_event_emitter("mouse_release")
-events.MOUSE_SCROLL = make_figura_event_emitter("mouse_scroll")
-events.MOUSE_MOVE = make_figura_event_emitter("mouse_move")
-events.CHAR_TYPED = make_figura_event_emitter("char_typed")
-events.USE_ITEM = make_figura_event_emitter("item_use", "use_item")
-events.ITEM_USE = events.USE_ITEM
-events.TOTEM = make_figura_event_emitter("totem")
-events.TOTEM_POP = events.TOTEM
-events.ENTITY_DAMAGE = events.DAMAGE
-events.CHAT_RECEIVE = events.CHAT_RECEIVE_MESSAGE
-events.SKULL_RENDER = make_figura_event_emitter("skull_render")
-events.ARROW_RENDER = make_figura_event_emitter("arrow_render")
-events.ITEM_RENDER = make_figura_event_emitter("item_render")
-
-function events:getEvents()
-  return {
-    "TICK", "WORLD_TICK", "RENDER", "POST_RENDER", "WORLD_RENDER", "POST_WORLD_RENDER",
-    "ENTITY_INIT", "DAMAGE", "CHAT_SEND_MESSAGE", "CHAT_RECEIVE_MESSAGE",
-    "KEY_PRESS", "KEY_RELEASE", "KEY_REPEAT", "MOUSE_PRESS", "MOUSE_RELEASE",
-    "MOUSE_SCROLL", "MOUSE_MOVE", "CHAR_TYPED", "USE_ITEM", "TOTEM",
-    "SKULL_RENDER", "ARROW_RENDER", "ITEM_RENDER"
-  }
+local _emitters = {}
+local function register_emitter(name, ...)
+  local em = make_figura_event_emitter(...)
+  _emitters[name:upper()] = em
+  _emitters[name:lower()] = em
+  return em
 end
+
+register_emitter("tick", "tick")
+register_emitter("world_tick", "world_tick")
+register_emitter("render", "render")
+register_emitter("post_render", "post_render")
+register_emitter("world_render", "world_render")
+register_emitter("post_world_render", "post_world_render")
+register_emitter("entity_init", "entity_init")
+register_emitter("damage", "damage")
+register_emitter("chat_send_message", "chat_send_message")
+register_emitter("chat_receive_message", "chat_receive", "chat_receive_message")
+register_emitter("key_press", "key_press")
+register_emitter("key_release", "key_release")
+register_emitter("key_repeat", "key_repeat")
+register_emitter("mouse_press", "mouse_press")
+register_emitter("mouse_release", "mouse_release")
+register_emitter("mouse_scroll", "mouse_scroll")
+register_emitter("mouse_move", "mouse_move")
+register_emitter("char_typed", "char_typed")
+register_emitter("use_item", "item_use", "use_item")
+register_emitter("item_use", "item_use", "use_item")
+register_emitter("totem", "totem")
+register_emitter("totem_pop", "totem")
+register_emitter("entity_damage", "damage")
+register_emitter("chat_receive", "chat_receive", "chat_receive_message")
+register_emitter("skull_render", "skull_render")
+register_emitter("arrow_render", "arrow_render")
+register_emitter("item_render", "item_render")
 
 local event_alias_map = {
   tick = "TICK",
@@ -186,27 +266,51 @@ local event_alias_map = {
   use_item = "USE_ITEM",
   item_use = "USE_ITEM",
   totem = "TOTEM",
+  totem_pop = "TOTEM",
+  entity_damage = "DAMAGE",
   skull_render = "SKULL_RENDER",
   arrow_render = "ARROW_RENDER",
   item_render = "ITEM_RENDER"
 }
 
+function events:getEvents()
+  return {
+    "TICK", "WORLD_TICK", "RENDER", "POST_RENDER", "WORLD_RENDER", "POST_WORLD_RENDER",
+    "ENTITY_INIT", "DAMAGE", "CHAT_SEND_MESSAGE", "CHAT_RECEIVE_MESSAGE",
+    "KEY_PRESS", "KEY_RELEASE", "KEY_REPEAT", "MOUSE_PRESS", "MOUSE_RELEASE",
+    "MOUSE_SCROLL", "MOUSE_MOVE", "CHAR_TYPED", "USE_ITEM", "TOTEM",
+    "SKULL_RENDER", "ARROW_RENDER", "ITEM_RENDER"
+  }
+end
+
+local _auto_event_id = 0
 local events_mt = getmetatable(events) or {}
-local old_newindex = events_mt.__newindex
+events_mt.__index = function(t, k)
+  local str_k = tostring(k)
+  local mapped = event_alias_map[str_k:lower()]
+  if mapped and _emitters[mapped] then
+    return _emitters[mapped]
+  end
+  if _emitters[str_k:upper()] then
+    return _emitters[str_k:upper()]
+  end
+  return rawget(t, k)
+end
+
 events_mt.__newindex = function(t, k, v)
-  local emitter_name = event_alias_map[string.lower(tostring(k))]
-  if emitter_name and events[emitter_name] and type(events[emitter_name].register) == "function" then
+  local str_k = tostring(k)
+  local mapped = event_alias_map[str_k:lower()]
+  local emitter = mapped and _emitters[mapped] or _emitters[str_k:upper()]
+  if emitter and type(emitter.register) == "function" then
     if type(v) == "function" then
-      events[emitter_name]:register(v, "__direct_" .. tostring(k))
+      _auto_event_id = _auto_event_id + 1
+      emitter:register(v, "__auto_" .. str_k .. "_" .. tostring(_auto_event_id))
+      return
     elseif v == nil then
-      events[emitter_name]:remove("__direct_" .. tostring(k))
+      return
     end
   end
-  if old_newindex then
-    old_newindex(t, k, v)
-  else
-    rawset(t, k, v)
-  end
+  rawset(t, k, v)
 end
 setmetatable(events, events_mt)
 
@@ -526,6 +630,23 @@ function player:getName() return _shyne_read("player.name") or "Player" end
 function player:isAlive() return _shyne_read("player.alive") or (self:getHealth() > 0) end
 function player:getHealth() return _shyne_read("player.health") or 20 end
 function player:getMaxHealth() return _shyne_read("player.max_health") or 20 end
+function player:isLoaded() return _shyne_read("player.loaded") or true end
+
+function player:getHeldItem(off_hand)
+  local key = (off_hand == true or off_hand == "off_hand" or off_hand == "OFF_HAND") and "player.off_hand" or "player.main_hand"
+  local item = _shyne_read(key)
+  return make_item_proxy(item)
+end
+
+function player:getItem(slot)
+  local item = _shyne_read("player.item", slot)
+  return make_item_proxy(item)
+end
+
+function player:getEquipmentItem(slot)
+  return self:getItem(slot)
+end
+
 function player:setVelocity(vx, vy, vz)
   if type(vx) == "table" then
     return _shyne_player_set_velocity(vx.x or vx[1] or 0, vx.y or vx[2] or 0, vx.z or vx[3] or 0)
@@ -539,6 +660,9 @@ function player:addVelocity(vx, vy, vz)
   end
   return self:setVelocity(cur.x + (vx or 0), cur.y + (vy or 0), cur.z + (vz or 0))
 end
+
+---@class FiguraUser
+user = player
 
 
 

@@ -1,3 +1,28 @@
+## Shyne Creator v2.18.1
+
+### 100% Figura Avatar Parity: Multi-Listener Events Bus, Vanilla Model Vectors, Swizzle, Safe Item Proxy & Bone Pivots
+
+- **Multi-Listener Event Bus Parity (`events.tick`, `events.render`, etc.)**:
+  - Fixed assignment behavior for `function events.tick()` and `function events.render(delta)`. Now registers each callback to the listener chain without overwriting previous handlers across libraries (`swinging_physics.lua`, `NameplateGradients.lua`, etc.), allowing all physics chains (e.g. 11+ hair and dress parts in Pink Deltarune) to execute concurrently every frame.
+  - Case-insensitive event indexing on `events.<name>` and `events.<NAME>` returns canonical Figura event emitter proxies.
+- **Full `vanilla_model` Vector API Parity**:
+  - Implemented `:getOriginRot()`, `:getRot()`, `:getOffsetRot()`, `:setOffsetRot()`, `:getOriginPos()`, `:getPos()`, `:getOffsetPos()`, `:setOffsetPos()`, `:getScale()`, `:getOriginScale()`, `:getColor()`, and `:isVisible()` on `vanilla_model.*`.
+  - Returns canonical `vectors.vec3` supporting vector arithmetic (`+`, `-`, `*`) and component access (`.x`, `.y`, `.z`).
+- **Safe Item Proxy & Vector Swizzling**:
+  - Added `player:getHeldItem(hand)`, `player:getItem(slot)`, `player:getEquipmentItem(slot)`, `player:isLoaded()`, and alias `user = player`.
+  - Added safe item proxy fallback (`id = "minecraft:air"`) preventing nil dereferences when querying item IDs.
+  - Enhanced string metatable for string item representations in `item_render` so `.id`, `:getId()`, and equality comparisons (`item == "minecraft:..."` and `item.id == "minecraft:..."`) both succeed simultaneously.
+- **Bone Pivot & Hierarchy Introspection**:
+  - Added `getPivot()`, `getOriginPivot()`, `setPivot()`, and `getOriginRot()` on `models.<model>.<part>` proxies.
+  - Added `part:getName()`, `part:getParent()`, and `part:getChildren()` aliases.
+  - Added `animation:getName()` on animation proxies.
+
+- **อัปเดต v2.18.1: เพิ่มความสมบูรณ์ Figura 100% (รองรับ Multi-Listener Events Bus, ฟิสิกส์ผม/กระโปรงหลายชิ้น, Vanilla Model API ครบถ้วน)**:
+  - **ระบบ Events Bus ไม่เขียนทับฟังก์ชันเดิม**: แก้ปัญหา `function events.tick()` และ `function events.render()` ในไลบรารีฟิสิกส์ (เช่น `swinging_physics.lua` ของตัวละคร Pink Deltarune ที่มีผมและกระโปรงกว่า 11 ชิ้น) โดนเขียนทับจนฟิสิกส์ค้างหรือตัวละครผิดรูป ตอนนี้ทุกชิ้นส่วนจะลงทะเบียนเป็น Listener อิสระและขยับพริ้วไหวพร้อมกัน 100%
+  - **รองรับ `vanilla_model` ครบทุกเมธอด**: เพิ่ม `getOriginRot()`, `getRot()`, `getPos()`, `getScale()` ฯลฯ และคืนค่าเป็น `vectors.vec3` ที่สามารถบวกลบคูณหารเวกเตอร์ได้ตามสเปกของ Figura
+  - **ระบบ Item Proxy ปลอดภัย**: เพิ่ม `player:getHeldItem()`, `player:getItem()`, `player:isLoaded()` และ `user = player` พร้อมระบบป้องกัน nil error เมื่อตรวจสอบไอเทมในมือ
+  - **รองรับ Pivot และการสืบทอดกระดูก**: เพิ่ม `getPivot()`, `setPivot()`, `getOriginRot()`, `getName()`, `getParent()`, `getChildren()` บนโมเดลพาร์ท
+
 ## Shyne Creator v2.18.0
 
 ### Zero-Friction Layer Toggles, Drag & Drop Installation, First-Person Mod Compat, Figura Library Shims & Smart Anti-Clip Physics

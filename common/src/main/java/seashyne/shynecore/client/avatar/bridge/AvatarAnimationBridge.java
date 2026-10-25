@@ -208,7 +208,7 @@ public final class AvatarAnimationBridge {
 
     public void playAnimation(String animationName, double speed, double weight, int priority, Boolean loopOverride,
                               int fadeInTicks, int fadeOutTicks, List<String> mask, boolean additive, int transitionTicks) {
-        if (animationName == null || animationName.isBlank() || state.boundEntityId() == null) return;
+        if (animationName == null || animationName.isBlank()) return;
         var definition = model != null ? model.findAnimation(animationName) : null;
         double length = definition == null || definition.lengthSeconds() <= 0 ? 2.0 : definition.lengthSeconds();
         boolean looping = loopOverride != null ? loopOverride : definition == null || definition.looping();

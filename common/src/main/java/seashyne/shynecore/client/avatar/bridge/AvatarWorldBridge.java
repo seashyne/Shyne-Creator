@@ -44,9 +44,19 @@ public final class AvatarWorldBridge {
     public static void register(Globals globals, AvatarState state) {
         globals.set("_shyne_read", new VarArgFunction() {
             @Override public Varargs invoke(Varargs args) {
-                Minecraft client = Minecraft.getInstance();
-                var player = client.player;
+                Minecraft client = null;
+                try {
+                    client = Minecraft.getInstance();
+                } catch (Throwable ignored) {}
                 String key = args.arg(1).optjstring("");
+                if (client == null) return LuaValue.NIL;
+                Player player = null;
+                if (state != null && state.boundEntityId() != null && client.level != null) {
+                    player = client.level.getPlayerByUUID(state.boundEntityId());
+                }
+                if (player == null) {
+                    player = client.player;
+                }
                 if ("client.singleplayer".equals(key)) return LuaValue.valueOf(client.hasSingleplayerServer());
                 if ("world.loaded".equals(key)) return LuaValue.valueOf(client.level != null);
                 if ("settings.powers_enabled".equals(key)) return LuaValue.valueOf(seashyne.shynecore.client.config.ShyneClientSettings.avatarPowersEnabled);
@@ -140,8 +150,11 @@ public final class AvatarWorldBridge {
                 if (!seashyne.shynecore.client.config.ShyneClientSettings.avatarPowersEnabled) {
                     return LuaValue.FALSE;
                 }
-                Minecraft client = Minecraft.getInstance();
-                if (client.player == null) return LuaValue.FALSE;
+                Minecraft client = null;
+                try {
+                    client = Minecraft.getInstance();
+                } catch (Throwable ignored) {}
+                if (client == null || client.player == null) return LuaValue.FALSE;
                 double vx = args.arg(1).optdouble(client.player.getDeltaMovement().x);
                 double vy = args.arg(2).optdouble(client.player.getDeltaMovement().y);
                 double vz = args.arg(3).optdouble(client.player.getDeltaMovement().z);

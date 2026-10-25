@@ -94,6 +94,18 @@ public final class AvatarModelBridge {
                     return switch (key) {
                         case "visible" -> LuaValue.valueOf(defaultPartVisibility(requestedPath));
                         case "scale" -> vec3(1, 1, 1);
+                        case "pivot" -> {
+                            if (model != null) {
+                                String resolved = state.resolvePath(requestedPath);
+                                String name = resolved.substring(resolved.lastIndexOf('.') + 1);
+                                var bone = model.findBoneByName(name);
+                                if (bone == null) bone = model.findBoneByName(requestedPath);
+                                if (bone != null) {
+                                    yield vec3(bone.pivotX(), bone.pivotY(), bone.pivotZ());
+                                }
+                            }
+                            yield vec3(0, 0, 0);
+                        }
                         default -> vec3(0, 0, 0);
                     };
                 }
@@ -102,6 +114,18 @@ public final class AvatarModelBridge {
                     case "position" -> vec3(part.posX(), part.posY(), part.posZ());
                     case "rotation" -> vec3(part.rotX(), part.rotY(), part.rotZ());
                     case "scale" -> vec3(part.scaleX(), part.scaleY(), part.scaleZ());
+                    case "pivot" -> {
+                        if (model != null) {
+                            String resolved = state.resolvePath(requestedPath);
+                            String name = resolved.substring(resolved.lastIndexOf('.') + 1);
+                            var bone = model.findBoneByName(name);
+                            if (bone == null) bone = model.findBoneByName(requestedPath);
+                            if (bone != null) {
+                                yield vec3(bone.pivotX(), bone.pivotY(), bone.pivotZ());
+                            }
+                        }
+                        yield vec3(0, 0, 0);
+                    }
                     case "rotation_add" -> vec3(part.additiveRotX(), part.additiveRotY(), part.additiveRotZ());
                     case "color" -> vec3(((part.colorArgb() >> 16) & 255) / 255.0, ((part.colorArgb() >> 8) & 255) / 255.0, (part.colorArgb() & 255) / 255.0);
                     case "opacity" -> LuaValue.valueOf(((part.colorArgb() >>> 24) & 255) / 255.0);

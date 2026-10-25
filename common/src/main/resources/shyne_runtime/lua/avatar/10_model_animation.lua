@@ -27,6 +27,12 @@ local function part_proxy(path)
       if key == "rotate" or key == "rotation" or key == "rot" then return function(self, x, y, z) if x == nil then return vector.new(_avatar_part_read(path, "rotation")) end x, y, z = coordinates(x, y, z, 0); _avatar_part_mutate(path, "rot", x, y, z) return self end end
       if key == "setRot" then return function(self, x, y, z) return self:rot(x, y, z) end end
       if key == "getRot" or key == "getTrueRot" or key == "getAnimRot" then return function(self) return self:rot() end end
+      if key == "getOriginRot" then
+        return function(self)
+          local r = _avatar_part_read(path, "rotation")
+          return (vectors and vectors.vec3) and vectors.vec3(r) or vector.new(r)
+        end
+      end
 
       -- Additive Rotation (Layered on top of Blockbench animations / Figura setOffsetRot)
       if key == "rot_add" or key == "add_rot" or key == "add_rotation" or key == "setOffsetRot" then
@@ -66,6 +72,31 @@ local function part_proxy(path)
           return (vectors and vectors.vec3) and vectors.vec3(p) or vector.new(p)
         end
       end
+      if key == "getOriginPos" then
+        return function(self)
+          local p = _avatar_part_read(path, "position")
+          return (vectors and vectors.vec3) and vectors.vec3(p) or vector.new(p)
+        end
+      end
+
+      -- Pivot (Figura Parity)
+      if key == "pivot" or key == "setPivot" or key == "setOffsetPivot" then
+        return function(self, x, y, z)
+          if x == nil then
+            local p = _avatar_part_read(path, "pivot")
+            return (vectors and vectors.vec3) and vectors.vec3(p) or vector.new(p)
+          end
+          x, y, z = coordinates(x, y, z, 0)
+          _avatar_part_mutate(path, "pivot", x, y, z)
+          return self
+        end
+      end
+      if key == "getPivot" or key == "getOriginPivot" or key == "getOffsetPivot" then
+        return function(self)
+          local p = _avatar_part_read(path, "pivot")
+          return (vectors and vectors.vec3) and vectors.vec3(p) or vector.new(p)
+        end
+      end
 
       -- Scale
       if key == "scale" or key == "setOffsetScale" then
@@ -81,6 +112,12 @@ local function part_proxy(path)
       end
       if key == "setScale" then return function(self, x, y, z) return self:scale(x, y, z) end end
       if key == "getScale" or key == "getTrueScale" or key == "getOffsetScale" then
+        return function(self)
+          local s = _avatar_part_read(path, "scale")
+          return (vectors and vectors.vec3) and vectors.vec3(s) or vector.new(s)
+        end
+      end
+      if key == "getOriginScale" then
         return function(self)
           local s = _avatar_part_read(path, "scale")
           return (vectors and vectors.vec3) and vectors.vec3(s) or vector.new(s)
@@ -192,11 +229,11 @@ local function part_proxy(path)
       end
 
       -- Metadata & Hierarchy
-      if key == "name" then return function() return _avatar_part_info(path).name end end
-      if key == "role" then return function() return _avatar_part_info(path).role end end
-      if key == "tags" then return function() return _avatar_part_info(path).tags or {} end end
-      if key == "parent" then return function() local p = _avatar_part_info(path).parent; return p == "" and nil or model.part(p) end end
-      if key == "children" then return function() local result = {}; for _, p in ipairs(_avatar_part_info(path).children or {}) do table.insert(result, model.part(p)) end return result end end
+      if key == "name" or key == "getName" then return function() return _avatar_part_info(path).name end end
+      if key == "role" or key == "getRole" then return function() return _avatar_part_info(path).role end end
+      if key == "tags" or key == "getTags" then return function() return _avatar_part_info(path).tags or {} end end
+      if key == "parent" or key == "getParent" then return function() local p = _avatar_part_info(path).parent; return p == "" and nil or model.part(p) end end
+      if key == "children" or key == "getChildren" then return function() local result = {}; for _, p in ipairs(_avatar_part_info(path).children or {}) do table.insert(result, model.part(p)) end return result end end
 
       -- World Space Transforms
       if key == "world_position" then return function() return vector.new(_avatar_part_info(path).world_position) end end
@@ -353,6 +390,7 @@ end
 
 function animation_proxy:set_playing(value) if value then return self:play() end return self:stop() end
 function animation_proxy:setPlaying(value) return self:set_playing(value) end
+function animation_proxy:getName() return self.name end
 function animation_proxy:getLength() return self:length() end
 function animation_proxy:speed(value) self.speed_value = math.max(0.01, math.min(8, value or 1)); return self end
 function animation_proxy:setSpeed(value) return self:speed(value) end

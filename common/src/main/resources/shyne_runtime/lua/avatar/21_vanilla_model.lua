@@ -154,14 +154,52 @@ local function vanilla_proxy(part)
   function proxy:hide() return self:visible(false) end
   function proxy:setVisible(value) return self:visible(value) end
   function proxy:getVisible() return self:visible() end
+  function proxy:isVisible() return self:visible() end
+  function proxy:getTrueVisible() return self:visible() end
+
   function proxy:position()
     local t = _avatar_vanilla_transform and _avatar_vanilla_transform(self.part)
-    return vector.new(t and t.position or { x = 0, y = 0, z = 0 })
+    local pos = t and t.position or { x = 0, y = 0, z = 0 }
+    if vectors and vectors.vec3 then
+      return vectors.vec3(pos.x or pos[1] or 0, pos.y or pos[2] or 0, pos.z or pos[3] or 0)
+    end
+    return vector.new(pos)
   end
+  function proxy:getPos() return self:position() end
+  function proxy:getOriginPos() return self:position() end
+  function proxy:getOffsetPos() return self:position() end
+  function proxy:setOffsetPos(pos) return self end
+  function proxy:setPos(pos) return self end
+
   function proxy:rotation()
     local t = _avatar_vanilla_transform and _avatar_vanilla_transform(self.part)
-    return vector.new(t and t.rotation or { x = 0, y = 0, z = 0 })
+    local rot = t and t.rotation or { x = 0, y = 0, z = 0 }
+    if vectors and vectors.vec3 then
+      return vectors.vec3(rot.x or rot[1] or 0, rot.y or rot[2] or 0, rot.z or rot[3] or 0)
+    end
+    return vector.new(rot)
   end
+  function proxy:getRot() return self:rotation() end
+  function proxy:getOriginRot() return self:rotation() end
+  function proxy:getOffsetRot() return self:rotation() end
+  function proxy:setOffsetRot(rot) return self end
+  function proxy:setRot(rot) return self end
+
+  function proxy:getScale()
+    if vectors and vectors.vec3 then return vectors.vec3(1, 1, 1) end
+    return vector.new(1, 1, 1)
+  end
+  function proxy:getOriginScale() return self:getScale() end
+  function proxy:getOffsetScale() return self:getScale() end
+  function proxy:setScale(s) return self end
+  function proxy:setOffsetScale(s) return self end
+
+  function proxy:getColor()
+    if vectors and vectors.vec3 then return vectors.vec3(1, 1, 1) end
+    return vector.new(1, 1, 1)
+  end
+  function proxy:setColor(c) return self end
+
   return proxy
 end
 
