@@ -130,9 +130,27 @@ public final class ShyneLibraryManager {
         return null;
     }
 
+    /**
+     * Resolves well-known Figura community library names (case-insensitively, with or without
+     * folder prefixes such as {@code libs.GSAnimBlend}) to Shyne's built-in compatibility shims.
+     */
+    public static String resolveBuiltInCompatResource(String module) {
+        if (module == null || module.isBlank()) return null;
+        String normalized = module.trim().replace('/', '.').toLowerCase(Locale.ROOT);
+        int lastDot = normalized.lastIndexOf('.');
+        String leaf = lastDot >= 0 ? normalized.substring(lastDot + 1) : normalized;
+        return switch (leaf) {
+            case "gsanimblend", "gs_anim_blend" -> "/shyne_runtime/lua/compat/gsanimblend.lua";
+            case "ezanims", "ezanim", "ez_anims" -> "/shyne_runtime/lua/compat/ezanims.lua";
+            case "kattarmor", "katt_armor" -> "/shyne_runtime/lua/compat/kattarmor.lua";
+            default -> null;
+        };
+    }
+
     /** Reports whether a module is bundled in the mod JAR. */
     public static boolean isBuiltIn(String module) {
         if (!isValidModuleName(module)) return false;
+        if (resolveBuiltInCompatResource(module) != null) return true;
         String path1 = "/shyne_runtime/lua/" + modulePath(module) + ".lua";
         String path2 = module.startsWith("lib.") ? null : "/shyne_runtime/lua/lib/" + module + ".lua";
         if (ShyneLibraryManager.class.getResource(path1) != null) return true;

@@ -220,12 +220,16 @@ public final class ClientLuaAvatarRuntime {
                     }
                 }
 
-                // 2. Try bundled classpath resources (checks /shyne_runtime/lua/<mod>.lua and /shyne_runtime/lua/lib/<mod>.lua)
+                // 2. Try bundled classpath resources (checks /shyne_runtime/lua/<mod>.lua, /shyne_runtime/lua/lib/<mod>.lua, and Figura compat shims)
                 String path1 = "/shyne_runtime/lua/" + module.replace('.', '/') + ".lua";
                 String path2 = module.startsWith("lib.") ? null : "/shyne_runtime/lua/lib/" + module + ".lua";
+                String compatPath = ShyneLibraryManager.resolveBuiltInCompatResource(module);
                 InputStream stream = getClass().getResourceAsStream(path1);
                 if (stream == null && path2 != null) {
                     stream = getClass().getResourceAsStream(path2);
+                }
+                if (stream == null && compatPath != null) {
+                    stream = getClass().getResourceAsStream(compatPath);
                 }
                 if (stream != null) {
                     try (InputStream bundled = stream) {

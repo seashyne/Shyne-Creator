@@ -352,18 +352,47 @@ function animation_proxy:on_complete(callback)
 end
 
 function animation_proxy:set_playing(value) if value then return self:play() end return self:stop() end
+function animation_proxy:setPlaying(value) return self:set_playing(value) end
+function animation_proxy:getLength() return self:length() end
 function animation_proxy:speed(value) self.speed_value = math.max(0.01, math.min(8, value or 1)); return self end
 function animation_proxy:setSpeed(value) return self:speed(value) end
+function animation_proxy:getSpeed() return self.speed_value or 1 end
 function animation_proxy:weight(value) self.weight_value = math.max(0, math.min(1, value or 1)); return self end
 function animation_proxy:setBlend(value) return self:weight(value) end
+function animation_proxy:getBlend() return self.weight_value or 1 end
+function animation_proxy:getWeight() return self.weight_value or 1 end
 function animation_proxy:priority(value) self.priority_value = math.floor(value or 0); return self end
 function animation_proxy:setPriority(value) return self:priority(value) end
-function animation_proxy:loop(value) self.loop_value = value and true or false; return self end
+function animation_proxy:getPriority() return self.priority_value or 0 end
+function animation_proxy:loop(value)
+  if type(value) == "string" then
+    local upper = string.upper(value)
+    self.loop_value = (upper == "LOOP" or upper == "TRUE")
+  else
+    self.loop_value = value and true or false
+  end
+  return self
+end
 function animation_proxy:setLoop(value) return self:loop(value) end
+function animation_proxy:getLoop() return self.loop_value or false end
 function animation_proxy:fade_in(ticks) self.fade_in_value = math.max(0, math.floor(ticks or 0)); return self end
 function animation_proxy:fade_out(ticks) self.fade_out_value = math.max(0, math.floor(ticks or 0)); return self end
 function animation_proxy:transition(ticks) self.transition_value = math.max(0, math.floor(ticks or 0)); return self end
-function animation_proxy:setBlendTime(ticks) return self:transition(ticks) end
+function animation_proxy:blendTime(in_ticks, out_ticks)
+  local fade_in = math.max(0, math.floor(tonumber(in_ticks) or 0))
+  local fade_out = out_ticks ~= nil and math.max(0, math.floor(tonumber(out_ticks) or 0)) or fade_in
+  self.fade_in_value = fade_in
+  self.fade_out_value = fade_out
+  self.transition_value = fade_in
+  return self
+end
+function animation_proxy:setBlendTime(in_ticks, out_ticks) return self:blendTime(in_ticks, out_ticks) end
+function animation_proxy:getBlendTime() return self.fade_in_value or self.transition_value or 0, self.fade_out_value or self.transition_value or 0 end
+function animation_proxy:blendCurve(fn) self._blend_curve = fn; return self end
+function animation_proxy:setBlendCurve(fn) return self:blendCurve(fn) end
+function animation_proxy:getBlendCurve() return self._blend_curve end
+function animation_proxy:onBlend(fn) self._on_blend = fn; return self end
+function animation_proxy:setOnBlend(fn) return self:onBlend(fn) end
 function animation_proxy:mask(parts)
   if type(parts) == "string" then parts = { parts } end
   if type(parts) ~= "table" then error("animation mask requires a part-name table", 2) end
@@ -372,8 +401,13 @@ function animation_proxy:mask(parts)
 end
 function animation_proxy:additive(value) self.additive_value = value == nil or bool(value); return self end
 
+local _animation_proxies = {}
 function model.animation.get(name)
-  return setmetatable({ name = tostring(name), speed_value = 1, weight_value = 1, priority_value = 0, mask_value = {} }, animation_proxy)
+  name = tostring(name)
+  if not _animation_proxies[name] then
+    _animation_proxies[name] = setmetatable({ name = name, speed_value = 1, weight_value = 1, priority_value = 0, mask_value = {} }, animation_proxy)
+  end
+  return _animation_proxies[name]
 end
 
 function model.animation.exists(name) return _avatar_anim_exists(tostring(name or "")) end
@@ -457,7 +491,8 @@ local animations_methods = {
 
 animations = setmetatable(animations_methods, {
   __index = function(t, key)
-    if animations_methods[key] then return animations_methods[key] end
+    local direct = rawget(t, key)
+    if direct ~= nil then return direct end
     local anim_name = tostring(key)
     if model.animation.exists(anim_name) then return model.animation.get(anim_name) end
     return setmetatable({}, {

@@ -18,7 +18,9 @@ import seashyne.shynecore.client.avatar.AvatarCatalogEntry;
 import seashyne.shynecore.client.avatar.AvatarLoader;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
 import seashyne.shynecore.client.avatar.AvatarState;
+import seashyne.shynecore.client.avatar.AvatarUserLayerPrefs;
 import seashyne.shynecore.client.avatar.ShyneStatusClient;
+import seashyne.shynecore.client.avatar.importer.AvatarDragDropInstaller;
 import seashyne.shynecore.client.config.ShyneClientSettings;
 import seashyne.shynecore.client.render.AvatarIconTextures;
 
@@ -272,10 +274,28 @@ public class AvatarManagerScreen extends Screen {
             if (this.minecraft != null) this.minecraft.gui.setScreen(new AvatarImporterScreen(this));
         }).tooltip(Tooltip.create(Component.literal("Import and convert Figura & Blockbench avatars with Creator Attribution"))).build();
 
+        Button wingsToggle = Button.builder(layerToggleLabel("Wings", active, AvatarUserLayerPrefs.LAYER_ELYTRA), btn -> {
+            AvatarState current = AvatarRuntime.active();
+            if (current != null) {
+                AvatarUserLayerPrefs.toggleLayer(current, AvatarUserLayerPrefs.LAYER_ELYTRA);
+                openPage(currentPage);
+            }
+        }).tooltip(Tooltip.create(Component.literal("Toggle Vanilla Elytra / Wings visibility for this avatar"))).build();
+        wingsToggle.active = active != null;
+
+        Button armorToggle = Button.builder(layerToggleLabel("Armor", active, AvatarUserLayerPrefs.LAYER_ARMOR), btn -> {
+            AvatarState current = AvatarRuntime.active();
+            if (current != null) {
+                AvatarUserLayerPrefs.toggleLayer(current, AvatarUserLayerPrefs.LAYER_ARMOR);
+                openPage(currentPage);
+            }
+        }).tooltip(Tooltip.create(Component.literal("Toggle Vanilla Armor visibility for this avatar"))).build();
+        armorToggle.active = active != null;
+
         if (moreOpen) {
             placeRow(innerX, footerTop - 24, innerWidth, active == null
                 ? List.of(importer, permissions, mask, validate, verify, cloudSettings)
-                : List.of(importer, permissions, mask, validate, folder, verify, cloudSettings));
+                : List.of(importer, permissions, mask, wingsToggle, armorToggle, validate, folder, verify, cloudSettings));
         }
 
         if (compactFooter) {
@@ -545,6 +565,12 @@ public class AvatarManagerScreen extends Screen {
             .append(Component.literal(enabled ? " ON" : " OFF").withStyle(enabled ? ChatFormatting.AQUA : ChatFormatting.GRAY));
     }
 
+    private Component layerToggleLabel(String label, AvatarState state, String layerKey) {
+        boolean visible = AvatarUserLayerPrefs.isLayerVisible(state, layerKey);
+        return Component.literal(label)
+            .append(Component.literal(visible ? " ON" : " OFF").withStyle(visible ? ChatFormatting.AQUA : ChatFormatting.GRAY));
+    }
+
     private void activate(AvatarCatalogEntry entry) {
         // The selected catalog entry already contains its validated root path, so
         // activation does not need another full directory scan on the UI thread.
@@ -611,6 +637,14 @@ public class AvatarManagerScreen extends Screen {
             return true;
         }
         return super.keyPressed(event);
+    }
+
+    @Override
+    public void onFilesDrop(List<Path> files) {
+        AvatarDragDropInstaller.DropResult result = AvatarDragDropInstaller.installDroppedFiles(files);
+        if (result.installedCount() > 0) {
+            rescanCatalog();
+        }
     }
 
     @Override

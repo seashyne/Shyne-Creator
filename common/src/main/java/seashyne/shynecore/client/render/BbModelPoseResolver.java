@@ -266,6 +266,10 @@ private static float blendAngle(float from, float to, float weight) {
         if (part != null && part.visibilityControlled()) {
             return part.visible();
         }
+        if (seashyne.shynecore.client.compat.FirstPersonModelCompat.shouldMaskHeadForEntity(context, entityId)
+            && seashyne.shynecore.client.compat.FirstPersonModelCompat.isHeadOrDescendantBone(model, bone, part)) {
+            return false;
+        }
         if (isMouthOpenName(bone.name())) {
             return seashyne.shynecore.voice.ShyneMicrophoneState.isSpeaking(entityId);
         }

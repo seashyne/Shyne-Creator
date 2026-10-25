@@ -1,3 +1,30 @@
+## Shyne Creator v2.18.0
+
+### Zero-Friction Layer Toggles, Drag & Drop Installation, First-Person Mod Compat, Figura Library Shims & Smart Anti-Clip Physics
+
+- **One-Click Vanilla Layer Toggles (`Wing / Elytra`, `Armor`, `Cape`)**:
+  - Added instant per-avatar layer visibility toggles directly inside `AvatarOutfitScreen` (below the 3D preview) and `AvatarManagerScreen` (`More` toolbar) via `AvatarUserLayerPrefs`.
+  - Players can hide clipping Elytra wings, vanilla armor, or capes with a single click—no Lua scripting required—persisted automatically per avatar in `config/shyne-creator/avatar_layer_prefs.json` and synchronized across multiplayer.
+- **Native OS Drag-and-Drop Installation (`AvatarDragDropInstaller`)**:
+  - Dragging `.zip` archives, avatar folders, or standalone `.bbmodel` files directly into `AvatarManagerScreen` or `AvatarImporterScreen` automatically extracts, generates `avatar.json` manifests, and refreshes the catalog.
+  - Dragging `.png` texture files into `AvatarOutfitScreen` installs new outfits immediately.
+- **First-Person Body & Camera Mod Compatibility (`FirstPersonModelCompat`)**:
+  - Added automatic detection and compatibility for **FirstPersonModel (by tr7zw)**, **Real Camera**, and **Shoulder Surfing Reloaded**.
+  - Automatically masks head, hat, helmet, and hair child bones when rendering the local player's body in first-person camera mode so hair bangs and eyeballs never obstruct the player's view.
+- **Built-in Figura Community Library Shims (`GSAnimBlend`, `EZAnims`, `KattArmor`)**:
+  - Bundled native compatibility shims for `GSAnimBlend`, `EZAnims`, and `KattArmor` in `/shyne_runtime/lua/compat/` and wired automatic resolution into `require(...)` and `ShyneLibraryManager`.
+  - Fixed `animations.<model>.<anim>` metatable lookup and instance caching in `10_model_animation.lua`.
+- **Smart Anti-Clipping Spring Physics (`AvatarPhysicsController`)**:
+  - Added `crouching` and `riding` signals so `tail` and `cloth`/`skirt`/`cape` bones automatically lift upward when sneaking or sitting in boats/mounts, preventing ground penetration.
+  - Added forward pitch clamping on `cape`/`cloth` and `hair` presets when moving backward to prevent chest/torso clipping.
+
+- **อัปเดตใหญ่ v2.18.0: ปุ่มปิดปีก/เกราะในคลิกเดียว, ลากไฟล์ลงเกม, รองรับม็อด First-Person, ไลบรารี Figura ในตัว และฟิสิกส์กันทะลุพื้น**:
+  - **ปุ่มเปิด/ปิด ปีก (Wing / Elytra), เกราะ (Armor), ผ้าคลุม (Cape) ในคลิกเดียว**: กดสลับซ่อน/แสดงได้ทันทีจากหน้า Outfits และ Avatar Manager โดยไม่ต้องแก้โค้ด Lua พร้อมจำค่าแยกตามแต่ละ Avatar และซิงก์ออนไลน์อัตโนมัติ
+  - **ลากไฟล์วางลงหน้าจอเกม (Drag & Drop)**: รองรับการลากไฟล์ `.zip`, โฟลเดอร์ Avatar, หรือไฟล์ `.bbmodel` เดี่ยวๆ วางลงหน้าจอเมนูเพื่อติดตั้งและสร้าง `avatar.json` ให้อัตโนมัติ รวมถึงลากไฟล์ `.png` วางในหน้า Outfits เพื่อเพิ่มชุดใหม่
+  - **รองรับม็อดมุมมองบุคคลที่หนึ่งเห็นลำตัว (`FirstPersonModelCompat`)**: ทำงานร่วมกับ FirstPersonModel (tr7zw), Real Camera และ Shoulder Surfing โดยซ่อนเฉพาะส่วนหัวและเส้นผมไม่ให้บังกล้องอัตโนมัติ
+  - **ฝังไลบรารี Figura ยอดนิยมในตัว (`GSAnimBlend`, `EZAnims`, `KattArmor`)**: โมเดลที่เรียกใช้ `require("GSAnimBlend")`, `require("EZAnims")`, หรือ `require("KattArmor")` โหลดผ่านและทำงานได้ทันที
+  - **ฟิสิกส์อัจฉริยะป้องกันหางและผ้าคลุมทะลุพื้น/ลำตัว**: ยกหางและชายกระโปรงขึ้นอัตโนมัติเมื่อกดย่อตัว (Sneak) หรือนั่งเรือ/ม้า และป้องกันผ้าคลุมสะบัดทะลุหน้าอกเวลาเดินถอยหลัง
+
 ## Shyne Creator v2.17.0
 
 ### Flashback & Replay Mod Compatibility Bridge, Replay Entity Binding & Animation Sync

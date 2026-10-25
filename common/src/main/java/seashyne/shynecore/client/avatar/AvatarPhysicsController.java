@@ -125,7 +125,8 @@ public final class AvatarPhysicsController {
                 * parameters.windStrength * (0.35 + Math.min(1.0, horizontalSpeed * 4.0));
             if (signals.inFluid) wind *= 0.35;
             Motion motion = target(node.preset, forwardAcceleration, rightAcceleration,
-                verticalAcceleration, yawDelta, pitchDelta, landing, wind);
+                verticalAcceleration, yawDelta, pitchDelta, landing, wind,
+                signals.crouching, signals.riding, node.depth);
 
             double depthGain = 1.0 + Math.min(5, node.depth) * 0.12;
             double targetX = motion.x * depthGain;
@@ -153,6 +154,13 @@ public final class AvatarPhysicsController {
                     node.velocityX = vx; node.velocityY = vy; node.velocityZ = vz;
                 });
 
+            applyAntiClipClamp(node.preset, signals.crouching, signals.riding,
+                node.angleX, node.angleY, node.angleZ, node.velocityX, node.velocityY, node.velocityZ,
+                (ax, ay, az, vx, vy, vz) -> {
+                    node.angleX = ax; node.angleY = ay; node.angleZ = az;
+                    node.velocityX = vx; node.velocityY = vy; node.velocityZ = vz;
+                });
+
             changed |= state.getPart(node.path).setAdditiveRotationLayer(
                 ROTATION_LAYER, (float) node.angleX, (float) node.angleY, (float) node.angleZ
             );
@@ -165,7 +173,8 @@ public final class AvatarPhysicsController {
                 * config.wind * (0.35 + Math.min(1.0, horizontalSpeed * 4.0));
             if (signals.inFluid) wind *= 0.35;
             Motion motion = target(config.preset, forwardAcceleration, rightAcceleration,
-                verticalAcceleration, yawDelta, pitchDelta, landing, wind);
+                verticalAcceleration, yawDelta, pitchDelta, landing, wind,
+                signals.crouching, signals.riding, 0);
 
             double targetX = motion.x + config.gravity * 100.0;
             double targetY = motion.y;
@@ -193,6 +202,13 @@ public final class AvatarPhysicsController {
 
             constrainCone(node.angleX, node.angleY, node.angleZ, node.velocityX, node.velocityY, node.velocityZ,
                 config.maxAngle, (ax, ay, az, vx, vy, vz) -> {
+                    node.angleX = ax; node.angleY = ay; node.angleZ = az;
+                    node.velocityX = vx; node.velocityY = vy; node.velocityZ = vz;
+                });
+
+            applyAntiClipClamp(config.preset, signals.crouching, signals.riding,
+                node.angleX, node.angleY, node.angleZ, node.velocityX, node.velocityY, node.velocityZ,
+                (ax, ay, az, vx, vy, vz) -> {
                     node.angleX = ax; node.angleY = ay; node.angleZ = az;
                     node.velocityX = vx; node.velocityY = vy; node.velocityZ = vz;
                 });
@@ -272,8 +288,16 @@ public final class AvatarPhysicsController {
         double yawDelta,
         double pitchDelta,
         double landing,
-        double wind
+        double wind,
+        boolean crouching,
+        boolean riding,
+        int depth
     ) {
+        double crouchTailLift = (crouching ? -24.0 : 0.0) + (riding ? -30.0 : 0.0);
+        if (depth > 0) crouchTailLift *= 0.35;
+        double crouchClothLift = (crouching ? -14.0 : 0.0) + (riding ? -20.0 : 0.0);
+        if (depth > 0) crouchClothLift *= 0.35;
+
         return switch (preset != null ? preset : "") {
             case "bunny_ears", "ears" -> new Motion(
                 -forwardAcceleration * 150.0 + verticalAcceleration * 80.0 + pitchDelta * 0.32 + landing + wind,
@@ -281,7 +305,7 @@ public final class AvatarPhysicsController {
                 -rightAcceleration * 115.0 - yawDelta * 0.16 + wind * 0.12
             );
             case "tail" -> new Motion(
-                forwardAcceleration * 90.0 - verticalAcceleration * 75.0 - landing * 0.45 + wind * 0.35,
+                forwardAcceleration * 90.0 - verticalAcceleration * 75.0 - landing * 0.45 + wind * 0.35 + crouchTailLift,
                 -rightAcceleration * 150.0 - yawDelta * 0.68 + wind,
                 -rightAcceleration * 35.0
             );
@@ -291,7 +315,7 @@ public final class AvatarPhysicsController {
                 -rightAcceleration * 90.0 - yawDelta * 0.20 + wind * 0.18
             );
             case "cloth", "cape", "skirt" -> new Motion(
-                -forwardAcceleration * 155.0 + verticalAcceleration * 95.0 + landing * 0.80 + wind,
+                -forwardAcceleration * 155.0 + verticalAcceleration * 95.0 + landing * 0.80 + wind + crouchClothLift,
                 -yawDelta * 0.14,
                 -rightAcceleration * 130.0 - yawDelta * 0.30 + wind * 0.25
             );
@@ -323,6 +347,42 @@ public final class AvatarPhysicsController {
         out.accept(ax * scale, ay * scale, az * scale, vx * 0.55, vy * 0.55, vz * 0.55);
     }
 
+    /**
+     * Prevents tails from clipping into the ground when crouching/sitting and prevents
+     * capes/back-hair from swinging through the player's torso when moving backward.
+     * ป้องกันหางจมทะลุพื้นเวลาย่อตัว/นั่ง และป้องกันผม/ผ้าคลุมสะบัดทะลุลำตัวเวลาเดินถอยหลัง.
+     */
+    private static void applyAntiClipClamp(
+        String preset,
+        boolean crouching,
+        boolean riding,
+        double ax, double ay, double az,
+        double vx, double vy, double vz,
+        ConeOutput out
+    ) {
+        String p = preset == null ? "" : preset;
+        if ("tail".equals(p) && (crouching || riding)) {
+            double maxDownward = riding ? -8.0 : -4.0;
+            if (ax > maxDownward) {
+                ax = maxDownward;
+                if (vx > 0.0) vx *= 0.25;
+            }
+        } else if ("cape".equals(p) || "cloth".equals(p)) {
+            // Prevent cape from swinging forward through the torso
+            if (ax < -8.0) {
+                ax = -8.0;
+                if (vx < 0.0) vx *= 0.25;
+            }
+        } else if ("hair".equals(p)) {
+            // Limit forward swing into the chest/neck
+            if (ax < -14.0) {
+                ax = -14.0;
+                if (vx < 0.0) vx *= 0.30;
+            }
+        }
+        out.accept(ax, ay, az, vx, vy, vz);
+    }
+
     private static double stablePhase(String value) {
         return (value == null ? 0 : value.hashCode() & 0xFFFF) / 65535.0 * Math.PI * 2.0;
     }
@@ -346,8 +406,23 @@ public final class AvatarPhysicsController {
         double pitchDegrees,
         boolean onGround,
         boolean inFluid,
-        long worldTime
+        long worldTime,
+        boolean crouching,
+        boolean riding
     ) {
+        public Signals(
+            double velocityX,
+            double velocityY,
+            double velocityZ,
+            double bodyYawDegrees,
+            double pitchDegrees,
+            boolean onGround,
+            boolean inFluid,
+            long worldTime
+        ) {
+            this(velocityX, velocityY, velocityZ, bodyYawDegrees, pitchDegrees, onGround, inFluid, worldTime, false, false);
+        }
+
         public Signals {
             velocityX = finite(velocityX);
             velocityY = finite(velocityY);

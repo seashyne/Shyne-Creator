@@ -1,5 +1,6 @@
 package seashyne.shynecore.client.ui;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -13,12 +14,15 @@ import seashyne.shynecore.client.avatar.AvatarOutfit;
 import seashyne.shynecore.client.avatar.AvatarOutfitLoader;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
 import seashyne.shynecore.client.avatar.AvatarState;
+import seashyne.shynecore.client.avatar.AvatarUserLayerPrefs;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public final class AvatarOutfitScreen extends Screen {
     private static final int ROW_HEIGHT = 34;
@@ -94,8 +98,50 @@ public final class AvatarOutfitScreen extends Screen {
         totalPages = Math.max(1, (rows.size() + pageSize - 1) / pageSize);
         currentPage = Math.min(requestedPage, totalPages - 1);
 
+        addQuickLayerToggles(active);
         addRows();
         addFooter(innerX, innerWidth);
+    }
+
+    private void addQuickLayerToggles(AvatarState active) {
+        int toggleY = footerY - 26;
+        int gap = 2;
+        int btnW = Math.max(28, (previewWidth - gap * 2) / 3);
+        Button elytraBtn = Button.builder(layerLabel("Wing", AvatarUserLayerPrefs.isLayerVisible(active, AvatarUserLayerPrefs.LAYER_ELYTRA)), ignored -> {
+            AvatarState current = AvatarRuntime.active();
+            if (current != null) {
+                AvatarUserLayerPrefs.toggleLayer(current, AvatarUserLayerPrefs.LAYER_ELYTRA);
+                rebuildWidgets();
+            }
+        }).tooltip(Tooltip.create(Component.literal("Toggle Vanilla Elytra / Wings visibility (saved per avatar)")))
+            .bounds(previewX, toggleY, btnW, 18).build();
+
+        Button armorBtn = Button.builder(layerLabel("Armor", AvatarUserLayerPrefs.isLayerVisible(active, AvatarUserLayerPrefs.LAYER_ARMOR)), ignored -> {
+            AvatarState current = AvatarRuntime.active();
+            if (current != null) {
+                AvatarUserLayerPrefs.toggleLayer(current, AvatarUserLayerPrefs.LAYER_ARMOR);
+                rebuildWidgets();
+            }
+        }).tooltip(Tooltip.create(Component.literal("Toggle Vanilla Armor visibility (saved per avatar)")))
+            .bounds(previewX + btnW + gap, toggleY, btnW, 18).build();
+
+        Button capeBtn = Button.builder(layerLabel("Cape", AvatarUserLayerPrefs.isLayerVisible(active, AvatarUserLayerPrefs.LAYER_CAPE)), ignored -> {
+            AvatarState current = AvatarRuntime.active();
+            if (current != null) {
+                AvatarUserLayerPrefs.toggleLayer(current, AvatarUserLayerPrefs.LAYER_CAPE);
+                rebuildWidgets();
+            }
+        }).tooltip(Tooltip.create(Component.literal("Toggle Vanilla Cape visibility (saved per avatar)")))
+            .bounds(previewX + (btnW + gap) * 2, toggleY, previewWidth - (btnW + gap) * 2, 18).build();
+
+        addRenderableWidget(elytraBtn);
+        addRenderableWidget(armorBtn);
+        addRenderableWidget(capeBtn);
+    }
+
+    private Component layerLabel(String shortName, boolean visible) {
+        return Component.literal(shortName + (visible ? " ✓" : " ✗"))
+            .withStyle(visible ? ChatFormatting.AQUA : ChatFormatting.GRAY);
     }
 
     private void addRows() {
@@ -148,7 +194,7 @@ public final class AvatarOutfitScreen extends Screen {
         graphics.text(this.font, Component.translatable("screen.shyne_core.outfits.title"), panelX + 16, panelY + 14, 0xFFF4F7FC, true);
         graphics.text(this.font, Component.translatable("screen.shyne_core.outfits.subtitle", Math.max(0, rows.size() - 1)), panelX + 16, panelY + 31, TEXT_MUTED, false);
 
-        int previewBottom = footerY - 8;
+        int previewBottom = footerY - 30;
         graphics.fill(previewX, contentTop, previewX + previewWidth, previewBottom, 0xFF101B2C);
         graphics.outline(previewX, contentTop, previewWidth, previewBottom - contentTop, 0x8841D7E5);
         UiViewportBounds preview = UiViewportBounds.clip(
@@ -241,6 +287,28 @@ public final class AvatarOutfitScreen extends Screen {
             }
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+
+    @Override
+    public void onFilesDrop(List<Path> files) {
+        AvatarState active = AvatarRuntime.active();
+        if (active == null || files == null || files.isEmpty()) return;
+        Path folder = AvatarOutfitLoader.outfitDir(active.rootDir());
+        int copied = 0;
+        try {
+            Files.createDirectories(folder);
+            for (Path p : files) {
+                if (p != null && Files.isRegularFile(p) && p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".png")) {
+                    Files.copy(p, folder.resolve(p.getFileName().toString()), StandardCopyOption.REPLACE_EXISTING);
+                    copied++;
+                }
+            }
+        } catch (IOException e) {
+            ShyneCore.LOGGER.warn("[AvatarOutfit] Failed to import dropped outfit PNG: {}", e.getMessage());
+        }
+        if (copied > 0) {
+            refreshOutfits();
+        }
     }
 
     @Override

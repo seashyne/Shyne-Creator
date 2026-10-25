@@ -12,6 +12,7 @@ import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.avatar.AvatarCatalogEntry;
 import seashyne.shynecore.client.avatar.AvatarLoader;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
+import seashyne.shynecore.client.avatar.importer.AvatarDragDropInstaller;
 import seashyne.shynecore.client.avatar.importer.AvatarImportReport;
 import seashyne.shynecore.client.avatar.importer.AvatarImporter;
 
@@ -325,6 +326,23 @@ public final class AvatarImporterScreen extends Screen {
         }
 
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public void onFilesDrop(List<Path> files) {
+        AvatarDragDropInstaller.DropResult result = AvatarDragDropInstaller.installDroppedFiles(files);
+        statusMessage = result.message();
+        statusColor = result.installedCount() > 0 ? OK : WARNING;
+        if (result.installedCount() > 0) {
+            AvatarRuntime.refreshCatalogAsync(true).whenComplete((entries, err) -> {
+                if (minecraft != null) {
+                    minecraft.execute(() -> {
+                        loadCandidates();
+                        selectCandidate(0);
+                    });
+                }
+            });
+        }
     }
 
     @Override

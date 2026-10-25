@@ -202,14 +202,14 @@ if (-not $FabricOnly) {
 
 $jarsToUpload = @()
 
-if ($FabricJar -and -not $NeoForgeOnly) {
-    $jarsToUpload += @{ Loader = "Fabric"; File = $FabricJar; GameVersionName = "Fabric" }
-    Write-Ok "Fabric JAR:   $($FabricJar.Name) ($([math]::Round($FabricJar.Length / 1MB, 2)) MB)"
-}
-
 if ($NeoForgeJar -and -not $FabricOnly) {
     $jarsToUpload += @{ Loader = "NeoForge"; File = $NeoForgeJar; GameVersionName = "NeoForge" }
     Write-Ok "NeoForge JAR: $($NeoForgeJar.Name) ($([math]::Round($NeoForgeJar.Length / 1MB, 2)) MB)"
+}
+
+if ($FabricJar -and -not $NeoForgeOnly) {
+    $jarsToUpload += @{ Loader = "Fabric"; File = $FabricJar; GameVersionName = "Fabric" }
+    Write-Ok "Fabric JAR:   $($FabricJar.Name) ($([math]::Round($FabricJar.Length / 1MB, 2)) MB)"
 }
 
 if ($jarsToUpload.Count -eq 0) {

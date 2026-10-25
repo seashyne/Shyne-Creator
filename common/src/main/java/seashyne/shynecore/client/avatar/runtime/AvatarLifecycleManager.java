@@ -237,6 +237,7 @@ public final class AvatarLifecycleManager {
             AvatarOutfitManager.applyOutfit(active, activeModel, AvatarOutfitLoader.DEFAULT_OUTFIT, true);
         }
         if (script != null) script.entityInit(client);
+        seashyne.shynecore.client.avatar.AvatarUserLayerPrefs.applySavedPrefs(active);
         syncAttachment(client);
         active.markSnapshotDirty();
         if (manifest.onlineSync()) snapshotSync.sendLocalSnapshot(client, active, manifest, activeModel, networkSender);
@@ -348,7 +349,9 @@ public final class AvatarLifecycleManager {
         physicsController.tick(new AvatarPhysicsController.Signals(
             velocity.x, velocity.y, velocity.z,
             player.yBodyRot, player.getXRot(), player.onGround(), player.isInWater(),
-            player.level().getGameTime()
+            player.level().getGameTime(),
+            player.isCrouching(),
+            player.getVehicle() != null
         ), active);
     }
 
