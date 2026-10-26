@@ -25,11 +25,7 @@ public abstract class AvatarNameplateMixin {
         String text = local ? AvatarRuntime.localNameplateText() : ClientAnimationState.getRemoteNameplateText(entity.getUUID());
         if (!text.isBlank()) {
             AvatarNameplateStyle style = local ? AvatarRuntime.localNameplateStyle() : ClientAnimationState.getRemoteNameplateStyle(entity.getUUID());
-            String label = style.badge().isBlank() ? text : style.badge() + " " + text;
-            cir.setReturnValue(Component.literal(label).withStyle(current -> current
-                .withColor(style.colorArgb() & 0x00FFFFFF)
-                .withBold(style.bold())
-                .withItalic(style.italic())));
+            cir.setReturnValue(formatNameplateComponent(text, style));
         }
     }
 
@@ -40,11 +36,40 @@ public abstract class AvatarNameplateMixin {
         if (client.player == null) return;
         boolean local = (client.player != null && client.player.getUUID().equals(entity.getUUID()))
             || seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayer(entity);
-        Boolean visible = local
-            ? Boolean.valueOf(AvatarRuntime.localNameplateVisible())
-            : ClientAnimationState.getRemoteNameplateVisible(entity.getUUID());
-        if (Boolean.FALSE.equals(visible)) {
-            cir.setReturnValue(false);
+        if (local) {
+            boolean visible = AvatarRuntime.localNameplateVisible();
+            if (!visible) {
+                cir.setReturnValue(false);
+            } else if (!client.options.getCameraType().isFirstPerson() && !AvatarRuntime.localNameplateText().isBlank()) {
+                cir.setReturnValue(true);
+            }
+        } else {
+            Boolean visible = ClientAnimationState.getRemoteNameplateVisible(entity.getUUID());
+            if (Boolean.FALSE.equals(visible)) {
+                cir.setReturnValue(false);
+            }
         }
+    }
+
+    private static Component formatNameplateComponent(String text, AvatarNameplateStyle style) {
+        if (text == null || text.isBlank()) return Component.empty();
+        String trimmed = text.trim();
+        boolean isJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+        Component textComp;
+        if (isJson) {
+            textComp = seashyne.shynecore.client.avatar.bridge.AvatarSystemBridge.parseJsonComponent(trimmed);
+        } else {
+            textComp = Component.literal(text);
+        }
+        if (style != null && !style.badge().isBlank()) {
+            textComp = Component.literal(style.badge() + " ").append(textComp);
+        }
+        if (!isJson && style != null) {
+            textComp = textComp.copy().withStyle(current -> current
+                .withColor(style.colorArgb() & 0x00FFFFFF)
+                .withBold(style.bold())
+                .withItalic(style.italic()));
+        }
+        return textComp;
     }
 }

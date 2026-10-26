@@ -6,6 +6,7 @@ import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.lib.OneArgFunction;
+import org.luaj.vm2.lib.ZeroArgFunction;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.avatar.bridge.*;
 import seashyne.shynecore.client.profiler.AvatarProfiler;
@@ -29,8 +30,8 @@ import static seashyne.shynecore.client.avatar.bridge.AvatarBridgeHelper.vec3;
  * loads bootstrap standard libraries, and dispatches engine events.
  */
 public final class ClientLuaAvatarRuntime {
-    private static final int LOAD_INSTRUCTION_LIMIT = 1_000_000;
-    private static final int EVENT_INSTRUCTION_LIMIT = 200_000;
+    private static final int LOAD_INSTRUCTION_LIMIT = 5_000_000;
+    private static final int EVENT_INSTRUCTION_LIMIT = 2_000_000;
     private static final List<String> AVATAR_BOOTSTRAP_MODULES = List.of(
         "/shyne_runtime/lua/avatar/00_core.lua",
         "/shyne_runtime/lua/avatar/01_shyne_core.lua",
@@ -170,6 +171,15 @@ public final class ClientLuaAvatarRuntime {
         dataBridge.register(globals);
         channelBridge.register(globals);
         AvatarAudioStreamBridge.register(globals, state);
+        globals.set("_shyne_reset_event_budget", new ZeroArgFunction() {
+            @Override
+            public LuaValue call() {
+                if (instructionBudget != null) {
+                    instructionBudget.reset(EVENT_INSTRUCTION_LIMIT);
+                }
+                return LuaValue.NIL;
+            }
+        });
     }
 
     private void loadBootstrap() throws IOException {

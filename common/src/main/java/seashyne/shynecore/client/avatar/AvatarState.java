@@ -195,9 +195,10 @@ public final class AvatarState {
     }
     public float shadowRadius() { return shadowRadius; }
     public void setShadowRadius(float value) { this.shadowRadius = value; markSnapshotDirty(); }
+    public static final int MAX_NAMEPLATE_TEXT_LENGTH = 32768;
     public String nameplateText() { return nameplateText; }
     public boolean nameplateVisible() { return nameplateVisible; }
-    public void setNameplate(String text, boolean visible) { nameplateText = text == null ? "" : text.substring(0, Math.min(128, text.length())); nameplateVisible = visible; markSnapshotDirty(); }
+    public void setNameplate(String text, boolean visible) { nameplateText = text == null ? "" : text.substring(0, Math.min(MAX_NAMEPLATE_TEXT_LENGTH, text.length())); nameplateVisible = visible; markSnapshotDirty(); }
     public AvatarNameplateStyle nameplateStyle() { return nameplateStyle; }
     public void setNameplateStyle(String badge, int colorArgb, boolean bold, boolean italic) {
         nameplateStyle = new AvatarNameplateStyle(badge, colorArgb, bold, italic);
@@ -228,7 +229,7 @@ public final class AvatarState {
     public boolean chatNameplateVisible() { return chatNameplateVisible; }
     public AvatarNameplateStyle chatNameplateStyle() { return chatNameplateStyle; }
     public void setChatNameplate(String text, boolean visible) {
-        chatNameplateText = text == null ? "" : text.substring(0, Math.min(128, text.length()));
+        chatNameplateText = text == null ? "" : text.substring(0, Math.min(MAX_NAMEPLATE_TEXT_LENGTH, text.length()));
         chatNameplateVisible = visible;
         markSnapshotDirty();
     }
@@ -240,7 +241,7 @@ public final class AvatarState {
     public boolean listNameplateVisible() { return listNameplateVisible; }
     public AvatarNameplateStyle listNameplateStyle() { return listNameplateStyle; }
     public void setListNameplate(String text, boolean visible) {
-        listNameplateText = text == null ? "" : text.substring(0, Math.min(128, text.length()));
+        listNameplateText = text == null ? "" : text.substring(0, Math.min(MAX_NAMEPLATE_TEXT_LENGTH, text.length()));
         listNameplateVisible = visible;
         markSnapshotDirty();
     }

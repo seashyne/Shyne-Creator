@@ -86,6 +86,7 @@ function events._dispatch(name, payload)
 
   -- 1. Internal handlers (run before avatar scripts)
   for index, callback in ipairs(events._internal[name] or {}) do
+    if _shyne_reset_event_budget then _shyne_reset_event_budget() end
     local ok, message = pcall(callback, payload)
     if not ok then _shyne_report_error("event_internal", name .. "#" .. tostring(index), tostring(message)) end
   end
@@ -94,6 +95,7 @@ function events._dispatch(name, payload)
   local handlers = {}
   for index, callback in ipairs(events._handlers[name] or {}) do handlers[index] = callback end
   for index, callback in ipairs(handlers) do
+    if _shyne_reset_event_budget then _shyne_reset_event_budget() end
     local ok, message = pcall(callback, payload)
     if not ok then _shyne_report_error("event", name .. "#" .. tostring(index), tostring(message)) end
   end
@@ -101,6 +103,7 @@ function events._dispatch(name, payload)
   -- 3. Direct function handlers (e.g. function events.tick() or function events.render())
   local direct = rawget(events, name)
   if type(direct) == "function" then
+    if _shyne_reset_event_budget then _shyne_reset_event_budget() end
     local ok, message = pcall(direct, payload and (payload.delta or payload.partial_tick) or payload)
     if not ok then _shyne_report_error("event_direct", name, tostring(message)) end
   end

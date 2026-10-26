@@ -28,6 +28,8 @@ local str_mt = (debug and debug.getmetatable and debug.getmetatable("")) or getm
 if str_mt then
   local old_str_index = str_mt.__index
   str_mt.__index = function(s, k)
+    local str_func = string[k]
+    if str_func ~= nil then return str_func end
     if k == "id" then return s end
     if k == "getId" then return function() return s end end
     if k == "name" then return s end
@@ -40,7 +42,7 @@ if str_mt then
     if k == "getTag" then return function() return {} end end
     if type(old_str_index) == "function" then return old_str_index(s, k) end
     if type(old_str_index) == "table" then return old_str_index[k] end
-    return string[k]
+    return nil
   end
 end
 

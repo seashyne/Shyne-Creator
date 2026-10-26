@@ -74,12 +74,21 @@ public final class ShyneTabStatusIcons {
             var listStyle = seashyne.shynecore.client.avatar.AvatarRuntime.localListNameplateStyle();
             boolean visible = seashyne.shynecore.client.avatar.AvatarRuntime.localListNameplateVisible();
             if (visible && (!listText.isBlank() || !listStyle.badge().isBlank())) {
-                String label = listText.isBlank() ? playerName.getString() : listText;
-                if (!listStyle.badge().isBlank()) label = listStyle.badge() + " " + label;
-                styledName = Component.literal(label).withStyle(s -> s
-                    .withColor(listStyle.colorArgb() & 0x00FFFFFF)
-                    .withBold(listStyle.bold())
-                    .withItalic(listStyle.italic()));
+                String trimmed = listText.trim();
+                boolean isJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+                if (isJson) {
+                    styledName = seashyne.shynecore.client.avatar.bridge.AvatarSystemBridge.parseJsonComponent(trimmed);
+                    if (!listStyle.badge().isBlank()) {
+                        styledName = Component.literal(listStyle.badge() + " ").append(styledName);
+                    }
+                } else {
+                    String label = listText.isBlank() ? playerName.getString() : listText;
+                    if (!listStyle.badge().isBlank()) label = listStyle.badge() + " " + label;
+                    styledName = Component.literal(label).withStyle(s -> s
+                        .withColor(listStyle.colorArgb() & 0x00FFFFFF)
+                        .withBold(listStyle.bold())
+                        .withItalic(listStyle.italic()));
+                }
             }
         } else {
             var remoteStyle = ClientAnimationState.getRemoteNameplateStyle(playerId);

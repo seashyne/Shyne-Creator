@@ -214,13 +214,16 @@ public final class AvatarAnimationBridge {
         boolean looping = loopOverride != null ? loopOverride : definition == null || definition.looping();
         int transition = Math.max(0, Math.min(1200, transitionTicks));
         long now = System.currentTimeMillis();
+        String key = animationName.toLowerCase(Locale.ROOT);
+        AvatarAnimationLayer existing = state.animationLayers().get(key);
+        long startedAt = (existing != null && existing.stoppingAtMillis() == 0L && !existing.finished(now)) ? existing.startedAtMillis() : now;
         if (transition > 0 && !additive) {
-            state.animationLayers().replaceAll((key, layer) ->
-                !layer.additive() && layer.priority() == priority && !key.equals(animationName.toLowerCase(Locale.ROOT))
+            state.animationLayers().replaceAll((k, layer) ->
+                !layer.additive() && layer.priority() == priority && !k.equals(key)
                     ? layer.requestStop(now, transition) : layer);
         }
-        state.animationLayers().put(animationName.toLowerCase(Locale.ROOT), new AvatarAnimationLayer(
-            animationName, now, length, looping,
+        state.animationLayers().put(key, new AvatarAnimationLayer(
+            animationName, startedAt, length, looping,
             Math.max(0.01, Math.min(8.0, speed)), Math.max(0.0, Math.min(1.0, weight)),
             Math.max(-1000, Math.min(1000, priority)),
             Math.max(transition, Math.max(0, Math.min(1200, fadeInTicks))),

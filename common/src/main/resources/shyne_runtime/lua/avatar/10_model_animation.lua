@@ -388,7 +388,15 @@ function animation_proxy:on_complete(callback)
   return self:on_keyframe(self:length(), callback)
 end
 
-function animation_proxy:set_playing(value) if value then return self:play() end return self:stop() end
+function animation_proxy:set_playing(value)
+  if value then
+    if not self:isPlaying() then return self:play() end
+    if self:isPaused() then return self:resume() end
+    return self
+  end
+  if self:isPlaying() then return self:stop() end
+  return self
+end
 function animation_proxy:setPlaying(value) return self:set_playing(value) end
 function animation_proxy:getName() return self.name end
 function animation_proxy:getLength() return self:length() end

@@ -1,3 +1,27 @@
+## Shyne Creator v2.18.2
+
+### In-Air Loop Animation Continuity, Overhead JSON Gradient Nameplates & Per-Listener Instruction Budgeting
+
+- **In-Air Animation Timeline Continuity (`setPlaying(true)`)**:
+  - Fixed animation timeline reset issue where calling `animations.<model>.<anim>:setPlaying(true)` every tick (as in in-air spinning ball animations) continuously reset playback to time `0.0s`.
+  - Animation layers now preserve active playback timelines (`startedAtMillis`) across tick calls, allowing in-air spin/roll loop animations to play and rotate smoothly without resetting.
+- **Overhead JSON Gradient Nameplates & Third-Person Rendering**:
+  - Added native JSON Text Component parsing in `AvatarNameplateMixin` and `ShyneTabStatusIcons`. Figura gradient libraries like `NameplateGradients.lua` setting raw JSON arrays (`[{"text":...}]`) are now parsed into full Minecraft formatted text components with gradients, colors, bold, and styling.
+  - Expanded nameplate text length limits from 128 characters to 32,768 characters in `AvatarState`, preventing JSON payload truncation.
+  - Enabled third-person overhead nameplate rendering for local players (`client.player`) in `shouldShowName` so players can see their own custom nameplates in F5.
+- **Dedicated Per-Listener Instruction Budgeting (`2,000,000` instructions)**:
+  - Raised global event instruction limit from 200,000 to 2,000,000 instructions and load limit to 5,000,000 instructions.
+  - Added `_shyne_reset_event_budget` in `events._dispatch` so each individual listener (e.g. 11+ physics part callbacks, nameplate gradient ticks, and main script ticks) receives a fresh dedicated instruction budget. Heavy mathematical physics loops can no longer starve or abort subsequent script listeners with `Lua instruction limit exceeded`.
+  - Optimized string metatable index lookup to return native `string.*` library methods in a single instruction.
+- **Automatic Figura Permission Parity**:
+  - Automatically grants default safe permissions (`NAMEPLATE`, `CHAT_NAMEPLATE`, `TAB_LIST_NAMEPLATE`, `DATA_STORAGE`, `NETWORK`, `PARTICLE`, `SOUND`, `CAMERA`) to imported Figura avatars without requiring explicit permissions in `avatar.json`.
+
+- **อัปเดต v2.18.2: แอนิเมชันหมุนกลางอากาศต่อเนื่อง, ป้ายชื่อไล่สี JSON เต็มรูปแบบในมุมมอง F5, และระบบ Instruction Budget แยกราย Listener**:
+  - **แอนิเมชันหมุนกลางอากาศไม่รีเซ็ตเวลา**: แก้ปัญหา `setPlaying(true)` ในลูป tick รีเซ็ตเวลาแอนิเมชันกลับไปที่ 0 ทุกเฟรม ทำให้แอนิเมชันหมุนตัวกลางอากาศ (เช่น ท่าแปลงเป็นลูกบอลหมุนของ Pink Deltarune) หมุนต่อเนื่องครบ 360 องศาอย่างราบรื่น
+  - **ป้ายชื่อไล่สี JSON Gradient & แสดงในมุมมองบุคคลที่ 3 (F5)**: รองรับการแปลง JSON Text Component ของ `NameplateGradients.lua` เป็นฟอนต์สีและตัวหนาใน Minecraft โดยตรง ขยายขีดจำกัดความยาวป้ายชื่อเป็น 32,768 ตัวอักษร และเปิดให้ผู้เล่นมองเห็นป้ายชื่อของตัวเองได้เมื่อกด F5
+  - **ระบบ Instruction Budget แยกอิสระ 2,000,000 คำสั่ง**: ป้องกันข้อผิดพลาด `Lua instruction limit exceeded` โดยรีเซ็ตโควตาคำสั่งแยกให้กับแต่ละ Listener (ฟิสิกส์ 11 ชิ้น, สคริปต์หลัก, ป้ายชื่อ) ทำให้ทุกสคริปต์ทำงานร่วมกันได้อย่างสมบูรณ์แบบโดยไม่แย่งโควตากัน
+  - **ให้สิทธิ์ป้ายชื่อและเน็ตเวิร์กอวตาร Figura อัตโนมัติ**: อวตารที่นำเข้าจาก Figura จะได้รับสิทธิ์ Nameplate, Chat, List, Particles และ Network Pings โดยไม่ต้องแก้ไข `avatar.json` เอง
+
 ## Shyne Creator v2.18.1
 
 ### 100% Figura Avatar Parity: Multi-Listener Events Bus, Vanilla Model Vectors, Swizzle, Safe Item Proxy & Bone Pivots

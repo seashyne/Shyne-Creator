@@ -514,7 +514,7 @@ public final class AvatarSystemBridge {
         return runtimeErrors;
     }
 
-    private static Component parseJsonComponent(String json) {
+    public static Component parseJsonComponent(String json) {
         if (json == null || json.isBlank()) {
             return Component.empty();
         }

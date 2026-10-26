@@ -152,7 +152,11 @@ public final class AvatarLoader {
         if ("figura".equalsIgnoreCase(standard)) {
             importSource = "figura";
         }
-        boolean isFigura = "figura".equalsIgnoreCase(importSource);
+        boolean isFigura = "figura".equalsIgnoreCase(importSource)
+            || (json.has("authors") && !json.has("standard"))
+            || (json.has("ignoredFiles") && !json.has("standard"))
+            || (json.has("autoAnimate") && !json.has("standard"))
+            || (json.has("color") && !json.has("standard"));
         if (!isFigura && !ShyneApiStandard.isSupportedStandard(standard)) {
             throw new IOException("unsupported Shyne Avatar standard: " + standard + "; expected 2.0 (Shyne Standard)");
         }
@@ -195,6 +199,11 @@ public final class AvatarLoader {
             declaredPermissions.add(AvatarPermission.PARTICLE);
             declaredPermissions.add(AvatarPermission.SOUND);
             declaredPermissions.add(AvatarPermission.CAMERA);
+            declaredPermissions.add(AvatarPermission.NAMEPLATE);
+            declaredPermissions.add(AvatarPermission.CHAT_NAMEPLATE);
+            declaredPermissions.add(AvatarPermission.TAB_LIST_NAMEPLATE);
+            declaredPermissions.add(AvatarPermission.DATA_STORAGE);
+            declaredPermissions.add(AvatarPermission.NETWORK);
         }
         if (json.has("api_version")) {
             throw new IOException("avatar api_version is not supported by Shyne Standard; use api \"standard\"");

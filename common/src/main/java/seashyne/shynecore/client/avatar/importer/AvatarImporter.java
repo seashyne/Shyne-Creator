@@ -595,7 +595,11 @@ public final class AvatarImporter {
                 Set<String> apis = report.scriptStats().detectedApis();
                 if (apis.contains("particles")) perms.add(AvatarPermission.PARTICLE.id());
                 if (apis.contains("sounds")) perms.add(AvatarPermission.SOUND.id());
-                if (apis.contains("nameplate")) perms.add(AvatarPermission.NAMEPLATE.id());
+                if (apis.contains("nameplate")) {
+                    perms.add(AvatarPermission.NAMEPLATE.id());
+                    perms.add(AvatarPermission.CHAT_NAMEPLATE.id());
+                    perms.add(AvatarPermission.TAB_LIST_NAMEPLATE.id());
+                }
                 if (apis.contains("data")) perms.add(AvatarPermission.DATA_STORAGE.id());
                 if (apis.contains("network") || apis.contains("pings")) perms.add(AvatarPermission.NETWORK.id());
                 if (apis.contains("camera")) perms.add(AvatarPermission.CAMERA.id());
