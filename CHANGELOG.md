@@ -1,3 +1,21 @@
+## Shyne Creator v2.18.4
+
+### First-Person View Shadow Suppression & First-Person Arm Orientation Alignment
+
+- **Local Player First-Person Shadow Suppression**:
+  - In `PlayerModelMaskMixin`, when the local player is viewed from the first-person camera (`Minecraft.getInstance().options.getCameraType().isFirstPerson()`), `state.shadowRadius` is strictly set to `0.0f`.
+  - Completely eliminates circular entity shadow blobs casting onto snow and ground directly in front of the camera in first-person view, matching Figura and vanilla behavior.
+  - Normal entity shadows remain fully intact in third-person view (`F5`).
+- **First-Person Arm Alignment & Hand Motion Correction**:
+  - Corrected `BbModelFirstPersonRenderer` model-to-world transform calculation for first-person avatar arm rendering.
+  - Replaced non-uniform axis scaling with coordinate-preserving `scale(1/16).rotateZ(180)`, ensuring Blockbench positive X correctly maps to Minecraft negative X for right-handed orientation.
+  - Preserves positive determinant, preventing triangle winding inversion and backface culling bugs.
+  - The first-person arm now swings naturally with vanilla hand swing, bobbing, and equip animations without distortion or backwards twisting.
+
+- **อัปเดต v2.18.4: แก้ไขบัคเงาในมุมมองที่ 1 และปรับการขยับ/การวางตำแหน่งแขนในมุมมองบุคคลที่หนึ่งให้ถูกต้อง**:
+  - **ลบเงากลมใต้ตัวในมุมมองบุคคลที่หนึ่ง (First-Person Shadow Fix)**: แก้ไข `PlayerModelMaskMixin` ให้ตั้งค่า `state.shadowRadius = 0.0f` สำหรับผู้เล่นในเครื่องเมื่ออยู่ในมุมมองบุคคลที่หนึ่ง ทำให้ไม่มีเงาดำตกกระทบพื้นหิมะตรงหน้าเวลาก้มมองพื้นอีกต่อไป โดยในมุมมองบุคคลที่สาม (F5) เงานังคงแสดงผลได้ตามปกติ
+  - **แก้ไขการขยับและตำแหน่งมือ/แขนในมุมมองบุคคลที่หนึ่ง (First-Person Arm & Hand Motion)**: แก้ไขคณิตศาสตร์ Matrix Transform ของ `BbModelFirstPersonRenderer` ให้หมุนแกน Z 180 องศาตามหลักพิกัด Blockbench to Minecraft แทนการสเกลแกนเดียว ทำให้แขนไม่บิดกลับด้าน ไม่ผิดมุม และแกว่งตามแอนิเมชันตี/สวิงมือของไมน์คราฟต์ได้อย่างเป็นธรรมชาติ 100%
+
 ## Shyne Creator v2.18.3
 
 ### Independent Animation Channel Blending, Figura Special Parts Suppression & First-Person Nametag Culling

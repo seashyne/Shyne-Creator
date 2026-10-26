@@ -59,7 +59,11 @@ public abstract class PlayerModelMaskMixin {
         AvatarState active = AvatarRuntime.active();
         boolean isLocal = (active != null && entity.getUUID().equals(active.boundEntityId()))
             || seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayer(entity);
-        if (isLocal && active != null && active.shadowRadius() >= 0f) {
+        net.minecraft.client.Minecraft client = net.minecraft.client.Minecraft.getInstance();
+        boolean isFirstPerson = client != null && client.options != null && client.options.getCameraType().isFirstPerson();
+        if (isLocal && isFirstPerson) {
+            state.shadowRadius = 0.0f;
+        } else if (isLocal && active != null && active.shadowRadius() >= 0f) {
             state.shadowRadius = active.shadowRadius();
         }
     }

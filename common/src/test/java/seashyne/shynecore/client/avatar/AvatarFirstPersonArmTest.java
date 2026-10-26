@@ -19,4 +19,16 @@ final class AvatarFirstPersonArmTest {
         state.setFirstPersonArm(true);
         assertTrue(state.firstPersonArm());
     }
+
+    @Test
+    void avatarStateSupportsShadowRadiusConfiguration() {
+        AvatarState state = new AvatarState("test", "test", Path.of("test"), false, Set.of(), Set.of());
+        assertEquals(-1.0f, state.shadowRadius());
+
+        state.setShadowRadius(0.5f);
+        assertEquals(0.5f, state.shadowRadius());
+
+        state.setShadowRadius(0.0f);
+        assertEquals(0.0f, state.shadowRadius());
+    }
 }

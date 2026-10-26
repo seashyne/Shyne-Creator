@@ -103,12 +103,11 @@ private static void renderFirstPersonModel(
     float vanillaPivotX = arm == HumanoidArm.RIGHT ? -5.0f : 5.0f;
     float vanillaPivotY = 2.0f;
     float vanillaPivotZ = 0.0f;
-    float vanillaRotZ = 0.0f;
 
     Matrix4f modelToWorld = new Matrix4f(pose.pose())
         .translate(vanillaPivotX / 16.0f, vanillaPivotY / 16.0f, vanillaPivotZ / 16.0f)
-        .rotateZ(vanillaRotZ)
-        .scale(1.0f / 16.0f, -1.0f / 16.0f, 1.0f / 16.0f)
+        .scale(1.0f / 16.0f, 1.0f / 16.0f, 1.0f / 16.0f)
+        .rotateZ((float) Math.PI)
         .translate(-armBone.pivotX(), -armBone.pivotY(), -armBone.pivotZ());
 
     for (BbCubeDefinition cube : model.cubes()) {
