@@ -280,6 +280,26 @@ private static float blendAngle(float from, float to, float weight) {
         BbBoneDefinition skullBone,
         UUID entityId
     ) {
+        boolean isPortrait = portraitBone != null && BbModelRigResolver.belongsToBone(model, bone.uuid(), portraitBone.uuid());
+        boolean isSkull = skullBone != null && BbModelRigResolver.belongsToBone(model, bone.uuid(), skullBone.uuid());
+
+        boolean isGuiPreview = AvatarRenderContext.PORTRAIT.equals(context)
+            || AvatarRenderContext.isGuiOrPreview(context);
+        if (isGuiPreview && portraitBone == null) {
+            // When rendering in GUI preview/paperdoll without a dedicated portrait bust,
+            // ensure first-person dedicated bones are suppressed, and the main root bones
+            // remain visible even if a previous first-person world frame marked them invisible in Lua.
+            if (BbModelRigResolver.isFirstPersonSubtreeRoot(bone)) {
+                return false;
+            }
+            if ((bone.parentUuid() == null || bone.name().equalsIgnoreCase("root") || bone.name().equalsIgnoreCase("model"))
+                && !isPortrait && !isSkull) {
+                if (bone.name().equalsIgnoreCase("root") || bone.name().equalsIgnoreCase("model")) {
+                    return true;
+                }
+            }
+        }
+
         if (part != null && part.visibilityControlled()) {
             return part.visible();
         }
@@ -296,9 +316,6 @@ private static float blendAngle(float from, float to, float weight) {
         if (!bone.visible()) {
             return false;
         }
-
-        boolean isPortrait = portraitBone != null && BbModelRigResolver.belongsToBone(model, bone.uuid(), portraitBone.uuid());
-        boolean isSkull = skullBone != null && BbModelRigResolver.belongsToBone(model, bone.uuid(), skullBone.uuid());
 
         if (AvatarRenderContext.PORTRAIT.equals(context)) {
             if (portraitBone != null) {

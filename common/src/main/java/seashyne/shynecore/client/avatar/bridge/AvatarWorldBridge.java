@@ -117,7 +117,10 @@ public final class AvatarWorldBridge {
                     case "world.biome" -> LuaValue.valueOf(player.level().getBiome(BlockPos.containing(args.arg(2).optdouble(player.getX()), args.arg(3).optdouble(player.getY()), args.arg(4).optdouble(player.getZ())))
                         .unwrapKey().map(entryKey -> entryKey.identifier().toString()).orElse(""));
                     case "client.paused" -> LuaValue.valueOf(client.isPaused());
-                    case "client.first_person" -> LuaValue.valueOf(client.options.getCameraType().isFirstPerson());
+                    case "client.first_person" -> LuaValue.valueOf(
+                        !seashyne.shynecore.client.render.AvatarRenderContext.isGuiOrPreview(seashyne.shynecore.client.render.AvatarRenderContext.current(client))
+                        && client.options.getCameraType().isFirstPerson()
+                    );
                     case "client.camera_is_player" -> LuaValue.valueOf(client.getCameraEntity() == player);
                     case "client.camera_backwards" -> LuaValue.valueOf(client.options.getCameraType().isMirrored());
                     case "client.chat_open" -> LuaValue.valueOf(client.gui != null && client.gui.screen() instanceof net.minecraft.client.gui.screens.ChatScreen);

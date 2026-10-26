@@ -1,3 +1,22 @@
+## Shyne Creator v2.18.5
+
+### GUI & Preview Character Visibility, Initial Part State Sync & Natural Player Shadow Restoration
+
+- **GUI & Preview Character Visibility Fix**:
+  - In `AvatarWorldBridge`, `client.first_person` now checks `!AvatarRenderContext.isGuiOrPreview(...)`, ensuring `renderer:isFirstPerson()` returns `false` inside menus, screens, and paperdoll portrait render passes.
+  - In `BbModelPoseResolver`, root bones are protected from first-person visibility suppression while in GUI / preview contexts, preventing the character model from disappearing in the inventory screen (`E`) or Avatar Manager preview.
+  - Dedicated first-person bones (e.g. `fpModel`) remain strictly hidden in GUI preview passes.
+- **Initial Part State Synchronization & Duplicate Part Elimination**:
+  - In `AvatarLifecycleManager.activate()`, `AvatarRuntime.renderHook()` is now invoked immediately after avatar script evaluation and `entityInit`.
+  - Chunk-level script initialization (such as `models.model.ball:setVisible(false)`) immediately syncs to `ClientAnimationState`, eliminating stray secondary parts or floating tails (e.g. `tailBall`) at the character's feet.
+- **Natural Player Entity Shadow Restoration**:
+  - Reverted forced zeroing of `state.shadowRadius` in `PlayerModelMaskMixin`. Player entity shadows now render naturally according to Minecraft settings and are only overridden when explicitly configured via `renderer:setShadowRadius(...)` in Lua.
+
+- **อัปเดต v2.18.5: แก้ไขบัคมองไม่เห็นตัวละครในพรีวิว กำจัดหางเกิน/พาร์ทซ้ำ และคืนค่าเงาตัวละครให้เป็นธรรมชาติ**:
+  - **แก้ไขตัวละครหายในหน้าต่างพรีวิว / Inventory (GUI & Preview Character Visibility)**: ปรับให้ `renderer:isFirstPerson()` คืนค่า `false` เมื่อเปิดหน้าจอ GUI ต่างๆ หรือกำลังเรนเดอร์ภาพพรีวิวตัวละคร และป้องกันไม่ให้ root model ถูกซ่อนเมื่อผู้เล่นตั้งกล้องมุมมองบุคคลที่หนึ่งไว้ ทำให้ตัวละครแสดงผลในหน้าต่าง Avatar Manager และช่องเก็บของ (`E`) ได้ครบถ้วน 100%
+  - **ซิงก์สถานะพาร์ทตั้งแต่เปิดใช้งาน (Initial Part Sync)**: เรียกซิงก์สถานะโมเดล (`renderHook`) ทันทีที่โหลดสคริปต์เสร็จ ทำให้คำสั่งปิดการแสดงผลพาร์ทเสริม (เช่น `ball:setVisible(false)`) มีผลทันที ไม่แสดงหางเกินหรือชิ้นส่วนบอลกลิ้งค้างอยู่ที่ขาอีกต่อไป
+  - **คืนค่าเงาตัวละครตามปกติ (Restore Entity Shadow)**: คืนค่าเงาตัวละครใต้เท้าให้แสดงตามปกติของเกม Minecraft และปรับขนาดเงาเฉพาะเมื่อมีคำสั่งจากสคริปต์ (`renderer:setShadowRadius`) เท่านั้น
+
 ## Shyne Creator v2.18.4
 
 ### First-Person View Shadow Suppression & First-Person Arm Orientation Alignment

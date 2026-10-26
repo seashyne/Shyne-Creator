@@ -237,6 +237,7 @@ public final class AvatarLifecycleManager {
             AvatarOutfitManager.applyOutfit(active, activeModel, AvatarOutfitLoader.DEFAULT_OUTFIT, true);
         }
         if (script != null) script.entityInit(client);
+        seashyne.shynecore.client.avatar.AvatarRuntime.renderHook();
         seashyne.shynecore.client.avatar.AvatarUserLayerPrefs.applySavedPrefs(active);
         syncAttachment(client);
         active.markSnapshotDirty();

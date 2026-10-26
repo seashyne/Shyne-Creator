@@ -85,4 +85,9 @@ public final class AvatarRenderContext {
         String normalized = normalize(context);
         return normalized.equals(RENDER) || normalized.equals(WORLD);
     }
+
+    public static boolean isGuiOrPreview(String context) {
+        String normalized = normalize(context);
+        return SHYNE_GUI.equals(normalized) || MINECRAFT_GUI.equals(normalized) || PORTRAIT.equals(normalized);
+    }
 }
