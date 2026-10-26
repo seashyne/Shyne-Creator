@@ -228,6 +228,50 @@ final class BbModelRigAndPoseTest {
         assertTrue(worldPoses.get("head_id").visible(), "Head bone must remain visible");
     }
 
+    @Test
+    void blendAnimationLayersPreservesTargetBoneTransformsWhenSubsequentLayersDoNotTouchBone() {
+        BbBoneDefinition bodyBall = new BbBoneDefinition("body_ball_id", "bodyBall", null, null, "", "", List.of(), 0, 6, 0, 0, 0, 0, 0, true, List.of());
+        seashyne.shynecore.model.BbKeyframe kf0 = new seashyne.shynecore.model.BbKeyframe(0f, new seashyne.shynecore.model.BbKeyframePoint("0", "0", "0"), new seashyne.shynecore.model.BbKeyframePoint("0", "0", "0"), "linear", null);
+        seashyne.shynecore.model.BbKeyframe kf1 = new seashyne.shynecore.model.BbKeyframe(0.5f, new seashyne.shynecore.model.BbKeyframePoint("-360", "0", "0"), new seashyne.shynecore.model.BbKeyframePoint("-360", "0", "0"), "linear", null);
+        seashyne.shynecore.model.BbBoneAnimation ballAnim = new seashyne.shynecore.model.BbBoneAnimation("body_ball_id", List.of(kf0, kf1), List.of(), List.of(), false, false);
+        seashyne.shynecore.model.BbAnimationDefinition ball = new seashyne.shynecore.model.BbAnimationDefinition("ball", 0.5, true, 1, Map.of("body_ball_id", ballAnim), List.of("body_ball_id"));
+
+        // Idle and faceReset do NOT animate bodyBall
+        seashyne.shynecore.model.BbAnimationDefinition idle = new seashyne.shynecore.model.BbAnimationDefinition("idle", 1.0, true, 0, Map.of(), List.of());
+        seashyne.shynecore.model.BbAnimationDefinition faceReset = new seashyne.shynecore.model.BbAnimationDefinition("faceReset", 1.0, true, 0, Map.of(), List.of());
+
+        BbModelDefinition model = new BbModelDefinition(
+            "ball_test", "ball_test", "ball_test", Path.of("test.bbmodel"), 1, 16, 16, "", List.of(), List.of(bodyBall), List.of(), List.of(ball, idle, faceReset)
+        );
+
+        long now = 1000L;
+        // At t = 0.25s (250ms into animation), rotation X should be -180 degrees
+        seashyne.shynecore.client.avatar.AvatarAnimationLayer layerBall = new seashyne.shynecore.client.avatar.AvatarAnimationLayer("ball", now - 250L, 0.5, true, 1.0, 1.0, 0, 0, 0, List.of(), false, 0L);
+        seashyne.shynecore.client.avatar.AvatarAnimationLayer layerIdle = new seashyne.shynecore.client.avatar.AvatarAnimationLayer("idle", now - 500L, 1.0, true, 1.0, 1.0, 0, 0, 0, List.of(), false, 0L);
+        seashyne.shynecore.client.avatar.AvatarAnimationLayer layerFace = new seashyne.shynecore.client.avatar.AvatarAnimationLayer("faceReset", now - 100L, 1.0, true, 1.0, 1.0, 0, 0, 0, List.of(), false, 0L);
+
+        BbModelAnimator.Transform result = BbModelPoseResolver.blendAnimationLayers(model, bodyBall, List.of(layerBall, layerIdle, layerFace), now, AnimationExpressionContext.EMPTY);
+        assertEquals(-180f, result.rotation().x, 1.0f, "bodyBall rotation must not be wiped out by subsequent non-animating layers");
+    }
+
+    @Test
+    void specialFiguraItemsHiddenByDefaultInStandardRender() {
+        BbBoneDefinition root = new BbBoneDefinition("root_id", "root", null, null, "", "", List.of(), 0, 0, 0, 0, 0, 0, 0, true, List.of("trident_id", "wand_id", "head_id"));
+        BbBoneDefinition head = new BbBoneDefinition("head_id", "Head", "root_id", "root_id", "head", "", List.of(), 0, 24, 0, 0, 0, 0, 0, true, List.of());
+        BbBoneDefinition trident = new BbBoneDefinition("trident_id", "Trident", "root_id", "root_id", "", "", List.of(), 0, 0, 14, -90, 0, 180, 0, true, List.of());
+        BbBoneDefinition wand = new BbBoneDefinition("wand_id", "ItemWand", "root_id", "root_id", "", "", List.of(), 0, 0, 0, 0, -180, 0, 0, true, List.of());
+
+        BbModelDefinition model = new BbModelDefinition(
+            "trident_test", "trident_test", "trident_test", Path.of("test.bbmodel"), 1, 16, 16, "", List.of(), List.of(root, head, trident, wand), List.of(), List.of()
+        );
+
+        java.util.UUID entityId = java.util.UUID.randomUUID();
+        Map<String, BbModelEntityRenderer.BonePose> worldPoses = BbModelPoseResolver.prepareAvatar(model, entityId, BbModelVanillaPose.Snapshot.EMPTY);
+        assertTrue(worldPoses.get("head_id").visible(), "Head must be visible");
+        assertFalse(worldPoses.get("trident_id").visible(), "Trident must be hidden by default");
+        assertFalse(worldPoses.get("wand_id").visible(), "ItemWand must be hidden by default");
+    }
+
     private static BbModelDefinition model(BbBoneDefinition... bones) {
         return new BbModelDefinition("test", "test", "test", Path.of("test.bbmodel"), 1, 16, 16, "", List.of(), List.of(bones), List.of(), List.of());
     }

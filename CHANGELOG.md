@@ -1,3 +1,24 @@
+## Shyne Creator v2.18.3
+
+### Independent Animation Channel Blending, Figura Special Parts Suppression & First-Person Nametag Culling
+
+- **Per-Channel Multi-Layer Animation Blending**:
+  - Resolved animation clobbering in `BbModelPoseResolver.blendAnimationLayers` where active layers that did not keyframe a bone (e.g. `idle`, `faceReset`) overwrote the transforms of bones actively animated by other layers (e.g. `bodyBall` in `ball`) back to identity rest pose (`0, 0, 0`).
+  - Animation layers now only blend the specific channels (`position`, `rotation`, `scale`) that have actual keyframes declared in `BbBoneAnimation`.
+  - Non-additive layers with full weight (`weight >= 0.999f`) apply exact sampled keyframe rotations directly, ensuring 360-degree in-air ball spin animations rotate continuously without rotation modulo cancellation or dilution.
+- **Figura Special Separate Parts Hidden by Default**:
+  - Implemented Figura parent type filtering parity for auxiliary parts in `AvatarModelHelper` and `BbModelPoseResolver`.
+  - Model bones matching special separate Figura parent types (`Trident`, `Item*`, `Arrow`, `Skull`, `Portrait`, `World`, `Hud`, `Gui`) are now hidden by default in standard world and third-person rendering passes unless explicitly toggled or made visible by script (e.g. via Action Wheel custom items toggle or held items).
+  - Fixed stray items (such as `Trident` / `ItemWand`) dragging behind the avatar's feet on ground spawn.
+- **First-Person Nametag Culling & Camera Frustum Clarity**:
+  - Explicitly suppressed local player nameplate rendering in first-person camera mode (`client.options.getCameraType().isFirstPerson()`), preventing translucent see-through nameplate text from rendering onto the terrain when looking down.
+  - Third-person (F5) overhead nameplates remain fully active and formatted with custom JSON gradients.
+
+- **อัปเดต v2.18.3: ระบบผสมเลเยอร์แอนิเมชันแยกรายกระดูก, ซ่อนชิ้นส่วนพิเศษ Figura อัตโนมัติ, และป้องกันป้ายชื่อโผล่ในมุมมองบุคคลที่หนึ่ง**:
+  - **แอนิเมชันหมุนตัวกลางอากาศทำงานสมบูรณ์ 100%**: แก้ไขปัญหาที่เลเยอร์แอนิเมชันอื่น (เช่น `idle` หรือ `faceReset`) ที่ไม่ได้มีคีย์เฟรมของลูกบอล (`bodyBall`) เข้าไปทับค่าการหมุนให้กลับเป็น 0 องศา ระบบใหม่จะตรวจสอบว่าแต่ละแอนิเมชันมีคีย์เฟรมของกระดูกนั้นหรือไม่ ทำให้ท่าหมุน 360 องศาของลูกบอลหมุนได้อย่างลื่นไหลต่อเนื่อง
+  - **ซ่อนโมเดล Trident และไอเทมพิเศษที่ติดอยู่ที่ขา**: ชิ้นส่วนโมเดลของ Figura ที่เป็นประเภทแยกเฉพาะ (`Trident`, `ItemWand`, `ItemBomb`, `Arrow` ฯลฯ) จะถูกซ่อนโดยค่าเริ่มต้นในมุมมองปกติเหมือน Figura ของแท้ จะไม่ลากอยู่กับพื้นหลังขาอีกต่อไป และจะแสดงก็ต่อเมื่อถือไอเทมหรือเปิดผ่าน Action Wheel
+  - **ตัดป้ายชื่อในมุมมองบุคคลที่หนึ่ง (First-Person)**: ป้องกันไม่ให้ป้ายชื่อโผล่ซ้อนกับพื้นทรายหรือหน้าจอเวลาผู้เล่นก้มมองพื้นในมุมมองบุคคลที่ 1 โดยป้ายชื่อไล่สียังคงแสดงผลเหนือศีรษะอย่างสวยงามเมื่อกดมุมมองบุคคลที่สาม (F5)
+
 ## Shyne Creator v2.18.2
 
 ### In-Air Loop Animation Continuity, Overhead JSON Gradient Nameplates & Per-Listener Instruction Budgeting

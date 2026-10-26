@@ -181,34 +181,51 @@ public final class BbModelPoseResolver {
     return result;
 }
 
-static BbModelAnimator.Transform blendAnimationLayers(BbModelDefinition model, BbBoneDefinition bone, List<AvatarAnimationLayer> layers, long now, AnimationExpressionContext expressionContext) {
-    Vector3f pivot = new Vector3f(bone.pivotX(), bone.pivotY(), bone.pivotZ());
-    Vector3f rotation = new Vector3f(bone.rotationX(), bone.rotationY(), bone.rotationZ());
-    Vector3f scale = new Vector3f(1, 1, 1);
-    String bonePath = model.bonePath(bone.uuid());
-    for (AvatarAnimationLayer layer : layers) {
-        if (!layer.appliesTo(bone.name(), bonePath)) continue;
-        float weight = (float) layer.effectiveWeight(now);
-        if (weight <= 0) continue;
-        BbModelAnimator.Transform sampled = BbModelAnimator.sampleBoneTransform(
-            model, layer.name(), bone.uuid(), layer.sampledStart(now), now, 0f, expressionContext, layer.looping()
-        );
-        if (layer.additive()) {
-            pivot.add(new Vector3f(sampled.pivot()).sub(bone.pivotX(), bone.pivotY(), bone.pivotZ()).mul(weight));
-            rotation.add(new Vector3f(sampled.rotation()).sub(bone.rotationX(), bone.rotationY(), bone.rotationZ()).mul(weight));
-            scale.add(new Vector3f(sampled.scale()).sub(1f, 1f, 1f).mul(weight));
-        } else {
-            pivot.lerp(sampled.pivot(), weight);
-            rotation.set(
-                blendAngle(rotation.x, sampled.rotation().x, weight),
-                blendAngle(rotation.y, sampled.rotation().y, weight),
-                blendAngle(rotation.z, sampled.rotation().z, weight)
+    static BbModelAnimator.Transform blendAnimationLayers(BbModelDefinition model, BbBoneDefinition bone, List<AvatarAnimationLayer> layers, long now, AnimationExpressionContext expressionContext) {
+        Vector3f pivot = new Vector3f(bone.pivotX(), bone.pivotY(), bone.pivotZ());
+        Vector3f rotation = new Vector3f(bone.rotationX(), bone.rotationY(), bone.rotationZ());
+        Vector3f scale = new Vector3f(1, 1, 1);
+        String bonePath = model.bonePath(bone.uuid());
+        for (AvatarAnimationLayer layer : layers) {
+            if (!layer.appliesTo(bone.name(), bonePath)) continue;
+            float weight = (float) layer.effectiveWeight(now);
+            if (weight <= 0) continue;
+            var definition = model.findAnimation(layer.name());
+            if (definition == null) continue;
+            BbBoneAnimation boneAnim = definition.boneAnimations().get(bone.uuid());
+            if (boneAnim == null) boneAnim = definition.boneAnimations().get(bone.name());
+            if (boneAnim == null) continue;
+
+            boolean hasPos = boneAnim.position() != null && !boneAnim.position().isEmpty();
+            boolean hasRot = boneAnim.rotation() != null && !boneAnim.rotation().isEmpty();
+            boolean hasScale = boneAnim.scale() != null && !boneAnim.scale().isEmpty();
+            if (!hasPos && !hasRot && !hasScale) continue;
+
+            BbModelAnimator.Transform sampled = BbModelAnimator.sampleBoneTransform(
+                model, layer.name(), bone.uuid(), layer.sampledStart(now), now, 0f, expressionContext, layer.looping()
             );
-            scale.lerp(sampled.scale(), weight);
+            if (layer.additive()) {
+                if (hasPos) pivot.add(new Vector3f(sampled.pivot()).sub(bone.pivotX(), bone.pivotY(), bone.pivotZ()).mul(weight));
+                if (hasRot) rotation.add(new Vector3f(sampled.rotation()).sub(bone.rotationX(), bone.rotationY(), bone.rotationZ()).mul(weight));
+                if (hasScale) scale.add(new Vector3f(sampled.scale()).sub(1f, 1f, 1f).mul(weight));
+            } else {
+                if (weight >= 0.999f) {
+                    if (hasPos) pivot.set(sampled.pivot());
+                    if (hasRot) rotation.set(sampled.rotation());
+                    if (hasScale) scale.set(sampled.scale());
+                } else {
+                    if (hasPos) pivot.lerp(sampled.pivot(), weight);
+                    if (hasRot) rotation.set(
+                        blendAngle(rotation.x, sampled.rotation().x, weight),
+                        blendAngle(rotation.y, sampled.rotation().y, weight),
+                        blendAngle(rotation.z, sampled.rotation().z, weight)
+                    );
+                    if (hasScale) scale.lerp(sampled.scale(), weight);
+                }
+            }
         }
+        return new BbModelAnimator.Transform(pivot, rotation, scale);
     }
-    return new BbModelAnimator.Transform(pivot, rotation, scale);
-}
 
 public static AnimationExpressionContext expressionContext(UUID entityId) {
     Minecraft client = null;
@@ -300,9 +317,9 @@ private static float blendAngle(float from, float to, float weight) {
             return !isPortrait;
         }
 
-        // In standard world, third-person and first-person contexts: hide auxiliary portrait & skull by default.
-        // ใน context ทั่วไป ให้ซ่อน auxiliary bones (portrait และ skull) โดยค่าเริ่มต้น เว้นแต่สคริปต์สั่งเปิด.
-        return !isPortrait && !isSkull;
+        // In standard world, third-person and first-person contexts: hide auxiliary portrait, skull & special separate parts by default.
+        // ใน context ทั่วไป ให้ซ่อน auxiliary bones (portrait, skull และ special separate parts เช่น Trident, ItemWand) โดยค่าเริ่มต้น เว้นแต่สคริปต์สั่งเปิด.
+        return !isPortrait && !isSkull && !isSpecialFiguraHiddenByDefault(bone.name());
     }
 
     static boolean isSpecialFiguraHiddenByDefault(String boneName) {

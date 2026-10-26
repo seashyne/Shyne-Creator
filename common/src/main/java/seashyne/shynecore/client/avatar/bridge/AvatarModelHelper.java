@@ -123,9 +123,17 @@ public final class AvatarModelHelper {
     }
 
     public static boolean isSpecialFiguraHiddenByDefault(String boneName) {
-        if (boneName == null) return false;
-        String normalized = boneName.trim().toLowerCase(Locale.ROOT).replace("_", "");
-        return "skull".equals(normalized) || "portrait".equals(normalized);
+        if (boneName == null || boneName.isBlank()) return false;
+        String normalized = boneName.trim().toLowerCase(Locale.ROOT).replace("_", "").replace("-", "");
+        return normalized.startsWith("skull")
+            || normalized.startsWith("portrait")
+            || normalized.startsWith("trident")
+            || normalized.startsWith("item")
+            || normalized.startsWith("arrow")
+            || normalized.startsWith("world")
+            || normalized.startsWith("hud")
+            || normalized.startsWith("gui")
+            || boneName.contains("☠");
     }
 
     public static AvatarPhysicsController.PhysicsConfig parsePhysicsConfig(String path, LuaValue val) {

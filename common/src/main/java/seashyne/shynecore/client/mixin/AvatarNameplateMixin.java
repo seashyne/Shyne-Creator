@@ -37,10 +37,9 @@ public abstract class AvatarNameplateMixin {
         boolean local = (client.player != null && client.player.getUUID().equals(entity.getUUID()))
             || seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayer(entity);
         if (local) {
-            boolean visible = AvatarRuntime.localNameplateVisible();
-            if (!visible) {
+            if (client.options.getCameraType().isFirstPerson() || !AvatarRuntime.localNameplateVisible()) {
                 cir.setReturnValue(false);
-            } else if (!client.options.getCameraType().isFirstPerson() && !AvatarRuntime.localNameplateText().isBlank()) {
+            } else if (!AvatarRuntime.localNameplateText().isBlank()) {
                 cir.setReturnValue(true);
             }
         } else {
