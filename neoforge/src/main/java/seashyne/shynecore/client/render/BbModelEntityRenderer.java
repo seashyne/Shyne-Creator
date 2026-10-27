@@ -366,7 +366,9 @@ public final class BbModelEntityRenderer {
                                               Map<String, BonePose> bonePoses) {
         Minecraft client = Minecraft.getInstance();
         AvatarState active = AvatarRuntime.active();
-        if (active == null || !entityId.equals(active.boundEntityId()) || !model.modelId().equals(active.modelId())) return;
+        UUID localPlayerId = client != null && client.player != null ? client.player.getUUID() : null;
+        boolean isLocal = active != null && (entityId.equals(active.boundEntityId()) || (localPlayerId != null && entityId.equals(localPlayerId)));
+        if (!isLocal || !model.modelId().equals(active.modelId())) return;
         String context = AvatarRenderContext.forEntity(client, entityId);
         boolean worldSpace = AvatarRenderContext.worldSpace(context);
         Matrix4f root = new Matrix4f(modelToRender);

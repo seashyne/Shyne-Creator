@@ -306,7 +306,17 @@ public final class AvatarLifecycleManager {
         if (client.player == null || active == null) return;
         Player player = client.player;
         UUID playerId = player.getUUID();
-        if (!playerId.equals(active.boundEntityId())) active.bindEntity(playerId);
+        if (!playerId.equals(active.boundEntityId())) {
+            UUID previousId = active.boundEntityId();
+            active.bindEntity(playerId);
+            if (previousId != null) {
+                ClientAnimationState.removeLocalPlayback(previousId);
+                ClientAnimationState.removeLocalAttachment(previousId);
+                ClientAnimationState.clearAvatarPartStates(previousId, active.modelId());
+            }
+            AvatarAnimationManager.publishAnimationPlayback(active, System.currentTimeMillis());
+            seashyne.shynecore.client.avatar.AvatarRuntime.renderHook();
+        }
         AttachedModelState current = ClientAnimationState.getAttachment(playerId);
         if (current != null && current.visible() && active.modelId().equals(current.modelId())
             && current.offsetX() == 0f && current.offsetY() == 0f && current.offsetZ() == 0f

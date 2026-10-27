@@ -106,8 +106,7 @@ private static void renderFirstPersonModel(
 
     Matrix4f modelToWorld = new Matrix4f(pose.pose())
         .translate(vanillaPivotX / 16.0f, vanillaPivotY / 16.0f, vanillaPivotZ / 16.0f)
-        .scale(1.0f / 16.0f, 1.0f / 16.0f, 1.0f / 16.0f)
-        .rotateZ((float) Math.PI)
+        .scale(1.0f / 16.0f, -1.0f / 16.0f, 1.0f / 16.0f)
         .translate(-armBone.pivotX(), -armBone.pivotY(), -armBone.pivotZ());
 
     for (BbCubeDefinition cube : model.cubes()) {

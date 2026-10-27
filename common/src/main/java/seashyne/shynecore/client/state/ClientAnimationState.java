@@ -541,7 +541,18 @@ public final class ClientAnimationState {
     public static AvatarPartState getAvatarPartState(UUID entityId, String modelId, String path) {
         if (entityId == null || modelId == null || path == null) return null;
         Map<String, AvatarPartState> map = AVATAR_PARTS.get(entityId.toString() + "|" + modelId);
-        if (map == null) return null;
+        if (map == null) {
+            seashyne.shynecore.client.avatar.AvatarState active = seashyne.shynecore.client.avatar.AvatarRuntime.active();
+            if (active != null && modelId.equals(active.modelId())) {
+                Minecraft mc = null;
+                try { mc = Minecraft.getInstance(); } catch (Throwable ignored) {}
+                UUID localPlayerId = mc != null && mc.player != null ? mc.player.getUUID() : null;
+                if (entityId.equals(active.boundEntityId()) || (localPlayerId != null && entityId.equals(localPlayerId))) {
+                    map = active.parts();
+                }
+            }
+            if (map == null) return null;
+        }
         AvatarPartState state = map.get(path);
         if (state != null) return interpolated(new RemotePartKey(entityId, modelId, path), state);
         String probe = path;
@@ -566,10 +577,32 @@ public final class ClientAnimationState {
     }
     public static AttachedModelState getAttachment(UUID entityId) {
         AttachedModelState avatar = AVATAR_ATTACHMENTS.get(entityId);
+        if (avatar == null && entityId != null) {
+            seashyne.shynecore.client.avatar.AvatarState active = seashyne.shynecore.client.avatar.AvatarRuntime.active();
+            if (active != null) {
+                Minecraft mc = null;
+                try { mc = Minecraft.getInstance(); } catch (Throwable ignored) {}
+                UUID localPlayerId = mc != null && mc.player != null ? mc.player.getUUID() : null;
+                if (entityId.equals(active.boundEntityId()) || (localPlayerId != null && entityId.equals(localPlayerId))) {
+                    avatar = AVATAR_ATTACHMENTS.get(active.boundEntityId());
+                }
+            }
+        }
         return avatar == null ? SERVER_ATTACHMENTS.get(entityId) : avatar;
     }
     public static AnimationPlayback getPlayback(UUID entityId) {
         AnimationPlayback avatar = AVATAR_PLAYBACKS.get(entityId);
+        if (avatar == null && entityId != null) {
+            seashyne.shynecore.client.avatar.AvatarState active = seashyne.shynecore.client.avatar.AvatarRuntime.active();
+            if (active != null) {
+                Minecraft mc = null;
+                try { mc = Minecraft.getInstance(); } catch (Throwable ignored) {}
+                UUID localPlayerId = mc != null && mc.player != null ? mc.player.getUUID() : null;
+                if (entityId.equals(active.boundEntityId()) || (localPlayerId != null && entityId.equals(localPlayerId))) {
+                    avatar = AVATAR_PLAYBACKS.get(active.boundEntityId());
+                }
+            }
+        }
         return avatar == null ? SERVER_PLAYBACKS.get(entityId) : avatar;
     }
     public static BbModelDefinition getModel(String modelId) {

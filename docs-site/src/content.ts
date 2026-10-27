@@ -74,7 +74,7 @@ export type TutorialItem = {
   content: string
 }
 
-export const version = '2.18.5'
+export const version = '2.18.6'
 export const minecraftVersion = '26.3'
 
 export const tutorials: TutorialItem[] = [

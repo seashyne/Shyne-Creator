@@ -15,9 +15,35 @@ import seashyne.shynecore.client.state.ClientAnimationState;
 
 @Mixin(EntityRenderer.class)
 public abstract class AvatarNameplateMixin {
+    private static boolean isRenderingShadowPass() {
+        try {
+            Class<?> irisApiClass = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
+            Object instance = irisApiClass.getMethod("getInstance").invoke(null);
+            if (instance != null) {
+                Object result = irisApiClass.getMethod("isRenderingShadowPass").invoke(instance);
+                if (result instanceof Boolean b && b) return true;
+            }
+        } catch (Throwable ignored) {}
+        try {
+            Class<?> shadowRendererClass = Class.forName("net.irisshaders.iris.shadows.ShadowRenderer");
+            Object active = shadowRendererClass.getField("ACTIVE").get(null);
+            if (active instanceof Boolean b && b) return true;
+        } catch (Throwable ignored) {}
+        try {
+            Class<?> optifine = Class.forName("net.optifine.shaders.Shaders");
+            Object isShadow = optifine.getField("isShadowPass").get(null);
+            if (isShadow instanceof Boolean b && b) return true;
+        } catch (Throwable ignored) {}
+        return false;
+    }
+
     @Inject(method = "getNameTag", at = @At("HEAD"), cancellable = true)
     private void shyne$customNameplate(Entity entity, CallbackInfoReturnable<Component> cir) {
         if (!(entity instanceof Player)) return;
+        if (isRenderingShadowPass()) {
+            cir.setReturnValue(Component.empty());
+            return;
+        }
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         boolean local = (client.player != null && client.player.getUUID().equals(entity.getUUID()))
@@ -32,6 +58,10 @@ public abstract class AvatarNameplateMixin {
     @Inject(method = "shouldShowName", at = @At("HEAD"), cancellable = true)
     private void shyne$nameplateVisibility(Entity entity, double distance, CallbackInfoReturnable<Boolean> cir) {
         if (!(entity instanceof Player)) return;
+        if (isRenderingShadowPass()) {
+            cir.setReturnValue(false);
+            return;
+        }
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         boolean local = (client.player != null && client.player.getUUID().equals(entity.getUUID()))

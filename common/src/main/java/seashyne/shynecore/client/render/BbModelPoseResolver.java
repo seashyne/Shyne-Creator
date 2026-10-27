@@ -233,12 +233,15 @@ public static AnimationExpressionContext expressionContext(UUID entityId) {
         client = Minecraft.getInstance();
     } catch (Throwable ignored) {}
     AvatarState local = AvatarRuntime.active();
-    Map<String, Double> parameters = local != null && entityId != null && entityId.equals(local.boundEntityId())
+    UUID localPlayerId = client != null && client.player != null ? client.player.getUUID() : null;
+    boolean isLocal = local != null && entityId != null && (entityId.equals(local.boundEntityId()) || (localPlayerId != null && entityId.equals(localPlayerId)));
+    Map<String, Double> parameters = isLocal
         ? local.animationParameters() : (entityId != null ? ClientAnimationState.getRemoteAnimationParameters(entityId) : Map.of());
     if (client == null || client.level == null) {
         return new AnimationExpressionContext(0, 0, 0, 0, false, false, parameters);
     }
     var player = entityId == null ? null : client.level.getPlayerByUUID(entityId);
+    if (player == null && isLocal) player = client.player;
     if (player == null) return new AnimationExpressionContext(0, 0, 0, 0, false, false, parameters);
     double horizontalSpeed = Math.sqrt(player.getDeltaMovement().x * player.getDeltaMovement().x + player.getDeltaMovement().z * player.getDeltaMovement().z) * 20.0;
     return new AnimationExpressionContext(0, horizontalSpeed, player.yBodyRot, player.getXRot(), player.isInWaterOrRain(), player.isSwimming(), parameters);

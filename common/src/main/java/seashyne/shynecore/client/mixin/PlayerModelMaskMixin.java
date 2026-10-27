@@ -1,5 +1,6 @@
 package seashyne.shynecore.client.mixin;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
@@ -14,6 +15,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import seashyne.shynecore.client.avatar.AvatarRuntime;
 import seashyne.shynecore.client.avatar.AvatarState;
 import seashyne.shynecore.client.render.VanillaRenderMask;
+
+import java.util.UUID;
 
 @Mixin(AvatarRenderer.class)
 public abstract class PlayerModelMaskMixin {
@@ -57,7 +60,9 @@ public abstract class PlayerModelMaskMixin {
         }
 
         AvatarState active = AvatarRuntime.active();
-        boolean isLocal = (active != null && entity.getUUID().equals(active.boundEntityId()))
+        Minecraft client = Minecraft.getInstance();
+        UUID localPlayerId = client != null && client.player != null ? client.player.getUUID() : null;
+        boolean isLocal = (active != null && (entity.getUUID().equals(active.boundEntityId()) || (localPlayerId != null && entity.getUUID().equals(localPlayerId))))
             || seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayer(entity);
         if (isLocal && active != null && active.shadowRadius() >= 0f) {
             state.shadowRadius = active.shadowRadius();

@@ -41,6 +41,10 @@ public final class AvatarRuntime {
 
     public static void onJoin() {
         snapshotSync.resetOnConnection(lifecycle.active());
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && mc.player != null) {
+            lifecycle.syncAttachment(mc);
+        }
     }
 
     public static void onDisconnect() {

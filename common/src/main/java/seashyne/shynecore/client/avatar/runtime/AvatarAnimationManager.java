@@ -63,7 +63,11 @@ public final class AvatarAnimationManager {
 
     public static List<AvatarAnimationLayer> animationLayers(AvatarState active, UUID entityId) {
         if (active == null || entityId == null) return List.of();
+        net.minecraft.client.Minecraft client = null;
+        try { client = net.minecraft.client.Minecraft.getInstance(); } catch (Throwable ignored) {}
+        UUID localPlayerId = client != null && client.player != null ? client.player.getUUID() : null;
         boolean matches = entityId.equals(active.boundEntityId())
+            || (localPlayerId != null && entityId.equals(localPlayerId))
             || seashyne.shynecore.client.compat.ReplayCompat.isReplayLocalPlayerUuid(entityId);
         if (!matches) return List.of();
         return active.sortedAnimationLayers();

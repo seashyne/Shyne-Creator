@@ -1,3 +1,21 @@
+## Shyne Creator v2.18.6
+
+### First-Person Arm Orientation Alignment, Shader Shadow Map Nametag Culling & Local Avatar UUID Sync
+
+- **First-Person Arm Orientation Alignment**:
+  - In `BbModelFirstPersonRenderer` (Fabric & NeoForge), replaced `.scale(1/16, 1/16, 1/16).rotateZ(PI)` with `.scale(1/16, -1/16, 1/16)`, properly converting Blockbench Y-down to Minecraft Y-up without negating the X-axis. This fixes the first-person hand flipping to the wrong side of the screen and inverted swinging rotations.
+- **Shader Shadow Map Nametag Culling**:
+  - In `AvatarNameplateMixin`, implemented `isRenderingShadowPass()` detection for Iris and Oculus shaders. During shadow passes, `shouldShowName` returns `false` and `getNameTag` returns `Component.empty()`, completely preventing floating nametag text and background quads from casting square shadows onto the ground.
+- **Local Avatar UUID Sync & Fallback**:
+  - In `ClientAnimationState.getAvatarPartState()`, added automatic fallback to `active.parts()` when querying with the local player's UUID or bound entity ID before tick synchronization finishes.
+  - In `AvatarAnimationManager.animationLayers()`, added local player UUID matching, ensuring animation layers (such as in-air spinning ball animations) continuously blend and play even if entity UUID binding transitions.
+  - In `AvatarLifecycleManager.syncAttachment()`, automatically re-synchronizes part states and playback when `boundEntityId` updates to the connected player UUID.
+
+- **อัปเดต v2.18.6: แก้ไขขยับมือผิดข้างในมุมมองบุคคลที่ 1, ตัดเงาป้ายชื่อตกกระทบพื้นจากเชดเดอร์ และซิงก์สถานะแอนิเมชัน/พาร์ทตัวละครในอากาศ**:
+  - **แก้ไขมือขยับผิดข้างและมุมหมุนกลับด้าน (First-Person Arm Alignment)**: แก้ไขการแปลงพิกัดของมือในมุมมองบุคคลที่หนึ่ง (First-Person) ไม่ให้กลับด้านแกน X ทำให้มือขวาและมือซ้ายอยู่ถูกฝั่ง ขยับและสวิงได้อย่างถูกต้องเป็นธรรมชาติ
+  - **ลบเงาสี่เหลี่ยมของป้ายชื่อเหนือหัวเมื่อใช้เชดเดอร์ (Shader Nametag Shadow Culling)**: ป้องกันไม่ให้แผ่นข้อความและพื้นหลังของป้ายชื่อเหนือหัวถูกส่งเข้าไปใน Shadow Pass ของ Iris / Oculus Shader ทำให้ไม่มีเงาสี่เหลี่ยมของชื่อตกกระทบลงบนพื้นดินอีกต่อไป
+  - **ซิงก์สถานะพาร์ทและแอนิเมชันหมุนตัวกลางอากาศ (In-Air Animation & Part Sync)**: แก้ไขระบบจับคู่ UUID ของผู้เล่นกับตัวละครใน `ClientAnimationState` และ `AvatarAnimationManager` ทำให้คำสั่งซ่อนพาร์ทบอลกลิ้ง (`ball:setVisible(false)`) บนพื้นทำงานได้สมบูรณ์ กำจัดหางเกิน (`tailBall`) ที่ขา และทำให้แอนิเมชันหมุนตัวกลางอากาศทำงานอย่างลื่นไหล
+
 ## Shyne Creator v2.18.5
 
 ### GUI & Preview Character Visibility, Initial Part State Sync & Natural Player Shadow Restoration

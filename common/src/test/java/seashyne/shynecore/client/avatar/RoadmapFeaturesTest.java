@@ -261,4 +261,22 @@ class RoadmapFeaturesTest {
         assertTrue(capePart.additiveRotX() >= -5.01f,
             "Cape pitch should be clamped >= -5 degrees so it never clips through the player's chest: actual=" + capePart.additiveRotX());
     }
+
+    @Test
+    void localPartFallbackAndAnimationLayerMatch(@TempDir Path tempDir) {
+        UUID boundId = UUID.randomUUID();
+        Set<AvatarPermission> allPerms = EnumSet.allOf(AvatarPermission.class);
+        AvatarState state = new AvatarState("test_hero", "avatar:test_hero", tempDir, true, allPerms, allPerms);
+        state.bindEntity(boundId);
+        AvatarPartState ballPart = state.getPart("model.ball");
+        ballPart.setVisible(false);
+
+        assertNotNull(state.parts().get("model.ball"));
+        assertFalse(state.parts().get("model.ball").visible());
+
+        state.animationLayers().put("ball", new AvatarAnimationLayer("ball", System.currentTimeMillis(), 1.0, true, 1.0, 1.0, 0, 0, 0, List.of(), false, 0L));
+        List<AvatarAnimationLayer> layers = seashyne.shynecore.client.avatar.runtime.AvatarAnimationManager.animationLayers(state, boundId);
+        assertEquals(1, layers.size());
+        assertEquals("ball", layers.get(0).name());
+    }
 }
