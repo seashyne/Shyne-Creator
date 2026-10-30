@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import seashyne.shynecore.client.render.AvatarFirstPersonShadow;
 import seashyne.shynecore.client.render.AvatarRenderTaskRegistry;
 
 /** Cross-loader bridge from Shyne task snapshots to Minecraft's world submit pipeline. */
@@ -20,6 +21,8 @@ public abstract class AvatarWorldRenderMixin {
     )
     private void shyne$submitWorldTasks(LevelRenderState state, SubmitNodeCollector collector,
                                         boolean renderBlockOutline, CallbackInfo ci) {
-        AvatarRenderTaskRegistry.submitWorld(new PoseStack(), collector, state.cameraRenderState);
+        PoseStack poseStack = new PoseStack();
+        AvatarRenderTaskRegistry.submitWorld(poseStack, collector, state.cameraRenderState);
+        AvatarFirstPersonShadow.submit(poseStack, collector, state);
     }
 }

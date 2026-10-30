@@ -39,9 +39,13 @@ public final class BbModelPoseResolver {
         String context = AvatarRenderContext.currentOverride();
         BbBoneDefinition portraitBone = findSpecialRootBone(model, "portrait");
         BbBoneDefinition skullBone = findSpecialRootBone(model, "skull");
+        // A model that owns both a Head and a Skull group uses Skull as the held-head replica,
+        // so it must stay invisible outside the skull pass even if a stale part state opens it.
+        // โมเดลที่มีทั้ง Head และ Skull ใช้ Skull เป็นหัวจำลองสำหรับบล็อกหัว ต้องปิดนอก SKULL context เสมอ.
+        boolean skullIsReplica = skullBone != null && findSpecialRootBone(model, "head") != null;
         Set<String> visiting = new HashSet<>();
         for (BbBoneDefinition bone : model.bones()) {
-            buildBonePose(model, bone, entityId, vanillaPose, bonePoses, visiting, playback, layers, activeAnimation, now, expressionContext, context, portraitBone, skullBone);
+            buildBonePose(model, bone, entityId, vanillaPose, bonePoses, visiting, playback, layers, activeAnimation, now, expressionContext, context, portraitBone, skullBone, skullIsReplica);
         }
         return bonePoses;
     }
@@ -60,7 +64,8 @@ public final class BbModelPoseResolver {
         AnimationExpressionContext expressionContext,
         String context,
         BbBoneDefinition portraitBone,
-        BbBoneDefinition skullBone
+        BbBoneDefinition skullBone,
+        boolean skullIsReplica
     ) {
         BbModelEntityRenderer.BonePose cached = cache.get(bone.uuid());
         if (cached != null) return cached;
@@ -70,7 +75,7 @@ public final class BbModelPoseResolver {
         if (bone.parentUuid() != null) {
             BbBoneDefinition parentBone = model.findBoneByUuid(bone.parentUuid());
             if (parentBone != null) {
-                parent = buildBonePose(model, parentBone, entityId, vanillaPose, cache, visiting, playback, layers, activeAnimation, now, expressionContext, context, portraitBone, skullBone);
+                parent = buildBonePose(model, parentBone, entityId, vanillaPose, cache, visiting, playback, layers, activeAnimation, now, expressionContext, context, portraitBone, skullBone, skullIsReplica);
             }
         } else {
         AvatarPartState rootModelPart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), "model");
@@ -163,7 +168,7 @@ public final class BbModelPoseResolver {
     if (part != null && part.additiveRotationControlled()) {
         rotation.add(part.additiveRotX(), part.additiveRotY(), part.additiveRotZ());
     }
-    boolean localVisible = resolveBoneVisibility(model, bone, part, context, portraitBone, skullBone, entityId);
+    boolean localVisible = resolveBoneVisibility(model, bone, part, context, portraitBone, skullBone, skullIsReplica, entityId);
     if (part != null && part.renderControlled()) {
         colorArgb = BbModelEntityRenderer.multiplyColor(colorArgb, part.colorArgb());
         emissive |= part.emissive();
@@ -281,10 +286,17 @@ private static float blendAngle(float from, float to, float weight) {
         String context,
         BbBoneDefinition portraitBone,
         BbBoneDefinition skullBone,
+        boolean skullIsReplica,
         UUID entityId
     ) {
         boolean isPortrait = portraitBone != null && BbModelRigResolver.belongsToBone(model, bone.uuid(), portraitBone.uuid());
         boolean isSkull = skullBone != null && BbModelRigResolver.belongsToBone(model, bone.uuid(), skullBone.uuid());
+
+        // Auxiliary presentation copies belong to exactly one pass. Their own context is the only
+        // one that may show them; a leftover Lua visibility flag must not leak them into the world.
+        // ชิ้นส่วนสำรอง (portrait bust / skull replica) แสดงได้เฉพาะ context ของตัวเอง แม้ Lua state เดิมจะสั่งเปิดก็ห้ามโผล่ใน world.
+        if (isPortrait && !AvatarRenderContext.PORTRAIT.equals(context)) return false;
+        if (isSkull && skullIsReplica && !AvatarRenderContext.SKULL.equals(context)) return false;
 
         boolean isGuiPreview = AvatarRenderContext.PORTRAIT.equals(context)
             || AvatarRenderContext.isGuiOrPreview(context);
@@ -323,16 +335,18 @@ private static float blendAngle(float from, float to, float weight) {
         if (AvatarRenderContext.PORTRAIT.equals(context)) {
             if (portraitBone != null) {
                 // Dedicated portrait bone exists: only render the portrait hierarchy in portrait/paperdoll context.
-                // เมื่อมี portrait bust เฉพาะ ให้แสดงเฉพาะ hierarchy ของ portrait ใน context portrait/paperdoll เพื่อไม่ให้ทับซ้อนกับตัวละคร.
-                return isPortrait;
+                // Ancestors such as `root` stay visible so the bust still inherits its transforms.
+                // เมื่อมี portrait bust เฉพาะ ให้แสดงเฉพาะ hierarchy ของ portrait (รวม bone บรรพบุรุษอย่าง root เพื่อส่งต่อ transform).
+                return isPortrait || BbModelRigResolver.belongsToBone(model, portraitBone.uuid(), bone.uuid());
             }
             return !isSkull;
         }
 
         if (AvatarRenderContext.SKULL.equals(context)) {
             if (skullBone != null) {
-                // Dedicated skull bone exists: only render the skull hierarchy in skull context.
-                return isSkull;
+                // Dedicated skull bone exists: only render the skull hierarchy, plus its ancestors that carry the transform.
+                // แสดงเฉพาะ hierarchy ของ skull และ bone บรรพบุรุษที่ส่งต่อ transform ให้ skull.
+                return isSkull || BbModelRigResolver.belongsToBone(model, skullBone.uuid(), bone.uuid());
             }
             return !isPortrait;
         }

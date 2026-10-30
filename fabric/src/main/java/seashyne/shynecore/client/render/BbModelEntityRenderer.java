@@ -251,8 +251,8 @@ public final class BbModelEntityRenderer {
             if (onlyBoneUuid != null && !belongsToBone(model, cube.parentBoneUuid(), onlyBoneUuid)) continue;
             if (cube.parentBoneUuid() == null && hasDedicatedPortrait) continue;
             if (cube.parentBoneUuid() != null && hiddenBoneUuids.contains(cube.parentBoneUuid())) continue;
-            BonePose bonePose = cube.parentBoneUuid() == null ? BonePose.IDENTITY : bonePoses.getOrDefault(cube.parentBoneUuid(), BonePose.IDENTITY);
-            if (!bonePose.visible) continue;
+            BonePose bonePose = cube.parentBoneUuid() == null ? BonePose.IDENTITY : bonePoses.get(cube.parentBoneUuid());
+            if (bonePose == null || !bonePose.visible) continue;
             AvatarPartState cubePart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.cubePath(cube));
             boolean cubeVisible = BbModelPoseResolver.resolveElementVisibility(entityId, cube.name(), cube.visible(), cubePart);
             if (!cubeVisible) continue;
@@ -285,8 +285,8 @@ public final class BbModelEntityRenderer {
             if (onlyBoneUuid != null && !belongsToBone(model, mesh.parentBoneUuid(), onlyBoneUuid)) continue;
             if (mesh.parentBoneUuid() == null && hasDedicatedPortrait) continue;
             if (mesh.parentBoneUuid() != null && hiddenBoneUuids.contains(mesh.parentBoneUuid())) continue;
-            BonePose bonePose = mesh.parentBoneUuid() == null ? BonePose.IDENTITY : bonePoses.getOrDefault(mesh.parentBoneUuid(), BonePose.IDENTITY);
-            if (!bonePose.visible) continue;
+            BonePose bonePose = mesh.parentBoneUuid() == null ? BonePose.IDENTITY : bonePoses.get(mesh.parentBoneUuid());
+            if (bonePose == null || !bonePose.visible) continue;
             AvatarPartState meshPart = ClientAnimationState.getAvatarPartState(entityId, model.modelId(), model.meshPath(mesh));
             boolean meshVisible = BbModelPoseResolver.resolveElementVisibility(entityId, mesh.name(), mesh.visible(), meshPart);
             if (!meshVisible) continue;

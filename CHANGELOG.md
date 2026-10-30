@@ -1,3 +1,30 @@
+## Shyne Creator v2.18.7
+
+### Skull Replica Suppression in World, Orphaned Geometry Culling & First-Person Player Shadow
+
+- **Skull Replica Suppression in World**:
+  - In `BbModelPoseResolver`, a model that owns both a `Head` and a `Skull` root group now treats `Skull` as the held-head replica (`skullIsReplica`).
+  - The replica and its descendants are hidden in every context outside the skull render pass, and this check runs **before** the Lua `visibilityControlled()` override so a stale `setVisible(true)` from `events.tick()` or `swinging_physics` can no longer leak it into the world.
+  - Fixes stray dangling strips below the skirt on avatars that carry a separate skull group (e.g. Pink (Deltarune) `root/Skull/hair2`).
+  - The portrait bust hierarchy receives the same context gate, and the PORTRAIT/SKULL branches also allow ancestor bones so a replica nested under `root` still renders correctly when placed as a real head.
+  - Compatibility gate: avatars whose only head group is literally named `Skull` (no `Head` bone) stay fully script-controllable.
+- **Orphaned Geometry Culling**:
+  - In `BbModelEntityRenderer` (Fabric & NeoForge), cubes and meshes whose parent bone has no resolved pose are skipped instead of rendered with `BonePose.IDENTITY`.
+  - Removes un-posed, mis-positioned and spinning fragments caused by bones missing from the pose map.
+- **First-Person Local Player Shadow**:
+  - New `AvatarFirstPersonShadow` restores the local player's shadow while the camera is in first person, which vanilla never submits because it skips the camera entity.
+  - Re-extracts the render state through `EntityRenderDispatcher.extractEntity`, then forwards `shadowRadius` and `shadowPieces` to `SubmitNodeCollector.submitShadow` translated relative to the camera position, so the shadow lands at the real ground position under the player.
+  - Honours `renderer:setShadowRadius(...)` from Lua, the render-attachments setting, and skips spectators, invisible players and non-bound avatars; extraction failures are ignored rather than crashing the frame.
+  - Called from the existing `LevelRenderer.submitFeatures` TAIL hook in `AvatarWorldRenderMixin`, so no additional render pass is introduced.
+- **Tests**: `BbModelRigAndPoseTest` gains two cases — the skull replica stays hidden in the world even when Lua opens it (and reappears under the pushed SKULL context), and a `Skull`-named head bone remains script-controllable when the model has no `Head` bone. Full suite, `buildAll` and `verifyLoaderParity` pass.
+
+- **อัปเดต v2.18.7: ลบชิ้นส่วนหัวจำลองที่ห้อยเป็นหาง, แก้ชิ้นส่วนตำแหน่งเพี้ยน และคืนเงาตัวละครในมุมมองบุคคลที่ 1**:
+  - **ลบหางเกินจากชิ้นส่วนหัวจำลอง (Skull Replica Suppression)**: โมเดลที่มีกลุ่ม `Head` และ `Skull` พร้อมกัน จะถูกมองว่า `Skull` เป็น "หัวจำลอง" สำหรับวางเป็นบล็อกหัวเท่านั้น จึงถูกซ่อนในทุกมุมมองยกเว้นตอนวางหัวจริง และการตรวจนี้ทำงานก่อนอ่านค่า visibility จาก Lua ทำให้คำสั่ง `setVisible(true)` ที่ค้างมาจากสคริปต์ (เช่นใน `events.tick()` หรือ `swinging_physics`) ไม่สามารถดันชิ้นส่วนผม/ผ้าให้ห้อยอยู่ใต้กระโปรงได้อีก ส่วนโมเดลที่มีหัวชื่อ `Skull` เป็นหลักและไม่มี `Head` ยังสั่งแสดง/ซ่อนด้วยสคริปต์ได้ปกติ
+  - **แก้ชิ้นส่วนหมุน/ตำแหน่งเพี้ยน (Orphaned Geometry Culling)**: ชิ้นส่วนที่ไม่พบท่าทางของกระดูกที่ตัวเองสังกัดอยู่ จะถูกข้ามการวาดแทนการวาดด้วยท่าเริ่มต้น ทำให้ไม่มีเศษโมเดลวางผิดที่หรือหมุนคว้าง
+  - **คืนเงาตัวละครในมุมมองบุคคลที่ 1 (First-Person Player Shadow)**: Minecraft ไม่เคยส่งเงาของเอนทิตีที่เป็นกล้อง ทำให้ก้มมองพื้นแล้วไม่มีเงาของตัวเอง ระบบใหม่จะดึงเงาของผู้เล่นในเครื่องมาวาดต่อในตำแหน่งจริงใต้เท้า โดยยังเคารพค่า `renderer:setShadowRadius()` จากสคริปต์, เปิด-ปิดตามตัวเลือก render attachments และข้ามโหมดมุมมองผู้สังเกต (Spectator) หรือตอนที่ตัวล่องหน
+  - **ทดสอบเพิ่ม 2 เคส**: หัวจำลองต้องไม่โผล่ในโลกแม้สคริปต์สั่งเปิด (และต้องแสดงถูกต้องตอนเป็นหัวจำลองที่ตั้งจริง) และหัวชื่อ `Skull` ในโมเดลที่ไม่มี `Head` ต้องยังควบคุมด้วยสคริปต์ได้ พร้อมผ่านชุดทดสอบเต็ม, `buildAll` และ `verifyLoaderParity`
+
+
 ## Shyne Creator v2.18.6
 
 ### First-Person Arm Orientation Alignment, Shader Shadow Map Nametag Culling & Local Avatar UUID Sync

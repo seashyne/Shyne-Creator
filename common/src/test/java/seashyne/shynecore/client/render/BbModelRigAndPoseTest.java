@@ -3,6 +3,7 @@ package seashyne.shynecore.client.render;
 import net.minecraft.world.entity.HumanoidArm;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
+import seashyne.shynecore.client.state.ClientAnimationState;
 import seashyne.shynecore.model.BbBoneDefinition;
 import seashyne.shynecore.model.BbCubeDefinition;
 import seashyne.shynecore.model.BbModelDefinition;
@@ -189,6 +190,58 @@ final class BbModelRigAndPoseTest {
         } finally {
             AvatarRenderContext.popContext();
         }
+    }
+
+    @Test
+    void skullReplicaStaysHiddenInWorldEvenWhenLuaOpensIt() {
+        BbBoneDefinition root = new BbBoneDefinition("root_id", "root", null, null, "", "", List.of(), 0, 0, 0, 0, 0, 0, 0, true, List.of("head_id", "skull_id"));
+        BbBoneDefinition head = new BbBoneDefinition("head_id", "Head", "root_id", "root_id", "head", "", List.of(), 0, 24, 0, 0, 0, 0, 0, true, List.of());
+        BbBoneDefinition skull = new BbBoneDefinition("skull_id", "Skull", "root_id", "root_id", "", "", List.of(), 0, 0, 0, 0, 0, 0, 0, true, List.of("skull_hair_id"));
+        BbBoneDefinition skullHair = new BbBoneDefinition("skull_hair_id", "strandR", "skull_id", "skull_id", "", "", List.of(), 0, 2, -2, 0, 0, 0, 0, true, List.of());
+
+        BbModelDefinition model = new BbModelDefinition(
+            "skull_replica_test", "skull_replica_test", "skull_replica_test", Path.of("test.bbmodel"),
+            1, 16, 16, "", List.of(), List.of(root, head, skull, skullHair), List.of(), List.of()
+        );
+
+        java.util.UUID entityId = java.util.UUID.randomUUID();
+        seashyne.shynecore.client.avatar.AvatarPartState forcedOpen = new seashyne.shynecore.client.avatar.AvatarPartState();
+        forcedOpen.setVisible(true);
+        ClientAnimationState.updateLocalAvatarPartState(entityId, model.modelId(), "model.root.Skull", forcedOpen);
+        ClientAnimationState.updateLocalAvatarPartState(entityId, model.modelId(), "model.root.Skull.strandR", forcedOpen);
+
+        Map<String, BbModelEntityRenderer.BonePose> worldPoses = BbModelPoseResolver.prepareAvatar(model, entityId, BbModelVanillaPose.Snapshot.EMPTY);
+        assertTrue(worldPoses.get("head_id").visible(), "Real head must stay visible");
+        assertFalse(worldPoses.get("skull_id").visible(), "Skull replica must stay hidden in world even when Lua opens it");
+        assertFalse(worldPoses.get("skull_hair_id").visible(), "Skull replica children must stay hidden in world");
+
+        AvatarRenderContext.pushContext(AvatarRenderContext.SKULL);
+        try {
+            Map<String, BbModelEntityRenderer.BonePose> skullPoses = BbModelPoseResolver.prepareAvatar(model, entityId, BbModelVanillaPose.Snapshot.EMPTY);
+            assertTrue(skullPoses.get("skull_id").visible(), "Skull replica must render in SKULL context");
+            assertTrue(skullPoses.get("skull_hair_id").visible(), "Skull replica children must render in SKULL context");
+        } finally {
+            AvatarRenderContext.popContext();
+        }
+    }
+
+    @Test
+    void skullNamedHeadBoneStaysScriptControllableWhenModelHasNoHead() {
+        BbBoneDefinition root = new BbBoneDefinition("root_id", "root", null, null, "", "", List.of(), 0, 0, 0, 0, 0, 0, 0, true, List.of("skull_id"));
+        BbBoneDefinition skull = new BbBoneDefinition("skull_id", "Skull", "root_id", "root_id", "", "", List.of(), 0, 24, 0, 0, 0, 0, 0, true, List.of());
+
+        BbModelDefinition model = new BbModelDefinition(
+            "skull_head_test", "skull_head_test", "skull_head_test", Path.of("test.bbmodel"),
+            1, 16, 16, "", List.of(), List.of(root, skull), List.of(), List.of()
+        );
+
+        java.util.UUID entityId = java.util.UUID.randomUUID();
+        seashyne.shynecore.client.avatar.AvatarPartState forcedOpen = new seashyne.shynecore.client.avatar.AvatarPartState();
+        forcedOpen.setVisible(true);
+        ClientAnimationState.updateLocalAvatarPartState(entityId, model.modelId(), "model.root.Skull", forcedOpen);
+
+        Map<String, BbModelEntityRenderer.BonePose> worldPoses = BbModelPoseResolver.prepareAvatar(model, entityId, BbModelVanillaPose.Snapshot.EMPTY);
+        assertTrue(worldPoses.get("skull_id").visible(), "A model whose only head is named Skull must stay script controllable");
     }
 
     @Test
