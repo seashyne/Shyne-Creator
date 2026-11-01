@@ -3,17 +3,17 @@ package seashyne.shynecore.client.ui;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-
 import seashyne.shynecore.client.input.DynamicAvatarInputRegistry;
 
 import java.util.List;
 
-/** In-game editor for key and mouse controls declared by the currently loaded Avatars. */
+/**
+ * In-game Studio editor for key and mouse controls declared by currently loaded Avatars.
+ */
 public final class AvatarInputSettingsScreen extends Screen {
     private static final int PAGE_SIZE = 8;
     private final Screen parent;
@@ -22,6 +22,7 @@ public final class AvatarInputSettingsScreen extends Screen {
     private int panelX;
     private int panelY;
     private int panelWidth;
+    private int panelHeight;
 
     public AvatarInputSettingsScreen(Screen parent) {
         super(Component.translatable("screen.shyne_core.inputs.title"));
@@ -33,41 +34,52 @@ public final class AvatarInputSettingsScreen extends Screen {
         List<DynamicAvatarInputRegistry.Snapshot> bindings = DynamicAvatarInputRegistry.snapshots();
         int pages = Math.max(1, (bindings.size() + PAGE_SIZE - 1) / PAGE_SIZE);
         page = Math.max(0, Math.min(page, pages - 1));
-        panelWidth = Math.min(620, this.width - 20);
+        panelWidth = Math.min(640, this.width - 20);
+        panelHeight = 310;
         panelX = (this.width - panelWidth) / 2;
-        panelY = Math.max(12, (this.height - 292) / 2);
+        panelY = Math.max(12, (this.height - panelHeight) / 2);
 
         int start = page * PAGE_SIZE;
         int end = Math.min(bindings.size(), start + PAGE_SIZE);
         for (int i = start; i < end; i++) {
             DynamicAvatarInputRegistry.Snapshot binding = bindings.get(i);
-            int y = panelY + 54 + (i - start) * 25;
-            Component keyLabel = capturing != null && capturing.equals(binding.stableId())
-                ? Component.translatable("screen.shyne_core.inputs.press_key").withStyle(ChatFormatting.YELLOW)
-                : binding.key();
-            addRenderableWidget(Button.builder(keyLabel, button -> {
-                capturing = binding.stableId();
-                rebuildWidgets();
-            }).bounds(panelX + panelWidth - 196, y, 112, 20).build());
-            addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.inputs.reset"), button -> {
+            int y = panelY + 54 + (i - start) * 26;
+            boolean isCapturing = capturing != null && capturing.equals(binding.stableId());
+            ShyneButton keyBtn;
+            if (isCapturing) {
+                keyBtn = ShyneButton.primary(Component.translatable("screen.shyne_core.inputs.press_key"), button -> {
+                    capturing = null;
+                    rebuildWidgets();
+                }).bounds(panelX + panelWidth - 200, y + 2, 116, 20);
+            } else {
+                keyBtn = ShyneButton.secondary(binding.key(), button -> {
+                    capturing = binding.stableId();
+                    rebuildWidgets();
+                }).bounds(panelX + panelWidth - 200, y + 2, 116, 20);
+            }
+            addRenderableWidget(keyBtn);
+
+            addRenderableWidget(ShyneButton.secondary(Component.translatable("screen.shyne_core.inputs.reset"), button -> {
                 DynamicAvatarInputRegistry.reset(binding.stableId());
                 capturing = null;
                 rebuildWidgets();
-            }).bounds(panelX + panelWidth - 80, y, 68, 20).build());
+            }).bounds(panelX + panelWidth - 80, y + 2, 68, 20));
         }
 
-        int footerY = panelY + 260;
-        addRenderableWidget(Button.builder(Component.literal("<"), button -> { page--; rebuildWidgets(); })
-            .bounds(panelX + 12, footerY, 34, 20).build()).active = page > 0;
-        addRenderableWidget(Button.builder(Component.literal(">"), button -> { page++; rebuildWidgets(); })
-            .bounds(panelX + 50, footerY, 34, 20).build()).active = page + 1 < pages;
-        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.inputs.reset_all"), button -> {
+        int footerY = panelY + panelHeight - 32;
+        addRenderableWidget(ShyneButton.secondary(Component.literal("<"), button -> { page--; rebuildWidgets(); })
+            .bounds(panelX + 14, footerY, 32, 20).activeState(page > 0));
+        addRenderableWidget(ShyneButton.secondary(Component.literal(">"), button -> { page++; rebuildWidgets(); })
+            .bounds(panelX + 50, footerY, 32, 20).activeState(page + 1 < pages));
+
+        addRenderableWidget(ShyneButton.danger(Component.translatable("screen.shyne_core.inputs.reset_all"), button -> {
             for (DynamicAvatarInputRegistry.Snapshot binding : bindings) DynamicAvatarInputRegistry.reset(binding.stableId());
             capturing = null;
             rebuildWidgets();
-        }).bounds(panelX + panelWidth - 212, footerY, 98, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), button -> onClose())
-            .bounds(panelX + panelWidth - 110, footerY, 98, 20).build());
+        }).bounds(panelX + panelWidth - 212, footerY, 98, 20));
+
+        addRenderableWidget(ShyneButton.primary(Component.translatable("gui.done"), button -> onClose())
+            .bounds(panelX + panelWidth - 110, footerY, 98, 20));
     }
 
     @Override
@@ -99,38 +111,47 @@ public final class AvatarInputSettingsScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(0, 0, this.width, this.height, 0xAA030918);
-        graphics.fillGradient(panelX, panelY, panelX + panelWidth, panelY + 292, 0xF20A1630, 0xF2071026);
-        graphics.outline(panelX, panelY, panelWidth, 292, 0xFF22D7E8);
-        graphics.text(this.font, this.title.copy().withStyle(ChatFormatting.AQUA), panelX + 12, panelY + 12, 0xFFFFFFFF, true);
-        graphics.text(this.font, Component.translatable("screen.shyne_core.inputs.subtitle"), panelX + 12, panelY + 29, 0xFF91A7C6, false);
+        ShyneTheme.drawBackdrop(graphics, this.width, this.height);
+        ShyneTheme.drawPanel(graphics, panelX, panelY, panelWidth, panelHeight, 46);
+
+        graphics.text(this.font, this.title, panelX + 16, panelY + 14, ShyneTheme.TEXT_PRIMARY, true);
+        graphics.text(this.font, Component.translatable("screen.shyne_core.inputs.subtitle"), panelX + 16, panelY + 31, ShyneTheme.TEXT_SECONDARY, false);
 
         List<DynamicAvatarInputRegistry.Snapshot> bindings = DynamicAvatarInputRegistry.snapshots();
         int start = page * PAGE_SIZE;
         int end = Math.min(bindings.size(), start + PAGE_SIZE);
         if (bindings.isEmpty()) {
-            graphics.text(this.font, Component.translatable("screen.shyne_core.inputs.empty"), panelX + 12, panelY + 70, 0xFF91A7C6, false);
+            graphics.text(this.font, Component.translatable("screen.shyne_core.inputs.empty"), panelX + 16, panelY + 70, ShyneTheme.TEXT_SECONDARY, false);
         }
         for (int i = start; i < end; i++) {
             DynamicAvatarInputRegistry.Snapshot binding = bindings.get(i);
-            int y = panelY + 54 + (i - start) * 25;
-            if ((i - start) % 2 == 0) graphics.fill(panelX + 8, y - 2, panelX + panelWidth - 8, y + 22, 0x2219BFD1);
-            graphics.text(this.font, Component.literal(binding.label()), panelX + 14, y + 1, 0xFFF3F7FF, false);
+            int y = panelY + 54 + (i - start) * 26;
+            boolean isCapturing = capturing != null && capturing.equals(binding.stableId());
+            boolean hovered = mouseX >= panelX + 12 && mouseX < panelX + panelWidth - 12 && mouseY >= y && mouseY < y + 24;
+
+            ShyneTheme.drawCard(graphics, panelX + 12, y, panelWidth - 24, 24, hovered, isCapturing);
+
+            graphics.text(this.font, Component.literal(binding.label()), panelX + 18, y + 4, ShyneTheme.TEXT_PRIMARY, false);
             String owner = binding.avatarId() + " · " + binding.bindingId();
-            graphics.text(this.font, Component.literal(owner), panelX + 14, y + 11, 0xFF7188A8, false);
+            graphics.text(this.font, Component.literal(owner), panelX + 18, y + 14, ShyneTheme.TEXT_DIM, false);
             if (!binding.conflicts().isEmpty()) {
-                graphics.text(this.font, Component.translatable("screen.shyne_core.inputs.conflict"), panelX + panelWidth - 270, y + 6, 0xFFFF6B7A, false);
+                graphics.text(this.font, Component.translatable("screen.shyne_core.inputs.conflict"), panelX + panelWidth - 280, y + 8, ShyneTheme.DANGER, false);
             }
         }
         int pages = Math.max(1, (bindings.size() + PAGE_SIZE - 1) / PAGE_SIZE);
-        graphics.text(this.font, Component.literal((page + 1) + " / " + pages), panelX + 92, panelY + 266, 0xFF91A7C6, false);
-        graphics.text(this.font, Component.translatable("screen.shyne_core.inputs.unbind_hint"), panelX + 165, panelY + 266, 0xFF7188A8, false);
+        int footerY = panelY + panelHeight - 32;
+        graphics.text(this.font, Component.literal((page + 1) + " / " + pages), panelX + 90, footerY + 6, ShyneTheme.TEXT_SECONDARY, false);
+        graphics.text(this.font, Component.translatable("screen.shyne_core.inputs.unbind_hint"), panelX + 140, footerY + 6, ShyneTheme.TEXT_DIM, false);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
-    @Override public void onClose() {
+    @Override
+    public void onClose() {
         if (this.minecraft != null) this.minecraft.gui.setScreen(parent);
     }
 
-    @Override public boolean isPauseScreen() { return true; }
+    @Override
+    public boolean isPauseScreen() {
+        return true;
+    }
 }

@@ -1,9 +1,7 @@
 package seashyne.shynecore.client.ui;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import seashyne.shynecore.client.avatar.AvatarPermission;
@@ -17,13 +15,14 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Granular avatar capability review and approval screen.
- * Allows inspecting, approving, or restricting individual features (particle, sound,
- * nameplate, custom camera, dangerous chat/tab alterations, network channels) per avatar.
+ * Clean, scrollable capability review and approval screen for local Avatars.
+ * Prioritizes requested permissions with full translated titles, risk badges,
+ * and inline descriptions while keeping unrequested engine capabilities tucked
+ * behind an optional filter toggle.
  */
 public final class AvatarPermissionScreen extends Screen {
-    private static final int PANEL_WIDTH = 540;
-    private static final int PANEL_HEIGHT = 340;
+    private static final int ROW_HEIGHT = 36;
+    private static final int CARD_HEIGHT = 32;
 
     private final Screen parent;
     private final String avatarId;
@@ -34,13 +33,27 @@ public final class AvatarPermissionScreen extends Screen {
 
     private int panelX;
     private int panelY;
+    private int panelWidth;
+    private int panelHeight;
+    private int listX;
+    private int listWidth;
+    private int listTop;
+    private int listBottom;
+    private int visibleRows;
+    private int scrollOffset;
+    private int maxScroll;
+    private boolean showUnused;
+
+    private List<AvatarPermission> displayedPermissions = List.of();
+    private final List<AbstractWidget> rowToggles = new ArrayList<>();
+    private ShyneButton unusedFilterBtn;
 
     public AvatarPermissionScreen(Screen parent, String avatarId, String avatarName, Set<AvatarPermission> requestedPermissions) {
         this(parent, avatarId, avatarName, requestedPermissions, null);
     }
 
     public AvatarPermissionScreen(Screen parent, String avatarId, String avatarName, Set<AvatarPermission> requestedPermissions, Runnable onApplied) {
-        super(Component.translatable("screen.shyne_core.permissions.title"));
+        super(Component.translatable("screen.shyne_core.permissions.local_title"));
         this.parent = parent;
         this.avatarId = avatarId == null ? "" : avatarId;
         this.avatarName = avatarName == null || avatarName.isBlank() ? this.avatarId : avatarName;
@@ -50,108 +63,142 @@ public final class AvatarPermissionScreen extends Screen {
         if (ShyneClientSettings.hasAvatarPermissionDecision(this.avatarId)) {
             approved.addAll(ShyneClientSettings.approvedAvatarPermissions(this.avatarId, this.requestedPermissions));
         } else {
-            // By default, grant all requested permissions
             approved.addAll(this.requestedPermissions);
         }
     }
 
     @Override
     protected void init() {
-        panelX = (width - PANEL_WIDTH) / 2;
-        panelY = Math.max(8, (height - PANEL_HEIGHT) / 2);
+        clearWidgets();
+        rowToggles.clear();
 
-        // Quick action buttons at top
-        int buttonWidth = 100;
-        int actionY = panelY + 44;
-        addRenderableWidget(Button.builder(Component.literal("Safe Only"), button -> {
+        panelWidth = Math.min(580, Math.max(300, width - 20));
+        panelHeight = Math.min(368, Math.max(240, height - 16));
+        panelX = (width - panelWidth) / 2;
+        panelY = (height - panelHeight) / 2;
+
+        listX = panelX + 14;
+        listWidth = panelWidth - 28;
+        listTop = panelY + 72;
+        int footerY = panelY + panelHeight - 28;
+        listBottom = footerY - 8;
+        visibleRows = Math.max(1, (listBottom - listTop) / ROW_HEIGHT);
+
+        // Quick preset toolbar
+        int toolbarY = panelY + 46;
+        int gap = 4;
+        int presetW = Math.min(78, Math.max(52, (listWidth - 124) / 4));
+
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("screen.shyne_core.permissions.safe_only"), btn -> {
             approved.clear();
             for (AvatarPermission p : requestedPermissions) {
                 if (!p.dangerous()) approved.add(p);
             }
-            rebuildWidgets();
-        }).tooltip(Tooltip.create(Component.literal("Allow all safe features; deny sensitive ones")))
-            .bounds(panelX + 16, actionY, buttonWidth, 18).build());
+            rebuildRowToggles();
+        }).bounds(listX, toolbarY, presetW, 18)
+            .tooltipText(Component.translatable("screen.shyne_core.permissions.safe_only.tooltip")));
 
-        addRenderableWidget(Button.builder(Component.literal("Allow All"), button -> {
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("screen.shyne_core.permissions.allow_all"), btn -> {
             approved.addAll(requestedPermissions);
-            rebuildWidgets();
-        }).tooltip(Tooltip.create(Component.literal("Grant all capabilities requested by this avatar")))
-            .bounds(panelX + 122, actionY, buttonWidth, 18).build());
+            rebuildRowToggles();
+        }).bounds(listX + (presetW + gap), toolbarY, presetW, 18)
+            .tooltipText(Component.translatable("screen.shyne_core.permissions.allow_all.tooltip")));
 
-        addRenderableWidget(Button.builder(Component.literal("Deny All"), button -> {
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("screen.shyne_core.permissions.deny_all"), btn -> {
             approved.clear();
-            rebuildWidgets();
-        }).tooltip(Tooltip.create(Component.literal("Disable all optional capabilities for this avatar")))
-            .bounds(panelX + 228, actionY, buttonWidth, 18).build());
+            rebuildRowToggles();
+        }).bounds(listX + (presetW + gap) * 2, toolbarY, presetW, 18)
+            .tooltipText(Component.translatable("screen.shyne_core.permissions.deny_all.tooltip")));
 
-        addRenderableWidget(Button.builder(Component.literal("Reset"), button -> {
+        addRenderableWidget(ShyneButton.ghost(Component.translatable("screen.shyne_core.reset"), btn -> {
             ShyneClientSettings.resetAvatarPermissions(avatarId);
             approved.clear();
             approved.addAll(requestedPermissions);
-            rebuildWidgets();
-        }).tooltip(Tooltip.create(Component.literal("Reset to manifest default")))
-            .bounds(panelX + 334, actionY, 80, 18).build());
+            rebuildRowToggles();
+        }).bounds(listX + (presetW + gap) * 3, toolbarY, Math.max(46, presetW - 10), 18)
+            .tooltipText(Component.translatable("screen.shyne_core.reset.tooltip")));
 
-        // Split into Safe (left) and Dangerous (right) columns
-        List<AvatarPermission> safeList = new ArrayList<>();
-        List<AvatarPermission> dangerousList = new ArrayList<>();
-        for (AvatarPermission p : AvatarPermission.values()) {
-            if (p.dangerous()) dangerousList.add(p);
-            else safeList.add(p);
+        int unusedCount = AvatarPermission.values().length - requestedPermissions.size();
+        if (unusedCount > 0) {
+            int filterW = Math.min(118, Math.max(76, listWidth - (presetW + gap) * 3 - Math.max(46, presetW - 10) - 6));
+            unusedFilterBtn = ShyneButton.toggle(unusedFilterLabel(unusedCount), () -> showUnused, btn -> {
+                showUnused = !showUnused;
+                scrollOffset = 0;
+                unusedFilterBtn.setMessage(unusedFilterLabel(unusedCount));
+                rebuildRowToggles();
+            }).bounds(listX + listWidth - filterW, toolbarY, filterW, 18);
+            addRenderableWidget(unusedFilterBtn);
         }
 
-        int colWidth = (PANEL_WIDTH - 48) / 2;
-        int leftX = panelX + 16;
-        int rightX = panelX + 24 + colWidth;
+        // Footer actions
+        addRenderableWidget(ShyneButton.primary(Component.translatable("screen.shyne_core.permissions.save_apply"), btn -> applyDecision())
+            .bounds(panelX + panelWidth - 208, footerY, 108, 20));
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("gui.cancel"), btn -> onClose())
+            .bounds(panelX + panelWidth - 94, footerY, 80, 20));
 
-        // Render toggles for Safe permissions
-        int safeY = panelY + 84;
-        for (AvatarPermission p : safeList) {
-            boolean requested = requestedPermissions.contains(p);
-            Button toggle = Button.builder(permissionToggleLabel(p, requested), btn -> {
-                if (!approved.remove(p)) approved.add(p);
-                rebuildWidgets();
-            }).tooltip(Tooltip.create(Component.translatable(p.descriptionKey())))
-                .bounds(leftX, safeY, colWidth, 20).build();
-            if (!requested) toggle.active = false;
-            addRenderableWidget(toggle);
-            safeY += 23;
-        }
-
-        // Render toggles for Sensitive permissions
-        int dangY = panelY + 84;
-        for (AvatarPermission p : dangerousList) {
-            boolean requested = requestedPermissions.contains(p);
-            Button toggle = Button.builder(permissionToggleLabel(p, requested), btn -> {
-                if (!approved.remove(p)) approved.add(p);
-                rebuildWidgets();
-            }).tooltip(Tooltip.create(Component.translatable(p.descriptionKey())))
-                .bounds(rightX, dangY, colWidth, 20).build();
-            if (!requested) toggle.active = false;
-            addRenderableWidget(toggle);
-            dangY += 23;
-        }
-
-        // Footer buttons
-        int footerY = panelY + PANEL_HEIGHT - 28;
-        addRenderableWidget(Button.builder(Component.literal("Save & Apply"), button -> applyDecision())
-            .bounds(panelX + PANEL_WIDTH - 216, footerY, 110, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), button -> onClose())
-            .bounds(panelX + PANEL_WIDTH - 100, footerY, 84, 20).build());
+        rebuildRowToggles();
     }
 
-    private Component permissionToggleLabel(AvatarPermission permission, boolean requested) {
-        if (!requested) {
-            return Component.literal("- ").append(Component.translatable(permission.translationKey())).withStyle(ChatFormatting.DARK_GRAY);
+    private Component unusedFilterLabel(int unusedCount) {
+        return showUnused
+            ? Component.translatable("screen.shyne_core.permissions.hide_unused")
+            : Component.translatable("screen.shyne_core.permissions.show_unused", unusedCount);
+    }
+
+    private void rebuildRowToggles() {
+        for (AbstractWidget widget : rowToggles) {
+            removeWidget(widget);
         }
-        boolean active = approved.contains(permission);
-        String box = active ? "[✓] " : "[  ] ";
-        Component label = Component.literal(box).append(Component.translatable(permission.translationKey()));
-        if (permission.dangerous()) {
-            return Component.literal(box).append(Component.literal("⚠ ").withStyle(ChatFormatting.GOLD))
-                .append(Component.translatable(permission.translationKey()).copy().withStyle(active ? ChatFormatting.YELLOW : ChatFormatting.GRAY));
+        rowToggles.clear();
+
+        List<AvatarPermission> ordered = new ArrayList<>();
+        // 1. Requested standard
+        for (AvatarPermission p : AvatarPermission.values()) {
+            if (requestedPermissions.contains(p) && !p.dangerous()) ordered.add(p);
         }
-        return label.copy().withStyle(active ? ChatFormatting.WHITE : ChatFormatting.GRAY);
+        // 2. Requested sensitive
+        for (AvatarPermission p : AvatarPermission.values()) {
+            if (requestedPermissions.contains(p) && p.dangerous()) ordered.add(p);
+        }
+        // 3. Unused capabilities (only when toggled on)
+        if (showUnused) {
+            for (AvatarPermission p : AvatarPermission.values()) {
+                if (!requestedPermissions.contains(p)) ordered.add(p);
+            }
+        }
+        displayedPermissions = List.copyOf(ordered);
+        maxScroll = Math.max(0, displayedPermissions.size() - visibleRows);
+        scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
+
+        int toggleW = 84;
+        int cardWidth = listWidth - (maxScroll > 0 ? 7 : 0);
+        int end = Math.min(displayedPermissions.size(), scrollOffset + visibleRows);
+
+        for (int i = scrollOffset; i < end; i++) {
+            AvatarPermission perm = displayedPermissions.get(i);
+            boolean requested = requestedPermissions.contains(perm);
+            int rowY = listTop + (i - scrollOffset) * ROW_HEIGHT;
+
+            Component btnLabel = !requested
+                ? Component.translatable("screen.shyne_core.permissions.unused")
+                : Component.translatable(approved.contains(perm)
+                    ? "screen.shyne_core.permissions.allowed"
+                    : "screen.shyne_core.permissions.blocked");
+
+            ShyneButton toggle = ShyneButton.toggle(
+                btnLabel,
+                () -> approved.contains(perm),
+                btn -> {
+                    if (!approved.remove(perm)) approved.add(perm);
+                    rebuildRowToggles();
+                }
+            ).bounds(listX + cardWidth - toggleW - 6, rowY + 6, toggleW, 20)
+                .tooltipText(Component.translatable(perm.descriptionKey()))
+                .activeState(requested);
+
+            rowToggles.add(toggle);
+            addRenderableWidget(toggle);
+        }
     }
 
     private void applyDecision() {
@@ -167,22 +214,106 @@ public final class AvatarPermissionScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(0, 0, width, height, 0xB0030918);
-        graphics.fillGradient(panelX, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 0xF20A1630, 0xF2071026);
-        graphics.outline(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, 0xFF22D7E8);
+        ShyneTheme.drawBackdrop(graphics, width, height);
+        ShyneTheme.drawPanel(graphics, panelX, panelY, panelWidth, panelHeight, 38);
 
-        graphics.text(font, Component.translatable("screen.shyne_core.permissions.title").copy().withStyle(ChatFormatting.AQUA),
-            panelX + 16, panelY + 12, 0xFFFFFFFF, true);
-        graphics.text(font, Component.literal("Avatar: " + avatarName + " (" + avatarId + ")"),
-            panelX + 16, panelY + 28, 0xFF91A7C6, false);
+        graphics.text(
+            font,
+            Component.literal("✦ ").append(Component.translatable("screen.shyne_core.permissions.local_title")),
+            panelX + 14,
+            panelY + 9,
+            ShyneTheme.TEXT_PRIMARY,
+            true
+        );
+        String avatarSubtitle = avatarName.equalsIgnoreCase(avatarId)
+            ? avatarName
+            : (avatarName + "  ·  " + avatarId);
+        graphics.text(
+            font,
+            Component.literal(ShyneTheme.ellipsize(font, avatarSubtitle, panelWidth - 28)),
+            panelX + 14,
+            panelY + 22,
+            ShyneTheme.TEXT_SECONDARY,
+            false
+        );
 
-        int colWidth = (PANEL_WIDTH - 48) / 2;
-        graphics.text(font, Component.literal("Standard Features").withStyle(ChatFormatting.AQUA),
-            panelX + 16, panelY + 70, 0xFFFFFFFF, false);
-        graphics.text(font, Component.literal("Sensitive / Protected Features").withStyle(ChatFormatting.GOLD),
-            panelX + 24 + colWidth, panelY + 70, 0xFFFFFFFF, false);
+        if (displayedPermissions.isEmpty()) {
+            ShyneTheme.drawCard(graphics, listX, listTop, listWidth, 38, false, false);
+            String noneMsg = ShyneTheme.ellipsize(font, Component.translatable("screen.shyne_core.permissions.none").getString(), listWidth - 20);
+            graphics.text(font, Component.literal("✓ " + noneMsg), listX + 12, listTop + 14, ShyneTheme.SUCCESS, false);
+        } else {
+            int cardWidth = listWidth - (maxScroll > 0 ? 7 : 0);
+            int end = Math.min(displayedPermissions.size(), scrollOffset + visibleRows);
+            for (int i = scrollOffset; i < end; i++) {
+                AvatarPermission perm = displayedPermissions.get(i);
+                boolean requested = requestedPermissions.contains(perm);
+                boolean isAllowed = requested && approved.contains(perm);
+                int y = listTop + (i - scrollOffset) * ROW_HEIGHT;
+                boolean hovered = mouseX >= listX && mouseX < listX + cardWidth && mouseY >= y && mouseY < y + CARD_HEIGHT;
+
+                ShyneTheme.drawCard(graphics, listX, y, cardWidth, CARD_HEIGHT, hovered, isAllowed);
+
+                int textMax = Math.max(60, cardWidth - 102);
+                String name = ShyneTheme.ellipsize(font, Component.translatable(perm.translationKey()).getString(), textMax - 74);
+                int titleColor = !requested ? ShyneTheme.TEXT_DIM : ShyneTheme.TEXT_PRIMARY;
+                graphics.text(font, Component.literal(name), listX + 10, y + 5, titleColor, false);
+
+                // Standard vs Sensitive badge
+                String badge = Component.translatable(perm.dangerous()
+                    ? "screen.shyne_core.permissions.sensitive_badge"
+                    : "screen.shyne_core.permissions.standard_badge").getString();
+                int badgeX = listX + 14 + font.width(name);
+                if (badgeX + font.width(badge) + 12 < listX + cardWidth - 94) {
+                    ShyneTheme.drawBadge(
+                        graphics,
+                        font,
+                        badge,
+                        badgeX,
+                        y + 3,
+                        perm.dangerous() ? ShyneTheme.WARNING_SOFT : ShyneTheme.ACCENT_SOFT,
+                        perm.dangerous() ? 0x99FFC66D : 0x883DD9E8,
+                        perm.dangerous() ? ShyneTheme.WARNING : ShyneTheme.ACCENT_BRIGHT
+                    );
+                }
+
+                String desc = ShyneTheme.ellipsize(font, Component.translatable(perm.descriptionKey()).getString(), textMax);
+                graphics.text(font, Component.literal(desc), listX + 10, y + 19, !requested ? ShyneTheme.TEXT_DIM : ShyneTheme.TEXT_SECONDARY, false);
+            }
+
+            if (maxScroll > 0) {
+                ShyneTheme.drawScrollbar(
+                    graphics,
+                    listX + listWidth - 3,
+                    listTop,
+                    listBottom,
+                    scrollOffset,
+                    maxScroll,
+                    visibleRows,
+                    displayedPermissions.size()
+                );
+            }
+        }
+
+        int footerDividerY = panelY + panelHeight - 34;
+        graphics.fill(panelX + 14, footerDividerY, panelX + panelWidth - 14, footerDividerY + 1, 0x333B5270);
+        String summary = approved.size() + " / " + requestedPermissions.size() + " "
+            + Component.translatable("screen.shyne_core.permissions.allowed").getString().toLowerCase(java.util.Locale.ROOT);
+        graphics.text(font, Component.literal(summary), panelX + 14, panelY + panelHeight - 22, ShyneTheme.TEXT_SECONDARY, false);
 
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (verticalAmount != 0 && maxScroll > 0) {
+            int next = Math.max(0, Math.min(maxScroll, scrollOffset + (verticalAmount < 0 ? 1 : -1)));
+            if (next != scrollOffset) {
+                scrollOffset = next;
+                rebuildRowToggles();
+                return true;
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override

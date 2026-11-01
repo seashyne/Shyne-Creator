@@ -256,7 +256,7 @@ try {
     exit 1
 }
 
-# Find the matching Minecraft version ID
+# Find the matching Minecraft version ID (prefer valid version types)
 $mcVersionEntry = $gameVersions | Where-Object { $_.name -eq $MinecraftVersion } | Select-Object -First 1
 
 if (-not $mcVersionEntry) {

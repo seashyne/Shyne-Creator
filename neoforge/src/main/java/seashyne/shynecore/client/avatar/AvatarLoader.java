@@ -62,16 +62,34 @@ public final class AvatarLoader {
         if (!Files.isDirectory(normalized)) return;
         Path extractedCache = normalized.resolve(".extracted");
         try (var stream = Files.list(normalized)) {
-            for (Path path : stream.toList()) {
+            List<Path> entries = stream.toList();
+            Set<String> directoryNames = new HashSet<>();
+            Set<String> directoryIds = new HashSet<>();
+            for (Path path : entries) {
                 Path abs = path.toAbsolutePath().normalize();
                 if (Files.isDirectory(abs)) {
-                    if (!abs.getFileName().toString().startsWith(".") && Files.isRegularFile(abs.resolve("avatar.json"))) {
+                    String folderName = abs.getFileName().toString();
+                    if (!folderName.startsWith(".") && Files.isRegularFile(abs.resolve("avatar.json"))) {
                         roots.add(abs);
+                        directoryNames.add(folderName.toLowerCase(Locale.ROOT));
+                        directoryIds.add(defaultAvatarId(abs));
                     }
-                } else if (Files.isRegularFile(abs) && abs.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".zip")) {
+                }
+            }
+            for (Path path : entries) {
+                Path abs = path.toAbsolutePath().normalize();
+                String fileName = abs.getFileName().toString();
+                if (Files.isRegularFile(abs) && fileName.toLowerCase(Locale.ROOT).endsWith(".zip")) {
+                    String rawName = fileName.substring(0, fileName.length() - 4);
+                    if (directoryNames.contains(rawName.toLowerCase(Locale.ROOT))
+                        || directoryIds.contains(defaultAvatarId(Path.of(rawName)))) {
+                        continue;
+                    }
                     Path root = AvatarZipExtractor.extractIfZip(abs, extractedCache);
                     if (root != null && Files.isRegularFile(root.resolve("avatar.json"))) {
-                        roots.add(root);
+                        if (!directoryIds.contains(defaultAvatarId(root))) {
+                            roots.add(root);
+                        }
                     }
                 }
             }
@@ -172,6 +190,14 @@ public final class AvatarLoader {
                     .filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".png"))
                     .forEach(p -> {
                         String rel = safeRoot.relativize(p).toString().replace('\\', '/');
+                        String lowerRel = rel.toLowerCase(Locale.ROOT);
+                        if (lowerRel.equals("avatar.png")
+                            || lowerRel.equals("icon.png")
+                            || lowerRel.equals("pack.png")
+                            || lowerRel.startsWith("outfit/")
+                            || lowerRel.startsWith("outfits/")) {
+                            return;
+                        }
                         if (!declaredTextures.contains(rel)) {
                             declaredTextures.add(rel);
                         }

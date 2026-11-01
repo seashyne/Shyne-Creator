@@ -123,6 +123,7 @@ public final class AvatarValidator {
         validateFullBodyHumanoid(model, manifest, issues);
 
         Set<String> declared = new HashSet<>();
+        boolean isFigura = manifest.isFiguraImport();
         if (manifest.textures() != null) for (String value : manifest.textures()) declared.add(normalize(value));
         Set<String> used = new HashSet<>();
         Path modelRoot = model.sourceFile().toAbsolutePath().normalize().getParent();
@@ -130,7 +131,7 @@ public final class AvatarValidator {
         for (var texture : model.textures()) {
             String relative = normalize(texture.relativePath());
             used.add(relative);
-            if (!declared.isEmpty() && !declared.contains(relative)) {
+            if (!isFigura && !texture.hasEmbeddedBytes() && !declared.isEmpty() && !declared.contains(relative)) {
                 warning(issues, "texture_undeclared", "Model texture is not listed in avatar.json; it will still be loaded from the Avatar folder: " + texture.relativePath(), manifest.model());
             }
 
@@ -158,8 +159,10 @@ public final class AvatarValidator {
             }
         }
         if (textureBytes > MAX_TEXTURE_TOTAL_BYTES) error(issues, "texture_total_size", "Avatar textures exceed the 64 MiB multiplayer limit", manifest.model());
-        for (String value : declared) {
-            if (!used.contains(value)) warning(issues, "texture_unused", "Listed texture is not used by the model", value);
+        if (!isFigura) {
+            for (String value : declared) {
+                if (!used.contains(value)) warning(issues, "texture_unused", "Listed texture is not used by the model", value);
+            }
         }
     }
 
@@ -226,7 +229,7 @@ public final class AvatarValidator {
         AvatarManifest manifest,
         List<AvatarValidationReport.Issue> issues
     ) {
-        if (manifest.parsedProfile() != AvatarProfile.FULL_BODY) return;
+        if (manifest.parsedProfile() != AvatarProfile.FULL_BODY || manifest.isFiguraImport()) return;
 
         Map<String, seashyne.shynecore.model.BbBoneDefinition> roots = new LinkedHashMap<>();
         for (var bone : model.bones()) {

@@ -273,6 +273,7 @@ public final class AvatarLifecycleManager {
         if (previousScript != null) previousScript.dispose();
         seashyne.shynecore.client.avatar.sound.AvatarCustomSoundManager.clear();
         seashyne.shynecore.client.avatar.sound.AvatarAudioStreamManager.clear();
+        seashyne.shynecore.client.render.AvatarActionTextureResolver.clear();
         if (physicsController != null && previous != null) {
             physicsController.clearDynamicNodes(previous);
         }

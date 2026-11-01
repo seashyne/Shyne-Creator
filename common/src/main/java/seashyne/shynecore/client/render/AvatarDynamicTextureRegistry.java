@@ -106,14 +106,39 @@ public final class AvatarDynamicTextureRegistry {
     public static synchronized boolean apply(Object owner, String avatarId, String name) {
         Entry entry = find(owner, avatarId, name);
         if (entry == null) return false;
-        Minecraft.getInstance().execute(() -> upload(entry));
+        Minecraft client = safeClient();
+        if (client != null) {
+            client.execute(() -> upload(entry));
+        }
         return true;
+    }
+
+    public static synchronized boolean hasTexture(Object owner, String avatarId, String name) {
+        return find(owner, avatarId, name) != null;
+    }
+
+    public static synchronized TextureInfo findInfoById(String idOrSpec) {
+        if (idOrSpec == null || idOrSpec.isBlank()) return null;
+        String trimmed = idOrSpec.trim();
+        for (Entry entry : ENTRIES.values()) {
+            if (!entry.released && entry.id.toString().equalsIgnoreCase(trimmed)) {
+                return entry.info();
+            }
+        }
+        return null;
+    }
+
+    public static synchronized void clearModelBindings(String modelId) {
+        if (modelId == null || modelId.isBlank()) return;
+        String prefix = safe(modelId, "model") + ":";
+        MODEL_TEXTURES.keySet().removeIf(key -> key.startsWith(prefix));
     }
 
     public static synchronized boolean bindModelTexture(Object owner, String avatarId, String modelId, String runtimeTexture, String targetTexture) {
         Entry entry = find(owner, avatarId, runtimeTexture);
         if (entry == null || modelId == null || modelId.isBlank()) return false;
-        String target = safe(targetTexture, "0");
+        String normalizedTarget = "custom".equalsIgnoreCase(targetTexture) ? "0" : targetTexture;
+        String target = safe(normalizedTarget, "0");
         MODEL_TEXTURES.put(modelBindingKey(modelId, target), entry);
         if (target.endsWith(".png")) {
             MODEL_TEXTURES.put(modelBindingKey(modelId, target.substring(0, target.length() - 4)), entry);
@@ -153,11 +178,13 @@ public final class AvatarDynamicTextureRegistry {
     }
 
     private static void register(Entry entry) {
-        Minecraft.getInstance().execute(() -> {
+        Minecraft client = safeClient();
+        if (client == null) return;
+        client.execute(() -> {
             if (entry.released) return;
             try {
                 entry.texture = new DynamicTexture(() -> "Shyne runtime texture " + entry.id, entry.image);
-                Minecraft.getInstance().getTextureManager().register(entry.id, entry.texture);
+                client.getTextureManager().register(entry.id, entry.texture);
                 entry.dirty = false;
             } catch (RuntimeException error) {
                 ShyneCore.LOGGER.warn("[AvatarTexture] Could not register runtime texture {}: {}", entry.id, error.getMessage());
@@ -180,13 +207,26 @@ public final class AvatarDynamicTextureRegistry {
     private static void release(Entry entry) {
         entry.released = true;
         seashyne.shynecore.client.avatar.AvatarQuotaManager.get(entry.avatarId).releaseTexture(entry.width, entry.height);
-        Minecraft.getInstance().execute(() -> {
+        Minecraft client = safeClient();
+        if (client == null) {
+            entry.image.close();
+            return;
+        }
+        client.execute(() -> {
             if (entry.texture == null) {
                 entry.image.close();
                 return;
             }
-            Minecraft.getInstance().getTextureManager().release(entry.id);
+            client.getTextureManager().release(entry.id);
         });
+    }
+
+    private static Minecraft safeClient() {
+        try {
+            return Minecraft.getInstance();
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 
     private static String safe(String value, String fallback) {

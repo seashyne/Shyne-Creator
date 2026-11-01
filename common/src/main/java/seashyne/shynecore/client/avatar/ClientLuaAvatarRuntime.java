@@ -87,7 +87,7 @@ public final class ClientLuaAvatarRuntime {
         this.inputBridge = new AvatarInputBridge(state);
         this.renderTaskBridge = new AvatarRenderTaskBridge(state);
         this.scriptCanvasBridge = new AvatarScriptCanvasBridge(state, () -> instructionBudget, EVENT_INSTRUCTION_LIMIT);
-        this.dynamicTextureBridge = new AvatarDynamicTextureBridge(state);
+        this.dynamicTextureBridge = new AvatarDynamicTextureBridge(state, model);
         this.animationBridge = new AvatarAnimationBridge(state, model);
         this.systemBridge = new AvatarSystemBridge(state, model,
             inputBridge::bindingCount,

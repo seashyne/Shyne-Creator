@@ -62,7 +62,12 @@ public final class ShyneKeybinds {
             }
             while (openActionWheel.consumeClick()) {
                 Minecraft mc = Minecraft.getInstance();
-                if (mc.gui.screen() == null) mc.gui.setScreen(new AvatarActionWheelScreen());
+                if (mc.gui.screen() == null) {
+                    int keyCode = openActionWheel.isUnbound()
+                        ? -1
+                        : InputConstants.getKey(openActionWheel.saveString()).getValue();
+                    mc.gui.setScreen(new AvatarActionWheelScreen(null, keyCode));
+                }
             }
             while (openPowerDeck.consumeClick()) {
                 Minecraft mc = Minecraft.getInstance();

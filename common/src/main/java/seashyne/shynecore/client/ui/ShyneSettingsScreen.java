@@ -3,8 +3,6 @@ package seashyne.shynecore.client.ui;
 import net.minecraft.ChatFormatting;
 import com.mojang.blaze3d.Blaze3D;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -56,6 +54,18 @@ public class ShyneSettingsScreen extends Screen {
         panelY = (this.height - panelHeight) / 2;
         compact = panelWidth < 420;
 
+        // Top Studio Navigation Bar
+        ShyneNavBar.addTabs(
+            this.minecraft,
+            this,
+            this.parent,
+            ShyneNavBar.Section.SETTINGS,
+            panelX + panelWidth - 8,
+            panelY + 12,
+            panelWidth - 140,
+            this::addRenderableWidget
+        );
+
         if (compact) {
             navWidth = panelWidth - 16;
             contentX = panelX + 8;
@@ -106,12 +116,11 @@ public class ShyneSettingsScreen extends Screen {
                 actionY = actionStart + (i / 2) * 24;
             }
             if (!visibleRow(actionY, 20)) continue;
-            Button button = Button.builder(action.label().get(), pressed -> {
+            ShyneButton button = ShyneButton.secondary(action.label().get(), pressed -> {
                 action.run().run();
                 pressed.setMessage(action.label().get());
-            })
-                .tooltip(Tooltip.create(action.tooltip().get()))
-                .bounds(actionX, actionY, actionWidth, 20).build();
+            }).tooltipText(action.tooltip().get())
+                .bounds(actionX, actionY, actionWidth, 20);
             button.active = action.enabled().getAsBoolean();
             addRenderableWidget(button);
         }
@@ -122,42 +131,46 @@ public class ShyneSettingsScreen extends Screen {
         int avatarsWidth = Math.max(88, innerWidth * 36 / 100);
         int resetWidth = Math.max(64, innerWidth * 25 / 100);
         int doneWidth = innerWidth - avatarsWidth - resetWidth - footerGap * 2;
-        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.avatars"), btn -> {
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("screen.shyne_core.avatars"), btn -> {
             if (this.minecraft != null) this.minecraft.gui.setScreen(new AvatarManagerScreen(this));
-        }).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.avatars.tooltip")))
-            .bounds(panelX + 8, footerY, avatarsWidth, 20).build());
+        }).tooltipText(Component.translatable("screen.shyne_core.avatars.tooltip"))
+            .bounds(panelX + 8, footerY, avatarsWidth, 20));
 
-        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.reset"), btn -> {
+        addRenderableWidget(ShyneButton.ghost(Component.translatable("screen.shyne_core.reset"), btn -> {
             ShyneClientSettings.resetDefaults();
             rebuildWidgets();
-        }).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.reset.tooltip")))
-            .bounds(panelX + 8 + avatarsWidth + footerGap, footerY, resetWidth, 20).build());
+        }).tooltipText(Component.translatable("screen.shyne_core.reset.tooltip"))
+            .bounds(panelX + 8 + avatarsWidth + footerGap, footerY, resetWidth, 20));
 
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), btn -> onClose())
-            .bounds(panelX + 8 + avatarsWidth + resetWidth + footerGap * 2, footerY, doneWidth, 20).build());
+        addRenderableWidget(ShyneButton.primary(Component.translatable("gui.done"), btn -> onClose())
+            .bounds(panelX + 8 + avatarsWidth + resetWidth + footerGap * 2, footerY, doneWidth, 20));
     }
 
     private void addCategoryButton(Category value, int x, int y, int width) {
-        Component label = Component.translatable(compact ? value.compactTranslationKey : value.translationKey)
-            .withStyle(value == category ? ChatFormatting.AQUA : ChatFormatting.WHITE);
-        Button button = Button.builder(label, btn -> {
+        Component label = Component.translatable(compact ? value.compactTranslationKey : value.translationKey);
+        ShyneButton button = ShyneButton.tab(label, btn -> {
             category = value;
             contentScroll = 0;
             rebuildWidgets();
-        }).tooltip(Tooltip.create(Component.translatable(value.descriptionKey))).bounds(x, y, width, 20).build();
-        button.active = value != category;
+        }, value == category)
+        .tooltipText(Component.translatable(value.descriptionKey))
+        .bounds(x, y, width, 20);
         addRenderableWidget(button);
     }
 
     private void addToggle(Setting setting, int x, int y, int width) {
-        boolean enabled = setting.getter().getAsBoolean();
-        Button button = Button.builder(toggleLabel(enabled), btn -> {
-            boolean next = !setting.getter().getAsBoolean();
-            setting.setter().set(next);
-            ShyneClientSettings.save();
-            btn.setMessage(toggleLabel(next));
-        }).tooltip(Tooltip.create(Component.translatable(setting.descriptionKey())))
-            .bounds(x, y, width, 20).build();
+        ShyneButton button = ShyneButton.toggle(
+            toggleLabel(setting.getter().getAsBoolean()),
+            setting.getter(),
+            btn -> {
+                boolean next = !setting.getter().getAsBoolean();
+                setting.setter().set(next);
+                ShyneClientSettings.save();
+                btn.setMessage(toggleLabel(next));
+            }
+        )
+        .tooltipText(Component.translatable(setting.descriptionKey()))
+        .bounds(x, y, width, 20);
         addRenderableWidget(button);
     }
 
@@ -168,47 +181,47 @@ public class ShyneSettingsScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(0, 0, this.width, this.height, 0x88030918);
-        graphics.fillGradient(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xF20A1630, 0xF2071026);
-        graphics.outline(panelX, panelY, panelWidth, panelHeight, 0xFF22D7E8);
+        graphics.fill(0, 0, this.width, this.height, ShyneTheme.BACKDROP);
+        ShyneTheme.drawPanel(graphics, panelX, panelY, panelWidth, panelHeight);
         if (compact) {
             int tabWidth = (navWidth - GAP * (Category.values().length - 1)) / Category.values().length;
             int selectedX = panelX + 8 + category.ordinal() * (tabWidth + GAP);
-            graphics.fill(selectedX, panelY + 73, selectedX + tabWidth, panelY + 76, 0xFF22D7E8);
+            graphics.fill(selectedX, panelY + 73, selectedX + tabWidth, panelY + 75, ShyneTheme.ACCENT);
         } else {
-            graphics.fill(panelX + navWidth, panelY + 48, panelX + navWidth + 1, panelY + panelHeight - 36, 0x5532D8EA);
+            graphics.fill(panelX + navWidth, panelY + 48, panelX + navWidth + 1, panelY + panelHeight - 36, ShyneTheme.BORDER_SUBTLE);
             int selectedCategoryY = panelY + 57 + category.ordinal() * 24;
-            graphics.fill(panelX + 4, selectedCategoryY, panelX + 7, selectedCategoryY + 20, 0xFF22D7E8);
+            graphics.fill(panelX + 4, selectedCategoryY, panelX + 7, selectedCategoryY + 20, ShyneTheme.ACCENT);
         }
 
         graphics.blit(RenderPipelines.GUI_TEXTURED, LOGO, panelX + 9, panelY + 8, 0, 0, 32, 32, 1280, 1280);
         graphics.text(this.font, Component.translatable("screen.shyne_core.title").withStyle(ChatFormatting.AQUA), panelX + 48, panelY + 9, 0xFFFFFFFF, true);
-        graphics.text(this.font, Component.translatable("screen.shyne_core.subtitle"), panelX + 48, panelY + 24, 0xFF91A7C6, false);
-        graphics.fill(panelX + 8, panelY + 46, panelX + panelWidth - 8, panelY + 47, 0x6632D8EA);
+        graphics.text(this.font, Component.translatable("screen.shyne_core.subtitle"), panelX + 48, panelY + 24, ShyneTheme.TEXT_MUTED, false);
+        graphics.fill(panelX + 8, panelY + 46, panelX + panelWidth - 8, panelY + 47, ShyneTheme.BORDER_SUBTLE);
 
         if (!compact) {
             graphics.text(this.font, Component.translatable(category.translationKey).withStyle(ChatFormatting.AQUA), contentX + 6, panelY + 53, 0xFFFFFFFF, false);
             String categoryDescription = this.font.plainSubstrByWidth(Component.translatable(category.descriptionKey).getString(), contentWidth - 12);
-            graphics.text(this.font, Component.literal(categoryDescription), contentX + 6, panelY + 66, 0xFF8195B4, false);
+            graphics.text(this.font, Component.literal(categoryDescription), contentX + 6, panelY + 66, ShyneTheme.TEXT_MUTED, false);
         }
         if (category == Category.CREATOR) {
-            graphics.fill(contentX, rowY, contentX + contentWidth, rowY + 24, 0x2419BFD1);
+            ShyneTheme.drawCard(graphics, contentX, rowY, contentWidth, 24, ShyneTheme.CARD_BG, ShyneTheme.BORDER_SUBTLE);
             graphics.text(this.font,
                 Component.translatable("screen.shyne_core.creator.by", ShyneCreatorInfo.CREATOR_NAME),
-                contentX + 7, rowY + 3, 0xFFF3F7FF, false);
+                contentX + 7, rowY + 3, ShyneTheme.TEXT_TITLE, false);
             graphics.text(this.font,
                 Component.translatable("screen.shyne_core.creator.version", ShyneCore.VERSION),
-                contentX + 7, rowY + 14, 0xFF8195B4, false);
+                contentX + 7, rowY + 14, ShyneTheme.TEXT_MUTED, false);
         }
         List<Setting> settings = settingsFor(category);
         for (int i = 0; i < settings.size(); i++) {
             Setting setting = settings.get(i);
             int y = rowY + i * 36 - contentScroll;
             if (!visibleRow(y, 32)) continue;
-            if (i % 2 == 0) graphics.fill(contentX, y, contentX + contentWidth, y + 32, 0x2419BFD1);
-            graphics.text(this.font, Component.translatable(setting.nameKey()), contentX + 7, y + 5, 0xFFF3F7FF, false);
+            int bg = (i % 2 == 0) ? ShyneTheme.CARD_BG : 0x44101929;
+            ShyneTheme.drawCard(graphics, contentX, y, contentWidth, 32, bg, ShyneTheme.BORDER_SUBTLE);
+            graphics.text(this.font, Component.translatable(setting.nameKey()), contentX + 7, y + 5, ShyneTheme.TEXT_TITLE, false);
             String description = this.font.plainSubstrByWidth(Component.translatable(setting.descriptionKey()).getString(), contentWidth - 78);
-            graphics.text(this.font, Component.literal(description), contentX + 7, y + 18, 0xFF8195B4, false);
+            graphics.text(this.font, Component.literal(description), contentX + 7, y + 18, ShyneTheme.TEXT_MUTED, false);
         }
 
         List<ScreenAction> actions = actionsFor(category);
@@ -217,6 +230,10 @@ public class ShyneSettingsScreen extends Screen {
             if (category != Category.CREATOR && actionStart >= rowY + 10 && actionStart < contentBottom()) {
                 graphics.text(this.font, Component.translatable("screen.shyne_core.settings.quick_actions"), contentX + 5, actionStart - 10, 0xFF8195B4, false);
             }
+        }
+
+        if (maxContentScroll > 0) {
+            ShyneTheme.drawScrollbar(graphics, contentX + contentWidth + 2, rowY, contentBottom(), contentScroll, maxContentScroll, contentBottom() - rowY, maxContentScroll + (contentBottom() - rowY));
         }
 
         Component hint = maxContentScroll > 0

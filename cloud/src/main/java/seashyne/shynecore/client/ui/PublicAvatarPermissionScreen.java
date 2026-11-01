@@ -1,16 +1,16 @@
 package seashyne.shynecore.client.ui;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import seashyne.shynecore.client.avatar.AvatarPermission;
 import seashyne.shynecore.client.avatar.ShyneCloudClient;
 import seashyne.shynecore.client.config.ShyneClientSettings;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -18,15 +18,28 @@ import java.util.Set;
  * Grants are scoped to share id + package hash so an update requires review.
  */
 public final class PublicAvatarPermissionScreen extends Screen {
-    private static final int PANEL_WIDTH = 430;
-    private static final int PANEL_HEIGHT = 300;
+    private static final int ROW_HEIGHT = 36;
+    private static final int CARD_HEIGHT = 32;
 
     private final Screen parent;
     private final ShyneCloudClient.CloudAvatar avatar;
     private final Runnable onApproved;
     private final EnumSet<AvatarPermission> approved = EnumSet.noneOf(AvatarPermission.class);
+
     private int panelX;
     private int panelY;
+    private int panelWidth;
+    private int panelHeight;
+    private int listX;
+    private int listWidth;
+    private int listTop;
+    private int listBottom;
+    private int visibleRows;
+    private int scrollOffset;
+    private int maxScroll;
+
+    private List<AvatarPermission> requestedList = List.of();
+    private final List<AbstractWidget> rowToggles = new ArrayList<>();
 
     public PublicAvatarPermissionScreen(
         Screen parent,
@@ -48,35 +61,70 @@ public final class PublicAvatarPermissionScreen extends Screen {
 
     @Override
     protected void init() {
-        panelX = (width - PANEL_WIDTH) / 2;
-        panelY = Math.max(10, (height - PANEL_HEIGHT) / 2);
-        int y = panelY + 82;
-        for (AvatarPermission permission : AvatarPermission.values()) {
-            if (!avatar.permissions().contains(permission)) continue;
-            addRenderableWidget(Button.builder(permissionLabel(permission), button -> {
-                if (!approved.remove(permission)) approved.add(permission);
-                rebuildWidgets();
-            }).tooltip(Tooltip.create(Component.translatable(permission.descriptionKey())))
-                .bounds(panelX + 18, y, PANEL_WIDTH - 36, 20).build());
-            y += 25;
-        }
+        clearWidgets();
+        rowToggles.clear();
 
-        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.permissions.allow"), button -> approve())
-            .bounds(panelX + 18, panelY + PANEL_HEIGHT - 34, 180, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.settings"), button -> {
+        panelWidth = Math.min(540, Math.max(300, width - 20));
+        panelHeight = Math.min(350, Math.max(230, height - 16));
+        panelX = (width - panelWidth) / 2;
+        panelY = (height - panelHeight) / 2;
+
+        listX = panelX + 14;
+        listWidth = panelWidth - 28;
+        listTop = panelY + 62;
+        int footerY = panelY + panelHeight - 28;
+        listBottom = footerY - 8;
+        visibleRows = Math.max(1, (listBottom - listTop) / ROW_HEIGHT);
+
+        List<AvatarPermission> ordered = new ArrayList<>();
+        for (AvatarPermission p : AvatarPermission.values()) {
+            if (avatar.permissions().contains(p) && !p.dangerous()) ordered.add(p);
+        }
+        for (AvatarPermission p : AvatarPermission.values()) {
+            if (avatar.permissions().contains(p) && p.dangerous()) ordered.add(p);
+        }
+        requestedList = List.copyOf(ordered);
+
+        addRenderableWidget(ShyneButton.primary(Component.translatable("screen.shyne_core.permissions.allow"), button -> approve())
+            .bounds(listX, footerY, Math.min(186, listWidth / 2), 20));
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("screen.shyne_core.nav.settings"), button -> {
             if (minecraft != null) minecraft.gui.setScreen(new ShyneSettingsScreen(this));
-        }).bounds(panelX + 204, panelY + PANEL_HEIGHT - 34, 100, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.permissions.cancel"), button -> onClose())
-            .bounds(panelX + 310, panelY + PANEL_HEIGHT - 34, 102, 20).build());
+        }).bounds(panelX + panelWidth - 178, footerY, 80, 20));
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("screen.shyne_core.permissions.cancel"), button -> onClose())
+            .bounds(panelX + panelWidth - 94, footerY, 80, 20));
+
+        rebuildRowToggles();
     }
 
-    private Component permissionLabel(AvatarPermission permission) {
-        String marker = approved.contains(permission) ? "✓ " : "□ ";
-        Component name = Component.translatable(permission.translationKey());
-        if (permission.dangerous()) {
-            return Component.literal(marker).append(Component.literal("⚠ ").withStyle(ChatFormatting.GOLD)).append(name);
+    private void rebuildRowToggles() {
+        for (AbstractWidget widget : rowToggles) {
+            removeWidget(widget);
         }
-        return Component.literal(marker).append(name);
+        rowToggles.clear();
+
+        maxScroll = Math.max(0, requestedList.size() - visibleRows);
+        scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
+
+        int toggleW = 84;
+        int cardWidth = listWidth - (maxScroll > 0 ? 7 : 0);
+        int end = Math.min(requestedList.size(), scrollOffset + visibleRows);
+
+        for (int i = scrollOffset; i < end; i++) {
+            AvatarPermission perm = requestedList.get(i);
+            int rowY = listTop + (i - scrollOffset) * ROW_HEIGHT;
+            Component label = Component.translatable(approved.contains(perm)
+                ? "screen.shyne_core.permissions.allowed"
+                : "screen.shyne_core.permissions.blocked");
+
+            ShyneButton toggle = ShyneButton.toggle(label, () -> approved.contains(perm), btn -> {
+                if (!approved.remove(perm)) approved.add(perm);
+                rebuildRowToggles();
+            }).bounds(listX + cardWidth - toggleW - 6, rowY + 6, toggleW, 20)
+                .tooltipText(Component.translatable(perm.descriptionKey()));
+
+            rowToggles.add(toggle);
+            addRenderableWidget(toggle);
+        }
     }
 
     private void approve() {
@@ -88,20 +136,98 @@ public final class PublicAvatarPermissionScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(0, 0, width, height, 0xB0030918);
-        graphics.fillGradient(panelX, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 0xF20A1630, 0xF2071026);
-        graphics.outline(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, 0xFF22D7E8);
-        graphics.text(font, Component.translatable("screen.shyne_core.permissions.title").withStyle(ChatFormatting.AQUA),
-            panelX + 18, panelY + 16, 0xFFFFFFFF, true);
-        graphics.text(font, Component.translatable("screen.shyne_core.permissions.subtitle", avatar.name(), avatar.ownerName()),
-            panelX + 18, panelY + 34, 0xFFB7C6DB, false);
-        graphics.text(font, Component.translatable("screen.shyne_core.permissions.scope"),
-            panelX + 18, panelY + 50, 0xFF8195B4, false);
-        if (avatar.permissions().isEmpty()) {
-            graphics.text(font, Component.translatable("screen.shyne_core.permissions.none"),
-                panelX + 18, panelY + 90, 0xFF79D8B2, false);
+        ShyneTheme.drawBackdrop(graphics, width, height);
+        ShyneTheme.drawPanel(graphics, panelX, panelY, panelWidth, panelHeight, 52);
+
+        graphics.text(
+            font,
+            Component.literal("✦ ").append(Component.translatable("screen.shyne_core.permissions.title")),
+            panelX + 14,
+            panelY + 9,
+            ShyneTheme.TEXT_PRIMARY,
+            true
+        );
+        String sub = ShyneTheme.ellipsize(
+            font,
+            Component.translatable("screen.shyne_core.permissions.subtitle", avatar.name(), avatar.ownerName()).getString(),
+            panelWidth - 28
+        );
+        graphics.text(font, Component.literal(sub), panelX + 14, panelY + 23, ShyneTheme.TEXT_SECONDARY, false);
+        String scope = ShyneTheme.ellipsize(
+            font,
+            Component.translatable("screen.shyne_core.permissions.scope").getString(),
+            panelWidth - 28
+        );
+        graphics.text(font, Component.literal(scope), panelX + 14, panelY + 36, ShyneTheme.TEXT_DIM, false);
+
+        if (requestedList.isEmpty()) {
+            ShyneTheme.drawCard(graphics, listX, listTop, listWidth, 38, false, false);
+            graphics.text(font, Component.translatable("screen.shyne_core.permissions.none"), listX + 12, listTop + 14, ShyneTheme.SUCCESS, false);
+        } else {
+            int cardWidth = listWidth - (maxScroll > 0 ? 7 : 0);
+            int end = Math.min(requestedList.size(), scrollOffset + visibleRows);
+            for (int i = scrollOffset; i < end; i++) {
+                AvatarPermission perm = requestedList.get(i);
+                boolean isAllowed = approved.contains(perm);
+                int y = listTop + (i - scrollOffset) * ROW_HEIGHT;
+                boolean hovered = mouseX >= listX && mouseX < listX + cardWidth && mouseY >= y && mouseY < y + CARD_HEIGHT;
+
+                ShyneTheme.drawCard(graphics, listX, y, cardWidth, CARD_HEIGHT, hovered, isAllowed);
+                int textMax = Math.max(60, cardWidth - 102);
+                String name = ShyneTheme.ellipsize(font, Component.translatable(perm.translationKey()).getString(), textMax - 74);
+                graphics.text(font, Component.literal(name), listX + 10, y + 5, ShyneTheme.TEXT_PRIMARY, false);
+
+                String badge = Component.translatable(perm.dangerous()
+                    ? "screen.shyne_core.permissions.sensitive_badge"
+                    : "screen.shyne_core.permissions.standard_badge").getString();
+                int badgeX = listX + 14 + font.width(name);
+                if (badgeX + font.width(badge) + 12 < listX + cardWidth - 94) {
+                    ShyneTheme.drawBadge(
+                        graphics,
+                        font,
+                        badge,
+                        badgeX,
+                        y + 3,
+                        perm.dangerous() ? ShyneTheme.WARNING_SOFT : ShyneTheme.ACCENT_SOFT,
+                        perm.dangerous() ? 0x99FFC66D : 0x883DD9E8,
+                        perm.dangerous() ? ShyneTheme.WARNING : ShyneTheme.ACCENT_BRIGHT
+                    );
+                }
+
+                String desc = ShyneTheme.ellipsize(font, Component.translatable(perm.descriptionKey()).getString(), textMax);
+                graphics.text(font, Component.literal(desc), listX + 10, y + 19, ShyneTheme.TEXT_SECONDARY, false);
+            }
+
+            if (maxScroll > 0) {
+                ShyneTheme.drawScrollbar(
+                    graphics,
+                    listX + listWidth - 3,
+                    listTop,
+                    listBottom,
+                    scrollOffset,
+                    maxScroll,
+                    visibleRows,
+                    requestedList.size()
+                );
+            }
         }
+
+        int footerDividerY = panelY + panelHeight - 34;
+        graphics.fill(panelX + 14, footerDividerY, panelX + panelWidth - 14, footerDividerY + 1, 0x333B5270);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (verticalAmount != 0 && maxScroll > 0) {
+            int next = Math.max(0, Math.min(maxScroll, scrollOffset + (verticalAmount < 0 ? 1 : -1)));
+            if (next != scrollOffset) {
+                scrollOffset = next;
+                rebuildRowToggles();
+                return true;
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override

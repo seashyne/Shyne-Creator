@@ -2,7 +2,6 @@ package seashyne.shynecore.client.ui;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
@@ -15,8 +14,8 @@ import seashyne.shynecore.client.config.ShyneClientSettings;
 
 public final class ShyneStatusScreen extends Screen {
     private static final Identifier LOGO = Identifier.fromNamespaceAndPath(ShyneCore.MOD_ID, "textures/gui/shyne_creator_logo.png");
-    private static final int PANEL_WIDTH = 430;
-    private static final int PANEL_HEIGHT = 192;
+    private static final int PANEL_WIDTH = 450;
+    private static final int PANEL_HEIGHT = 200;
     private final Screen parent;
     private int panelX;
     private int panelY;
@@ -34,26 +33,36 @@ public final class ShyneStatusScreen extends Screen {
         int width = Math.min(PANEL_WIDTH, this.width - 24);
         panelX = (this.width - width) / 2;
         panelY = Math.max(16, (this.height - PANEL_HEIGHT) / 2);
-        addRenderableWidget(Button.builder(enabledLabel(), button -> {
-            enabled = !enabled;
-            button.setMessage(enabledLabel());
-        }).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.status.enabled.tooltip")))
-            .bounds(panelX + width - 82, panelY + 50, 68, 20).build());
-        endpointBox = new EditBox(this.font, panelX + 14, panelY + 91, width - 28, 20, Component.translatable("screen.shyne_core.status.endpoint"));
+
+        addRenderableWidget(ShyneButton.toggle(
+            enabledLabel(),
+            () -> enabled,
+            button -> {
+                enabled = !enabled;
+                button.setMessage(enabledLabel());
+            }
+        ).bounds(panelX + width - 96, panelY + 50, 82, 20)
+        .tooltipText(Component.translatable("screen.shyne_core.status.enabled.tooltip")));
+
+        endpointBox = new EditBox(this.font, panelX + 16, panelY + 92, width - 32, 20, Component.translatable("screen.shyne_core.status.endpoint"));
         endpointBox.setMaxLength(240);
         endpointBox.setValue(ShyneClientSettings.cloudEndpoint);
         addRenderableWidget(endpointBox);
-        int footerY = panelY + PANEL_HEIGHT - 30;
-        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.status.check"), button -> check())
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.status.check.tooltip")))
-            .bounds(panelX + 14, footerY, 116, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), button -> onClose()).bounds(panelX + width - 170, footerY, 74, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), button -> saveAndClose()).bounds(panelX + width - 92, footerY, 78, 20).build());
+
+        int footerY = panelY + PANEL_HEIGHT - 32;
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("screen.shyne_core.status.check"), button -> check())
+            .bounds(panelX + 16, footerY, 116, 20)
+            .tooltipText(Component.translatable("screen.shyne_core.status.check.tooltip")));
+
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("gui.cancel"), button -> onClose())
+            .bounds(panelX + width - 176, footerY, 76, 20));
+
+        addRenderableWidget(ShyneButton.primary(Component.translatable("gui.done"), button -> saveAndClose())
+            .bounds(panelX + width - 94, footerY, 80, 20));
     }
 
     private Component enabledLabel() {
-        return Component.translatable(enabled ? "screen.shyne_core.status.enabled" : "screen.shyne_core.status.disabled")
-            .withStyle(enabled ? ChatFormatting.AQUA : ChatFormatting.GRAY);
+        return Component.translatable(enabled ? "screen.shyne_core.status.enabled" : "screen.shyne_core.status.disabled");
     }
 
     private void applyFields() {
@@ -77,28 +86,36 @@ public final class ShyneStatusScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         int width = Math.min(PANEL_WIDTH, this.width - 24);
-        graphics.fill(0, 0, this.width, this.height, 0x99030918);
-        graphics.fillGradient(panelX, panelY, panelX + width, panelY + PANEL_HEIGHT, 0xF20A1630, 0xF2071026);
-        graphics.outline(panelX, panelY, width, PANEL_HEIGHT, 0xFF22D7E8);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, LOGO, panelX + 12, panelY + 10, 0, 0, 28, 28, 1280, 1280);
-        graphics.text(this.font, this.title.copy().withStyle(ChatFormatting.AQUA), panelX + 49, panelY + 11, 0xFFFFFFFF, true);
-        graphics.text(this.font, Component.translatable("screen.shyne_core.status.subtitle"), panelX + 49, panelY + 26, 0xFF91A7C6, false);
-        graphics.fill(panelX + 12, panelY + 44, panelX + width - 12, panelY + 45, 0x6632D8EA);
-        graphics.text(this.font, Component.translatable("screen.shyne_core.status.enabled.label"), panelX + 14, panelY + 56, 0xFFF3F7FF, false);
-        graphics.text(this.font, Component.translatable("screen.shyne_core.status.endpoint"), panelX + 14, panelY + 78, 0xFF91A7C6, false);
+        ShyneTheme.drawBackdrop(graphics, this.width, this.height);
+        ShyneTheme.drawPanel(graphics, panelX, panelY, width, PANEL_HEIGHT, 44);
+
+        graphics.blit(RenderPipelines.GUI_TEXTURED, LOGO, panelX + 14, panelY + 8, 0, 0, 28, 28, 1280, 1280);
+        graphics.text(this.font, this.title, panelX + 48, panelY + 12, ShyneTheme.TEXT_PRIMARY, true);
+        graphics.text(this.font, Component.translatable("screen.shyne_core.status.subtitle"), panelX + 48, panelY + 28, ShyneTheme.TEXT_SECONDARY, false);
+
+        graphics.text(this.font, Component.translatable("screen.shyne_core.status.enabled.label"), panelX + 16, panelY + 56, ShyneTheme.TEXT_PRIMARY, false);
+        graphics.text(this.font, Component.translatable("screen.shyne_core.status.endpoint"), panelX + 16, panelY + 80, ShyneTheme.TEXT_SECONDARY, false);
+
         ShyneStatusClient.StatusResult result = ShyneStatusClient.lastResult();
         int color = switch (result.state()) {
-            case SUCCESS -> 0xFF79D8B2;
-            case ERROR -> 0xFFFF7F8B;
-            case WORKING -> 0xFF8DECF3;
-            case IDLE -> 0xFF7188A8;
+            case SUCCESS -> ShyneTheme.SUCCESS;
+            case ERROR -> ShyneTheme.DANGER;
+            case WORKING -> ShyneTheme.ACCENT;
+            case IDLE -> ShyneTheme.TEXT_SECONDARY;
         };
         String status = this.font.plainSubstrByWidth(result.message(), width - 34);
-        graphics.text(this.font, Component.literal("● " + status), panelX + 16, panelY + 122, color, false);
-        graphics.fill(panelX + 12, panelY + PANEL_HEIGHT - 38, panelX + width - 12, panelY + PANEL_HEIGHT - 37, 0x4432D8EA);
+        graphics.text(this.font, Component.literal("● " + status), panelX + 16, panelY + 124, color, false);
+
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
-    @Override public void onClose() { if (this.minecraft != null) this.minecraft.gui.setScreen(parent); }
-    @Override public boolean isPauseScreen() { return true; }
+    @Override
+    public void onClose() {
+        if (this.minecraft != null) this.minecraft.gui.setScreen(parent);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return true;
+    }
 }

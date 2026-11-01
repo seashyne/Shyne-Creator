@@ -4,7 +4,6 @@ import com.mojang.blaze3d.Blaze3D;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
@@ -23,17 +22,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * In-game UI for inspecting, diagnosing, and converting Figura and Blockbench
+ * In-game Studio UI for inspecting, diagnosing, and converting Figura and Blockbench
  * projects into Shyne Avatar Standard 2.0 with preserved Creator Attribution.
  */
 public final class AvatarImporterScreen extends Screen {
-    private static final int BACKGROUND = 0xF20B1222;
-    private static final int CARD_BG = 0x88121E36;
-    private static final int ACCENT = 0xFF3DD9E8;
-    private static final int OK = 0xFF7DDBB3;
-    private static final int WARNING = 0xFFFFC66D;
-    private static final int ERROR = 0xFFFF8793;
-    private static final int MUTED = 0xFF91A0B7;
+    private static final int ITEM_HEIGHT = 22;
 
     private final Screen parent;
     private List<Candidate> candidates = new ArrayList<>();
@@ -41,7 +34,7 @@ public final class AvatarImporterScreen extends Screen {
     private int candidateScroll = 0;
     private AvatarImportReport currentReport;
     private String statusMessage = "";
-    private int statusColor = OK;
+    private int statusColor = ShyneTheme.SUCCESS;
 
     private int panelX;
     private int panelY;
@@ -52,9 +45,9 @@ public final class AvatarImporterScreen extends Screen {
     private int rightX;
     private int rightWidth;
 
-    private Button convertButton;
-    private Button openFolderButton;
-    private Button exportButton;
+    private ShyneButton convertButton;
+    private ShyneButton openFolderButton;
+    private ShyneButton exportButton;
 
     public AvatarImporterScreen(Screen parent) {
         super(Component.literal("Avatar Importer & Creator Tooling"));
@@ -76,23 +69,23 @@ public final class AvatarImporterScreen extends Screen {
 
         int footerY = panelY + panelHeight - 32;
 
-        convertButton = addRenderableWidget(Button.builder(Component.literal("Convert to Shyne 2.0"), btn -> executeConvert())
-            .bounds(rightX, footerY, 140, 20).build());
+        convertButton = addRenderableWidget(ShyneButton.primary(Component.literal("Convert to Shyne 2.0"), btn -> executeConvert())
+            .bounds(rightX, footerY, 140, 20));
 
-        exportButton = addRenderableWidget(Button.builder(Component.literal("Export Report"), btn -> executeExportReport())
-            .bounds(rightX + 145, footerY, 95, 20).build());
+        exportButton = addRenderableWidget(ShyneButton.secondary(Component.literal("Export Report"), btn -> executeExportReport())
+            .bounds(rightX + 145, footerY, 95, 20));
 
-        openFolderButton = addRenderableWidget(Button.builder(Component.literal("Open Folder"), btn -> executeOpenFolder())
-            .bounds(rightX + 245, footerY, 85, 20).build());
+        openFolderButton = addRenderableWidget(ShyneButton.secondary(Component.literal("Open Folder"), btn -> executeOpenFolder())
+            .bounds(rightX + 245, footerY, 85, 20));
 
-        addRenderableWidget(Button.builder(Component.literal("Refresh"), btn -> {
+        addRenderableWidget(ShyneButton.secondary(Component.literal("Refresh"), btn -> {
             loadCandidates();
             statusMessage = "Refreshed candidates list.";
-            statusColor = MUTED;
-        }).bounds(panelX + 14, footerY, 70, 20).build());
+            statusColor = ShyneTheme.TEXT_SECONDARY;
+        }).bounds(panelX + 14, footerY, 70, 20));
 
-        addRenderableWidget(Button.builder(Component.translatable("gui.back"), btn -> onClose())
-            .bounds(panelX + panelWidth - 75, footerY, 65, 20).build());
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("gui.back"), btn -> onClose())
+            .bounds(panelX + panelWidth - 75, footerY, 65, 20));
 
         selectCandidate(selectedIndex);
     }
@@ -119,7 +112,7 @@ public final class AvatarImporterScreen extends Screen {
         if (selectedIndex >= candidates.size()) {
             selectedIndex = 0;
         }
-        int maxVisible = Math.max(1, (panelHeight - 40 - 66) / 20);
+        int maxVisible = Math.max(1, (panelHeight - 40 - 66) / ITEM_HEIGHT);
         int maxCandidateScroll = Math.max(0, candidates.size() - maxVisible);
         candidateScroll = Math.max(0, Math.min(candidateScroll, maxCandidateScroll));
     }
@@ -130,14 +123,15 @@ public final class AvatarImporterScreen extends Screen {
         Candidate candidate = candidates.get(index);
         if (Files.isDirectory(candidate.path())) {
             currentReport = AvatarImporter.analyze(candidate.path());
-            boolean canConvert = candidate.isUnimported() || currentReport.sourceType() != AvatarImportReport.SourceType.SHYNE_AVATAR || currentReport.warningCount() > 0;
-            if (convertButton != null) convertButton.active = Files.isDirectory(candidate.path());
+            boolean canConvert = Files.isDirectory(candidate.path());
+            if (convertButton != null) convertButton.active = canConvert;
             if (exportButton != null) exportButton.active = currentReport != null;
             if (openFolderButton != null) openFolderButton.active = Files.isDirectory(candidate.path());
         } else {
             currentReport = null;
             if (convertButton != null) convertButton.active = false;
             if (exportButton != null) exportButton.active = false;
+            if (openFolderButton != null) openFolderButton.active = false;
         }
     }
 
@@ -149,7 +143,7 @@ public final class AvatarImporterScreen extends Screen {
         AvatarImporter.ConversionResult result = AvatarImporter.convert(c.path());
         if (result.success()) {
             statusMessage = "Successfully imported '" + result.report().avatarName() + "' with Creator Attribution!";
-            statusColor = OK;
+            statusColor = ShyneTheme.SUCCESS;
             AvatarRuntime.refreshCatalogAsync(true).whenComplete((entries, err) -> {
                 if (minecraft != null) minecraft.execute(() -> {
                     loadCandidates();
@@ -158,7 +152,7 @@ public final class AvatarImporterScreen extends Screen {
             });
         } else {
             statusMessage = "Import failed: " + result.message();
-            statusColor = ERROR;
+            statusColor = ShyneTheme.DANGER;
         }
     }
 
@@ -170,10 +164,10 @@ public final class AvatarImporterScreen extends Screen {
         try {
             Path exported = AvatarImporter.exportReport(c.path());
             statusMessage = "Saved report to " + exported.getFileName();
-            statusColor = OK;
+            statusColor = ShyneTheme.SUCCESS;
         } catch (IOException e) {
             statusMessage = "Failed to export report: " + e.getMessage();
-            statusColor = ERROR;
+            statusColor = ShyneTheme.DANGER;
         }
     }
 
@@ -193,13 +187,13 @@ public final class AvatarImporterScreen extends Screen {
         if (event.button() == 0) {
             double mouseX = event.x();
             double mouseY = event.y();
-            int maxVisible = Math.max(1, (panelHeight - 40 - 66) / 20);
+            int maxVisible = Math.max(1, (panelHeight - 40 - 66) / ITEM_HEIGHT);
             int listY = panelY + 66;
             for (int i = 0; i < maxVisible; i++) {
                 int idx = candidateScroll + i;
                 if (idx >= candidates.size()) break;
-                int itemY = listY + i * 20;
-                if (mouseX >= panelX + 12 && mouseX <= panelX + 10 + leftWidth && mouseY >= itemY && mouseY < itemY + 20) {
+                int itemY = listY + i * ITEM_HEIGHT;
+                if (mouseX >= panelX + 12 && mouseX <= panelX + 10 + leftWidth && mouseY >= itemY && mouseY < itemY + ITEM_HEIGHT) {
                     selectCandidate(idx);
                     return true;
                 }
@@ -210,7 +204,7 @@ public final class AvatarImporterScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        int maxVisible = Math.max(1, (panelHeight - 40 - 66) / 20);
+        int maxVisible = Math.max(1, (panelHeight - 40 - 66) / ITEM_HEIGHT);
         int maxCandidateScroll = Math.max(0, candidates.size() - maxVisible);
         if (verticalAmount != 0 && maxCandidateScroll > 0) {
             candidateScroll = Math.max(0, Math.min(maxCandidateScroll, candidateScroll + (verticalAmount < 0 ? 1 : -1)));
@@ -221,108 +215,108 @@ public final class AvatarImporterScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(0, 0, width, height, 0xA8030710);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, BACKGROUND);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 2, ACCENT);
+        ShyneTheme.drawBackdrop(graphics, width, height);
+        ShyneTheme.drawPanel(graphics, panelX, panelY, panelWidth, panelHeight, 46);
 
         // Header
-        graphics.text(font, Component.literal("Shyne Avatar Importer & Tooling").withStyle(ChatFormatting.BOLD), panelX + 14, panelY + 12, 0xFFFFFFFF, true);
-        graphics.text(font, Component.literal("Inspect, convert, and preserve creator rights for Figura & Blockbench avatars"), panelX + 14, panelY + 26, MUTED, false);
+        graphics.text(font, Component.literal("Shyne Avatar Importer & Tooling").withStyle(ChatFormatting.BOLD), panelX + 16, panelY + 14, ShyneTheme.TEXT_PRIMARY, true);
+        graphics.text(font, Component.literal("Inspect, convert, and preserve creator rights for Figura & Blockbench avatars"), panelX + 16, panelY + 31, ShyneTheme.TEXT_SECONDARY, false);
 
-        // Left list panel background
-        graphics.fill(panelX + 10, panelY + 44, panelX + 10 + leftWidth, panelY + panelHeight - 40, CARD_BG);
-        String scrollHint = candidates.size() > Math.max(1, (panelHeight - 40 - 66) / 20) ? " (Scroll ↕)" : "";
-        graphics.text(font, Component.literal("Detected Folders (" + candidates.size() + ")" + scrollHint).withStyle(ChatFormatting.UNDERLINE), panelX + 16, panelY + 50, 0xFFFFFFFF, false);
+        // Left list panel inset
+        ShyneTheme.drawInset(graphics, panelX + 10, panelY + 46, leftWidth, panelHeight - 84, ShyneTheme.BORDER_SUBTLE);
+        String scrollHint = candidates.size() > Math.max(1, (panelHeight - 40 - 66) / ITEM_HEIGHT) ? " (Scroll ↕)" : "";
+        graphics.text(font, Component.literal("Detected Folders (" + candidates.size() + ")" + scrollHint), panelX + 16, panelY + 52, ShyneTheme.ACCENT_BRIGHT, false);
 
-        int maxVisible = Math.max(1, (panelHeight - 40 - 66) / 20);
+        int maxVisible = Math.max(1, (panelHeight - 40 - 66) / ITEM_HEIGHT);
         int listY = panelY + 66;
         for (int i = 0; i < maxVisible; i++) {
             int idx = candidateScroll + i;
             if (idx >= candidates.size()) break;
             Candidate c = candidates.get(idx);
-            int itemY = listY + i * 20;
+            int itemY = listY + i * ITEM_HEIGHT;
             boolean selected = (idx == selectedIndex);
-            if (selected) {
-                graphics.fill(panelX + 12, itemY - 2, panelX + 10 + leftWidth - 2, itemY + 18, 0x443DD9E8);
-            }
-            int color = c.isUnimported() ? WARNING : 0xFFE2E8F0;
-            String prefix = c.isUnimported() ? "[!] " : "[✓] ";
-            String clipped = font.plainSubstrByWidth(prefix + c.displayName(), leftWidth - 16);
-            graphics.text(font, Component.literal(clipped), panelX + 16, itemY + 2, color, false);
+            boolean hovered = mouseX >= panelX + 12 && mouseX <= panelX + 10 + leftWidth && mouseY >= itemY && mouseY < itemY + ITEM_HEIGHT - 2;
+
+            ShyneTheme.drawCard(graphics, panelX + 12, itemY, leftWidth - 6, ITEM_HEIGHT - 2, hovered, selected);
+
+            int color = c.isUnimported() ? ShyneTheme.WARNING : ShyneTheme.TEXT_PRIMARY;
+            String prefix = c.isUnimported() ? "! " : "✓ ";
+            String clipped = font.plainSubstrByWidth(prefix + c.displayName(), leftWidth - 20);
+            graphics.text(font, Component.literal(clipped), panelX + 16, itemY + 3, color, false);
         }
 
         if (candidates.size() > maxVisible) {
             int trackX = panelX + 10 + leftWidth - 3;
             int trackTop = panelY + 66;
             int trackBottom = panelY + panelHeight - 44;
-            int trackHeight = trackBottom - trackTop;
             int maxScroll = candidates.size() - maxVisible;
-            if (trackHeight > 10 && maxScroll > 0) {
-                graphics.fill(trackX, trackTop, trackX + 2, trackBottom, 0x33445A78);
-                int thumbHeight = Math.max(8, trackHeight * maxVisible / candidates.size());
-                int thumbY = trackTop + (int) ((trackHeight - thumbHeight) * ((float) candidateScroll / maxScroll));
-                graphics.fill(trackX, thumbY, trackX + 2, thumbY + thumbHeight, ACCENT);
-            }
+            ShyneTheme.drawScrollbar(graphics, trackX, trackTop, trackBottom, candidateScroll, maxScroll, maxVisible, candidates.size());
         }
 
-        // Right details panel
-        graphics.fill(rightX - 4, panelY + 44, panelX + panelWidth - 10, panelY + panelHeight - 40, CARD_BG);
+        // Right details panel inset
+        ShyneTheme.drawInset(graphics, rightX - 4, panelY + 46, rightWidth + 4, panelHeight - 84, ShyneTheme.BORDER_SUBTLE);
 
         if (currentReport != null) {
-            int ry = panelY + 52;
+            int ry = panelY + 54;
             AvatarImportReport r = currentReport;
 
             // Title & Source Type
-            graphics.text(font, Component.literal(r.avatarName()).withStyle(ChatFormatting.BOLD), rightX, ry, 0xFFFFFFFF, true);
-            graphics.text(font, Component.literal("ID: " + r.avatarId() + "  |  Source: " + r.sourceType()), rightX, ry + 14, MUTED, false);
+            graphics.text(font, Component.literal(r.avatarName()).withStyle(ChatFormatting.BOLD), rightX + 6, ry, ShyneTheme.TEXT_PRIMARY, true);
+            graphics.text(font, Component.literal("ID: " + r.avatarId() + "  |  Source: " + r.sourceType()), rightX + 6, ry + 14, ShyneTheme.TEXT_SECONDARY, false);
 
             // Grade Badge
             AvatarImportReport.CompatibilityGrade grade = r.grade();
-            int gradeCol = switch (grade) {
-                case A_PERFECT -> OK;
-                case B_COMPATIBLE_WITH_WARNINGS -> WARNING;
-                case C_NEEDS_MODIFICATIONS -> 0xFFFFB050;
-                case D_INCOMPATIBLE -> ERROR;
+            int gradeFill = switch (grade) {
+                case A_PERFECT -> ShyneTheme.SUCCESS_SOFT;
+                case B_COMPATIBLE_WITH_WARNINGS -> ShyneTheme.WARNING_SOFT;
+                case C_NEEDS_MODIFICATIONS -> 0x30FFB050;
+                case D_INCOMPATIBLE -> ShyneTheme.DANGER_SOFT;
             };
-            graphics.text(font, Component.literal("Compatibility: " + grade.label()), rightX + rightWidth - 190, ry, gradeCol, true);
+            int gradeCol = switch (grade) {
+                case A_PERFECT -> ShyneTheme.SUCCESS;
+                case B_COMPATIBLE_WITH_WARNINGS -> ShyneTheme.WARNING;
+                case C_NEEDS_MODIFICATIONS -> 0xFFFFB050;
+                case D_INCOMPATIBLE -> ShyneTheme.DANGER;
+            };
+            ShyneTheme.drawBadge(graphics, font, grade.label(), rightX + rightWidth - 140, ry, gradeFill, gradeCol, gradeCol);
 
             // Metrics Box
             ry += 32;
-            graphics.fill(rightX, ry, rightX + rightWidth - 10, ry + 44, 0x33000000);
+            ShyneTheme.drawCard(graphics, rightX + 4, ry, rightWidth - 8, 44, false, false);
             var m = r.modelStats();
-            graphics.text(font, Component.literal("Model: " + m.cubeCount() + " cubes  •  " + m.meshCount() + " meshes  •  " + m.boneCount() + " bones  •  " + m.textureCount() + " textures (" + m.maxTextureWidth() + "x" + m.maxTextureHeight() + ")"), rightX + 6, ry + 6, 0xFFE2E8F0, false);
+            graphics.text(font, Component.literal("Model: " + m.cubeCount() + " cubes  •  " + m.meshCount() + " meshes  •  " + m.boneCount() + " bones  •  " + m.textureCount() + " textures (" + m.maxTextureWidth() + "x" + m.maxTextureHeight() + ")"), rightX + 10, ry + 6, ShyneTheme.TEXT_PRIMARY, false);
             var s = r.scriptStats();
-            graphics.text(font, Component.literal("Scripts: " + s.scriptCount() + " files (" + s.totalLines() + " lines)  •  APIs: " + (s.detectedApis().isEmpty() ? "none" : String.join(", ", s.detectedApis()))), rightX + 6, ry + 18, 0xFFE2E8F0, false);
-            graphics.text(font, Component.literal("Animations: " + m.animationCount() + "  •  Keyframes: " + m.totalKeyframes()), rightX + 6, ry + 30, MUTED, false);
+            graphics.text(font, Component.literal("Scripts: " + s.scriptCount() + " files (" + s.totalLines() + " lines)  •  APIs: " + (s.detectedApis().isEmpty() ? "none" : String.join(", ", s.detectedApis()))), rightX + 10, ry + 18, ShyneTheme.TEXT_PRIMARY, false);
+            graphics.text(font, Component.literal("Animations: " + m.animationCount() + "  •  Keyframes: " + m.totalKeyframes()), rightX + 10, ry + 30, ShyneTheme.TEXT_SECONDARY, false);
 
             // Creator Attribution Box
             ry += 52;
-            graphics.fill(rightX, ry, rightX + rightWidth - 10, ry + 48, 0x33203450);
-            graphics.text(font, Component.literal("Creator Attribution & Licensing").withStyle(ChatFormatting.BOLD), rightX + 6, ry + 6, 0xFF3DD9E8, false);
+            ShyneTheme.drawCard(graphics, rightX + 4, ry, rightWidth - 8, 48, false, true);
+            graphics.text(font, Component.literal("Creator Attribution & Licensing").withStyle(ChatFormatting.BOLD), rightX + 10, ry + 6, ShyneTheme.ACCENT, false);
             String author = r.author().isBlank() ? "Original Creator" : r.author();
-            graphics.text(font, Component.literal("Author: " + author + "  •  Format: " + r.modelFormat()), rightX + 6, ry + 18, 0xFFFFFFFF, false);
-            graphics.text(font, Component.literal("Notice: Preserves original creator copyright in ATTRIBUTION.md and avatar.json"), rightX + 6, ry + 32, MUTED, false);
+            graphics.text(font, Component.literal("Author: " + author + "  •  Format: " + r.modelFormat()), rightX + 10, ry + 18, ShyneTheme.TEXT_PRIMARY, false);
+            graphics.text(font, Component.literal("Notice: Preserves original creator copyright in ATTRIBUTION.md and avatar.json"), rightX + 10, ry + 32, ShyneTheme.TEXT_SECONDARY, false);
 
             // Diagnostic Warnings / Issues
             ry += 56;
-            graphics.text(font, Component.literal("Diagnostic Findings (" + r.issues().size() + "):").withStyle(ChatFormatting.UNDERLINE), rightX, ry, 0xFFFFFFFF, false);
+            graphics.text(font, Component.literal("Diagnostic Findings (" + r.issues().size() + "):"), rightX + 6, ry, ShyneTheme.TEXT_PRIMARY, false);
             ry += 14;
             if (r.issues().isEmpty()) {
-                graphics.text(font, Component.literal("✨ No issues detected. Clean avatar configuration!"), rightX, ry, OK, false);
+                graphics.text(font, Component.literal("✨ No issues detected. Clean avatar configuration!"), rightX + 6, ry, ShyneTheme.SUCCESS, false);
             } else {
                 for (int i = 0; i < r.issues().size() && i < 3; i++) {
                     var issue = r.issues().get(i);
-                    int col = issue.severity() == seashyne.shynecore.client.avatar.linter.AvatarLintIssue.Severity.ERROR ? ERROR : WARNING;
+                    int col = issue.severity() == seashyne.shynecore.client.avatar.linter.AvatarLintIssue.Severity.ERROR ? ShyneTheme.DANGER : ShyneTheme.WARNING;
                     String icon = issue.severity() == seashyne.shynecore.client.avatar.linter.AvatarLintIssue.Severity.ERROR ? "× " : "! ";
                     String clipped = font.plainSubstrByWidth(icon + issue.message(), rightWidth - 20);
-                    graphics.text(font, Component.literal(clipped), rightX, ry + i * 12, col, false);
+                    graphics.text(font, Component.literal(clipped), rightX + 6, ry + i * 12, col, false);
                 }
             }
         }
 
         // Status Message
         if (!statusMessage.isEmpty()) {
-            graphics.text(font, Component.literal(statusMessage), rightX, panelY + panelHeight - 48, statusColor, false);
+            graphics.text(font, Component.literal(statusMessage), rightX + 6, panelY + panelHeight - 48, statusColor, false);
         }
 
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
@@ -332,7 +326,7 @@ public final class AvatarImporterScreen extends Screen {
     public void onFilesDrop(List<Path> files) {
         AvatarDragDropInstaller.DropResult result = AvatarDragDropInstaller.installDroppedFiles(files);
         statusMessage = result.message();
-        statusColor = result.installedCount() > 0 ? OK : WARNING;
+        statusColor = result.installedCount() > 0 ? ShyneTheme.SUCCESS : ShyneTheme.WARNING;
         if (result.installedCount() > 0) {
             AvatarRuntime.refreshCatalogAsync(true).whenComplete((entries, err) -> {
                 if (minecraft != null) {

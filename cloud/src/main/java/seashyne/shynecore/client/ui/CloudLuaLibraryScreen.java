@@ -8,7 +8,6 @@ import com.mojang.blaze3d.Blaze3D;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
@@ -84,12 +83,12 @@ public final class CloudLuaLibraryScreen extends Screen {
         searchBox.setValue(searchText);
         addRenderableWidget(searchBox);
 
-        Button openFolderBtn = Button.builder(Component.translatable("screen.shyne_core.cloud.lua_libs.open_folder"), b -> openFolder())
-            .bounds(panelX + panelWidth - 250, panelY + 43, 116, 20).build();
+        ShyneButton openFolderBtn = ShyneButton.secondary(Component.translatable("screen.shyne_core.cloud.lua_libs.open_folder"), b -> openFolder())
+            .bounds(panelX + panelWidth - 250, panelY + 43, 116, 20);
         addRenderableWidget(openFolderBtn);
 
-        Button refreshBtn = Button.builder(Component.translatable("screen.shyne_core.cloud.lua_libs.refresh"), b -> fetchRegistry())
-            .bounds(panelX + panelWidth - 128, panelY + 43, 114, 20).build();
+        ShyneButton refreshBtn = ShyneButton.secondary(Component.translatable("screen.shyne_core.cloud.lua_libs.refresh"), b -> fetchRegistry())
+            .bounds(panelX + panelWidth - 128, panelY + 43, 114, 20);
         addRenderableWidget(refreshBtn);
 
         int listX = panelX + 14;
@@ -109,27 +108,33 @@ public final class CloudLuaLibraryScreen extends Screen {
             boolean cached = ShyneLibraryManager.isCached(item.name());
             String override = statusOverrides.get(item.name());
 
-            Button actionBtn = Button.builder(Component.literal(override != null ? override : (builtIn ? "Built-in" : (cached ? "Cached" : "⬇ Download"))), b -> {
-                if (!builtIn && !cached && override == null) {
-                    downloadItem(item);
-                }
-            }).bounds(btnX, rowY + 11, btnWidth, 20).build();
-            actionBtn.active = !builtIn && !cached && override == null;
+            ShyneButton actionBtn;
+            if (builtIn) {
+                actionBtn = ShyneButton.ghost(Component.literal("Built-in"), b -> {})
+                    .bounds(btnX, rowY + 11, btnWidth, 20).activeState(false);
+            } else if (cached) {
+                actionBtn = ShyneButton.ghost(Component.literal("Cached"), b -> {})
+                    .bounds(btnX, rowY + 11, btnWidth, 20).activeState(false);
+            } else if (override != null) {
+                actionBtn = ShyneButton.ghost(Component.literal(override), b -> {})
+                    .bounds(btnX, rowY + 11, btnWidth, 20).activeState(false);
+            } else {
+                actionBtn = ShyneButton.primary(Component.literal("⬇ Download"), b -> downloadItem(item))
+                    .bounds(btnX, rowY + 11, btnWidth, 20);
+            }
             addRenderableWidget(actionBtn);
         }
 
-        Button prevBtn = Button.builder(Component.literal("‹"), b -> { offset = Math.max(0, offset - MAX_VISIBLE_ROWS); rebuildWidgets(); })
-            .bounds(listX, pagerY, 32, 20).build();
-        prevBtn.active = offset > 0;
+        ShyneButton prevBtn = ShyneButton.secondary(Component.literal("‹"), b -> { offset = Math.max(0, offset - MAX_VISIBLE_ROWS); rebuildWidgets(); })
+            .bounds(listX, pagerY, 32, 20).activeState(offset > 0);
         addRenderableWidget(prevBtn);
 
-        Button nextBtn = Button.builder(Component.literal("›"), b -> { offset += MAX_VISIBLE_ROWS; rebuildWidgets(); })
-            .bounds(listX + 36, pagerY, 32, 20).build();
-        nextBtn.active = offset + MAX_VISIBLE_ROWS < visibleItems.size();
+        ShyneButton nextBtn = ShyneButton.secondary(Component.literal("›"), b -> { offset += MAX_VISIBLE_ROWS; rebuildWidgets(); })
+            .bounds(listX + 36, pagerY, 32, 20).activeState(offset + MAX_VISIBLE_ROWS < visibleItems.size());
         addRenderableWidget(nextBtn);
 
-        Button backBtn = Button.builder(Component.translatable("gui.back"), b -> onClose())
-            .bounds(panelX + panelWidth - 94, footerY, 80, 20).build();
+        ShyneButton backBtn = ShyneButton.primary(Component.translatable("gui.back"), b -> onClose())
+            .bounds(panelX + panelWidth - 94, footerY, 80, 20);
         addRenderableWidget(backBtn);
     }
 
@@ -213,13 +218,11 @@ public final class CloudLuaLibraryScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(0, 0, this.width, this.height, 0x90000000);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xFF0D1424);
-        graphics.outline(panelX, panelY, panelWidth, panelHeight, 0x8841D7E5);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 2, 0xFF41D7E5);
+        ShyneTheme.drawBackdrop(graphics, this.width, this.height);
+        ShyneTheme.drawPanel(graphics, panelX, panelY, panelWidth, panelHeight, 44);
 
-        graphics.text(this.font, Component.translatable("screen.shyne_core.cloud.lua_libs.title"), panelX + 14, panelY + 16, 0xFFF4F7FC, false);
-        graphics.text(this.font, Component.literal("Hybrid Tier 3 Cache: .minecraft/shyne_creator/libs/"), panelX + 14, panelY + 30, 0xFF8193AA, false);
+        graphics.text(this.font, Component.translatable("screen.shyne_core.cloud.lua_libs.title"), panelX + 16, panelY + 12, ShyneTheme.TEXT_PRIMARY, true);
+        graphics.text(this.font, Component.literal("Hybrid Tier 3 Cache: .minecraft/shyne_creator/libs/"), panelX + 16, panelY + 28, ShyneTheme.TEXT_SECONDARY, false);
 
         int listX = panelX + 14;
         int listY = panelY + 74;
@@ -231,20 +234,27 @@ public final class CloudLuaLibraryScreen extends Screen {
             LibraryItem item = visibleItems.get(offset + i);
             boolean builtIn = ShyneLibraryManager.isBuiltIn(item.name());
             boolean cached = ShyneLibraryManager.isCached(item.name());
+            boolean hovered = mouseX >= listX && mouseX < listX + listWidth && mouseY >= rowY && mouseY < rowY + ROW_HEIGHT - 4;
 
-            graphics.fill(listX, rowY, listX + listWidth, rowY + ROW_HEIGHT - 4, (i % 2 == 0) ? 0xFF121B2F : 0xFF0F1728);
-            graphics.outline(listX, rowY, listWidth, ROW_HEIGHT - 4, 0x22FFFFFF);
+            ShyneTheme.drawCard(graphics, listX, rowY, listWidth, ROW_HEIGHT - 4, hovered, cached || builtIn);
 
             String title = item.name() + " v" + item.version() + " [" + item.category() + "]";
-            int titleColor = builtIn ? 0xFF79D8B2 : (cached ? 0xFF41D7E5 : 0xFFE2E8F0);
+            int titleColor = builtIn ? ShyneTheme.SUCCESS : (cached ? ShyneTheme.ACCENT : ShyneTheme.TEXT_PRIMARY);
             graphics.text(this.font, Component.literal(title), listX + 8, rowY + 6, titleColor, false);
             String desc = this.font.plainSubstrByWidth(item.description(), listWidth - 120);
-            graphics.text(this.font, Component.literal(desc), listX + 8, rowY + 20, 0xFF8D9CAE, false);
+            graphics.text(this.font, Component.literal(desc), listX + 8, rowY + 20, ShyneTheme.TEXT_SECONDARY, false);
         }
 
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
-    @Override public void onClose() { if (this.minecraft != null) this.minecraft.gui.setScreen(parent); }
-    @Override public boolean isPauseScreen() { return true; }
+    @Override
+    public void onClose() {
+        if (this.minecraft != null) this.minecraft.gui.setScreen(parent);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return true;
+    }
 }

@@ -2,9 +2,7 @@ package seashyne.shynecore.client.ui;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -42,6 +40,19 @@ public final class ItemCatalogScreen extends Screen {
     @Override
     protected void init() {
         clearWidgets();
+
+        // Top Studio Navigation Bar
+        ShyneNavBar.addTabs(
+            this.minecraft,
+            this,
+            this.parent,
+            ShyneNavBar.Section.ITEMS,
+            this.width - 14,
+            10,
+            this.width - 240,
+            this::addRenderableWidget
+        );
+
         int leftW = Math.max(190, width / 2 - 34);
         int clearWidth = 44;
         int searchW = Math.max(72, leftW - 12 - clearWidth);
@@ -49,12 +60,14 @@ public final class ItemCatalogScreen extends Screen {
         searchBox.setHint(Component.translatable("screen.shyne_core.items.search"));
         searchBox.setResponder(ignored -> refreshItems());
         addRenderableWidget(searchBox);
-        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.ui.clear"), ignored -> clearSearch())
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.ui.clear.tooltip")))
-            .bounds(18 + searchW, 50, clearWidth, 18).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.back"), ignored -> closeToParent())
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.ui.back.tooltip")))
-            .bounds(14, height - 30, 80, 20).build());
+
+        addRenderableWidget(ShyneButton.ghost(Component.translatable("screen.shyne_core.ui.clear"), ignored -> clearSearch())
+            .tooltipText(Component.translatable("screen.shyne_core.ui.clear.tooltip"))
+            .bounds(18 + searchW, 50, clearWidth, 18));
+
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("gui.back"), ignored -> closeToParent())
+            .tooltipText(Component.translatable("screen.shyne_core.ui.back.tooltip"))
+            .bounds(14, height - 30, 80, 20));
 
         refreshItems();
     }
@@ -89,26 +102,29 @@ public final class ItemCatalogScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(0, 0, width, height, BG_DARK);
-        graphics.text(font, Component.literal("✦ ").append(Component.translatable("screen.shyne_core.items.title")), 14, 10, ACCENT, true);
-        graphics.text(font, Component.translatable("screen.shyne_core.items.subtitle"), 14, 23, MUTED, false);
+        graphics.fill(0, 0, width, height, ShyneTheme.BACKDROP);
+        graphics.text(font, Component.literal("✦ ").append(Component.translatable("screen.shyne_core.items.title")), 14, 10, ShyneTheme.ACCENT, true);
+        graphics.text(font, Component.translatable("screen.shyne_core.items.subtitle"), 14, 23, ShyneTheme.TEXT_MUTED, false);
 
         int leftW = Math.max(190, width / 2 - 34);
         int detailX = leftW + 26;
         int contentY = 76;
         int contentBottom = height - 38;
-        graphics.text(font, Component.translatable("screen.shyne_core.items.collection"), 14, 40, 0xFFF0F5FF, true);
+
+        // Sleek panel backgrounds
+        ShyneTheme.drawPanel(graphics, 10, 36, leftW + 6, height - 72);
+        ShyneTheme.drawPanel(graphics, detailX - 6, 36, width - detailX - 6, height - 72);
+
+        graphics.text(font, Component.translatable("screen.shyne_core.items.collection"), 14, 40, ShyneTheme.TEXT_TITLE, true);
         Component count = Component.translatable("screen.shyne_core.items.count", displayedItems.size());
-        graphics.text(font, count, leftW + 6 - font.width(count), 40, MUTED, false);
-        graphics.text(font, Component.translatable("screen.shyne_core.items.details"), detailX, 40, 0xFFF0F5FF, true);
+        graphics.text(font, count, leftW + 6 - font.width(count), 40, ShyneTheme.TEXT_MUTED, false);
+        graphics.text(font, Component.translatable("screen.shyne_core.items.details"), detailX, 40, ShyneTheme.TEXT_TITLE, true);
         renderCatalog(graphics, 14, contentY, leftW - 8, contentBottom, mouseX, mouseY);
         renderDetail(graphics, detailX, 50, Math.max(120, width - detailX - 14), contentBottom);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     private void renderCatalog(GuiGraphicsExtractor graphics, int x, int y, int width, int bottom, int mouseX, int mouseY) {
-        graphics.fill(x, y, x + width, bottom, PANEL_BG);
-        graphics.outline(x, y, width, bottom - y, 0xFF293E5A);
         int cardHeight = 40;
         int gap = 4;
         int visible = Math.max(1, (bottom - y - 4) / (cardHeight + gap));
@@ -118,28 +134,33 @@ public final class ItemCatalogScreen extends Screen {
             int cardY = y + 4 + index * (cardHeight + gap);
             boolean selected = item.itemId().equals(selectedItemId);
             boolean hovered = mouseX >= x + 2 && mouseX <= x + width - 2 && mouseY >= cardY && mouseY <= cardY + cardHeight;
-            graphics.fill(x + 2, cardY, x + width - 2, cardY + cardHeight, selected ? CARD_SELECTED : (hovered ? CARD_HOVER : CARD_BG));
-            graphics.outline(x + 2, cardY, width - 4, cardHeight, selected ? ACCENT : 0xFF2A405D);
+            int bg = selected ? ShyneTheme.CARD_SELECTED : (hovered ? ShyneTheme.CARD_HOVER : ShyneTheme.CARD_BG);
+            int border = selected ? ShyneTheme.ACCENT : ShyneTheme.BORDER_SUBTLE;
+            ShyneTheme.drawCard(graphics, x + 2, cardY, width - 4, cardHeight, bg, border);
 
             int iconX = x + 7;
             int iconY = cardY + 7;
             graphics.fill(iconX, iconY, iconX + 26, iconY + 26, 0xFF09131F);
-            graphics.outline(iconX, iconY, 26, 26, selected ? ACCENT : 0xFF2A405D);
+            graphics.outline(iconX, iconY, 26, 26, selected ? ShyneTheme.ACCENT : ShyneTheme.BORDER_SUBTLE);
             if (!SkillIconTextures.drawItemCentered(graphics, item.itemId(), iconX + 2, iconY + 2, 22, 22)) {
                 String initial = initial(item.displayName());
-                graphics.text(font, Component.literal(initial), iconX + (26 - font.width(initial)) / 2, iconY + 8, ACCENT, false);
+                graphics.text(font, Component.literal(initial), iconX + (26 - font.width(initial)) / 2, iconY + 8, ShyneTheme.ACCENT, false);
             }
 
             int textX = iconX + 33;
             int textWidth = Math.max(10, width - (textX - x) - 12);
             graphics.text(font, Component.literal(font.plainSubstrByWidth(item.displayName(), textWidth)), textX, cardY + 6,
-                selected ? ACCENT : 0xFFF0F5FF, false);
+                selected ? ShyneTheme.ACCENT : 0xFFF0F5FF, false);
             String meta = item.maxStack() > 1 ? "Stack x" + item.maxStack() : "Creator item";
             if (!item.useSkill().isBlank()) meta += "  •  Action";
-            graphics.text(font, Component.literal(font.plainSubstrByWidth(meta, textWidth)), textX, cardY + 21, MUTED, false);
+            graphics.text(font, Component.literal(font.plainSubstrByWidth(meta, textWidth)), textX, cardY + 20,
+                ShyneTheme.TEXT_MUTED, false);
         }
         if (displayedItems.isEmpty()) {
-            graphics.text(font, Component.translatable("screen.shyne_core.items.empty"), x + 10, y + 18, MUTED, false);
+            graphics.text(font, Component.translatable("screen.shyne_core.items.empty"), x + 10, y + 18, ShyneTheme.TEXT_MUTED, false);
+        }
+        if (displayedItems.size() > visible) {
+            ShyneTheme.drawScrollbar(graphics, x + width - 4, y + 4, bottom - 4, start, Math.max(1, displayedItems.size() - visible), visible, displayedItems.size());
         }
     }
 

@@ -150,6 +150,20 @@ local function part_proxy(path)
         end
       end
       if key == "getRenderType" then return function(self) return self:render_type() end end
+      if key == "setPrimaryTexture" or key == "primaryTexture" then
+        return function(self, a1, a2)
+          local target, tex = a1, a2
+          if textures and textures.bindToModel then
+            textures:bindToModel(tex, target)
+          end
+          return self
+        end
+      end
+      if key == "setSecondaryTexture" or key == "secondaryTexture" then
+        return function(self, a1, a2)
+          return self
+        end
+      end
       if key == "reset" then return function(self) _avatar_part_mutate(path, "reset") return self end end
 
       -- 3D Text & Sprite Attachments (Figura Parity)
@@ -497,7 +511,7 @@ models = setmetatable({}, {
         _avatar_camera_set("first_person_arm", bool(enabled))
       end
     end
-    if key == "setPrimaryTexture" then
+    if key == "setPrimaryTexture" or key == "primaryTexture" then
       return function(a1, a2, a3)
         local target, tex
         if type(a1) == "string" then
@@ -506,10 +520,13 @@ models = setmetatable({}, {
           target, tex = a2, a3
         end
         if textures and textures.bindToModel then
-          return textures:bindToModel(tex, target)
+          textures:bindToModel(tex, target)
         end
-        return a1
+        return models
       end
+    end
+    if key == "setSecondaryTexture" or key == "secondaryTexture" then
+      return function() return models end
     end
     return model.part(tostring(key))
   end

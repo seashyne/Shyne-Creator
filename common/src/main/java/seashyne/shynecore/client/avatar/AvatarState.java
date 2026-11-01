@@ -66,6 +66,9 @@ public final class AvatarState {
     private final Map<String, String> pathAliases = new ConcurrentHashMap<>();
     private final Map<String, Boolean> vanillaVisibility = new ConcurrentHashMap<>();
     private final List<AvatarAction> actions = new ArrayList<>();
+    private final List<String> actionPages = new ArrayList<>();
+    private volatile String activeActionPage = "";
+    private volatile String primaryTextureOverride = "";
     private final Map<String, AvatarEmoteDefinition> emotes = new ConcurrentHashMap<>();
     private final AvatarAnimationGraph animationGraph = new AvatarAnimationGraph();
     private final Map<String, AvatarAnimationLayer> animationLayers = new ConcurrentHashMap<>();
@@ -405,9 +408,83 @@ public final class AvatarState {
     public void registerAction(AvatarAction action) {
         if (action == null) return;
         synchronized (actions) {
-            actions.removeIf(existing -> existing.id().equalsIgnoreCase(action.id()) && existing.page().equalsIgnoreCase(action.page()));
+            registerActionPageLocked(action.page());
+            for (int i = 0; i < actions.size(); i++) {
+                AvatarAction existing = actions.get(i);
+                if (existing.id().equalsIgnoreCase(action.id()) && existing.page().equalsIgnoreCase(action.page())) {
+                    actions.set(i, action);
+                    return;
+                }
+            }
             actions.add(action);
         }
+    }
+
+    public void unregisterAction(String page, String actionId) {
+        if (actionId == null || actionId.isBlank()) return;
+        synchronized (actions) {
+            actions.removeIf(existing ->
+                existing.id().equalsIgnoreCase(actionId)
+                    && (page == null || page.isBlank() || existing.page().equalsIgnoreCase(page))
+            );
+        }
+    }
+
+    public void clearActions(String page) {
+        synchronized (actions) {
+            if (page == null || page.isBlank()) {
+                actions.clear();
+                actionPages.clear();
+                activeActionPage = "";
+            } else {
+                actions.removeIf(existing -> existing.page().equalsIgnoreCase(page));
+            }
+        }
+    }
+
+    public void registerActionPage(String page) {
+        if (page == null || page.isBlank()) return;
+        synchronized (actions) {
+            registerActionPageLocked(page);
+        }
+    }
+
+    private void registerActionPageLocked(String page) {
+        if (page == null || page.isBlank()) return;
+        for (String existing : actionPages) {
+            if (existing.equalsIgnoreCase(page)) return;
+        }
+        actionPages.add(page);
+    }
+
+    public List<String> actionPages() {
+        synchronized (actions) {
+            return List.copyOf(actionPages);
+        }
+    }
+
+    public String activeActionPage() {
+        return activeActionPage;
+    }
+
+    public void setActiveActionPage(String page) {
+        String normalized = page == null ? "" : page.trim();
+        if (!normalized.isEmpty()) {
+            registerActionPage(normalized);
+        }
+        this.activeActionPage = normalized;
+    }
+
+    public String primaryTextureOverride() {
+        return primaryTextureOverride;
+    }
+
+    public void setPrimaryTextureOverride(String textureSpec) {
+        this.primaryTextureOverride = textureSpec == null ? "" : textureSpec.trim();
+    }
+
+    public void clearPrimaryTextureOverride() {
+        this.primaryTextureOverride = "";
     }
 
     public void registerEmote(AvatarEmoteDefinition emote) {

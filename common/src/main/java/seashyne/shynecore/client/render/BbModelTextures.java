@@ -7,8 +7,11 @@ import net.minecraft.resources.Identifier;
 import seashyne.shynecore.ShyneCore;
 import seashyne.shynecore.client.avatar.AvatarOutfit;
 import seashyne.shynecore.client.avatar.AvatarOutfitLoader;
+import seashyne.shynecore.client.avatar.AvatarState;
+import seashyne.shynecore.client.avatar.runtime.AvatarOutfitManager;
 import seashyne.shynecore.avatar.PngTextureValidator;
 import seashyne.shynecore.model.BbModelDefinition;
+import seashyne.shynecore.model.BbModelParser;
 import seashyne.shynecore.model.BbTextureDefinition;
 import seashyne.shynecore.network.AsyncTextureLoader;
 import seashyne.shynecore.network.ShyneNetwork;
@@ -33,6 +36,7 @@ public final class BbModelTextures {
     private static final Map<Path, CachedTexture> CACHE = new ConcurrentHashMap<>();
     private static final Map<String, SyncedTexture> SYNCED = new ConcurrentHashMap<>();
     private static final Map<String, Identifier> EMBEDDED_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Path, CachedBbModel> SECONDARY_BBMODELS = new ConcurrentHashMap<>();
 
     private BbModelTextures() {}
 
@@ -159,6 +163,7 @@ public final class BbModelTextures {
             }
         }
         CACHE.clear();
+        SECONDARY_BBMODELS.clear();
     }
 
     public static void clearAllAvatarTextures() {
@@ -274,12 +279,268 @@ public final class BbModelTextures {
 
     private static void releaseTexture(Identifier id) {
         if (id == null) return;
-        Minecraft client = Minecraft.getInstance();
+        Minecraft client = safeClient();
         if (client != null && client.getTextureManager() != null) {
             client.getTextureManager().release(id);
         }
     }
 
+    /**
+     * Applies or clears a Figura-compatible primary texture override (e.g.
+     * {@code models:setPrimaryTexture("Custom", textures["model.ghost"])} or
+     * {@code models:setPrimaryTexture("Primary")}).
+     */
+    public static boolean setPrimaryTextureOverride(
+        BbModelDefinition model,
+        AvatarState state,
+        String modeOrTarget,
+        String textureSpec
+    ) {
+        if (model == null) return false;
+        String target = modeOrTarget == null ? "0" : modeOrTarget.trim();
+        String spec = textureSpec == null ? "" : textureSpec.trim();
+
+        if ("primary".equalsIgnoreCase(target)
+            || "default".equalsIgnoreCase(target)
+            || "none".equalsIgnoreCase(target)
+            || spec.isEmpty()) {
+            AvatarDynamicTextureRegistry.clearModelBindings(model.modelId());
+            if (state != null) {
+                AvatarDynamicTextureRegistry.clearModelBindings(state.modelId());
+                state.setPrimaryTextureOverride("");
+                String selectedOutfit = state.selectedOutfitId();
+                if (selectedOutfit != null && !selectedOutfit.isBlank()
+                    && !AvatarOutfitLoader.DEFAULT_OUTFIT.equalsIgnoreCase(selectedOutfit)) {
+                    AvatarOutfitManager.applyOutfit(state, model, selectedOutfit, false);
+                    return true;
+                }
+            }
+            clearOutfit(model.modelId());
+            if (state != null) clearOutfit(state.modelId());
+            return true;
+        }
+
+        Path root = state != null ? state.rootDir() : (model.sourceFile() != null ? model.sourceFile().getParent() : null);
+        byte[] bytes = resolvePackagedTextureBytes(model, root, spec);
+        if (bytes == null || bytes.length == 0) return false;
+
+        int textureIndex = resolveTargetTextureIndex(model, target);
+        AvatarDynamicTextureRegistry.clearModelBindings(model.modelId());
+        if (state != null) {
+            AvatarDynamicTextureRegistry.clearModelBindings(state.modelId());
+            state.setPrimaryTextureOverride(spec);
+        }
+
+        Minecraft client = safeClient();
+        if (client == null || client.getTextureManager() == null) {
+            return true;
+        }
+
+        Runnable installTask = () -> {
+            try {
+                installOverride(model.modelId(), textureIndex, bytes, "Primary texture " + spec);
+            } catch (IOException | RuntimeException error) {
+                ShyneCore.LOGGER.warn("[AvatarTexture] Failed to apply primary texture '{}': {}", spec, error.getMessage());
+            }
+        };
+        if (client.isSameThread()) {
+            installTask.run();
+        } else {
+            client.execute(installTask);
+        }
+        return true;
+    }
+
+    private static int resolveTargetTextureIndex(BbModelDefinition model, String target) {
+        if (model == null || target == null || target.isBlank() || "custom".equalsIgnoreCase(target)) {
+            return 0;
+        }
+        try {
+            int parsed = Integer.parseInt(target);
+            if (parsed >= 0 && parsed < model.textures().size()) return parsed;
+        } catch (NumberFormatException ignored) {}
+        String cleanTarget = stripPngExtension(target).toLowerCase(java.util.Locale.ROOT);
+        for (int i = 0; i < model.textures().size(); i++) {
+            BbTextureDefinition tex = model.textures().get(i);
+            if (matchesTextureName(tex, cleanTarget)) return i;
+        }
+        return 0;
+    }
+
+    /**
+     * Resolves PNG bytes for a packaged Figura or Shyne texture specification,
+     * supporting disk files (e.g. {@code emotes.png}, {@code textures/emotes.png})
+     * and embedded Blockbench textures (e.g. {@code model.ghost}, {@code textures.emotes}).
+     */
+    public static byte[] resolvePackagedTextureBytes(BbModelDefinition activeModel, Path avatarRoot, String textureSpec) {
+        if (textureSpec == null || textureSpec.isBlank()) return null;
+        String spec = textureSpec.trim().replace('\\', '/');
+        Path safeRoot = avatarRoot == null ? null : avatarRoot.toAbsolutePath().normalize();
+
+        // 1. Check physical PNG files inside the avatar folder first
+        if (safeRoot != null && Files.isDirectory(safeRoot)) {
+            for (String candidateRel : candidateDiskPaths(spec)) {
+                Path candidate = safeRoot.resolve(candidateRel.replace('/', java.io.File.separatorChar)).normalize();
+                if (candidate.startsWith(safeRoot) && Files.isRegularFile(candidate)) {
+                    try {
+                        long size = Files.size(candidate);
+                        if (size > 0 && size <= ShyneNetwork.MAX_TEXTURE_BYTES) {
+                            return Files.readAllBytes(candidate);
+                        }
+                    } catch (IOException ignored) {}
+                }
+            }
+        }
+
+        // 2. Check dotted Figura `<bbmodel>.<textureName>` notation (e.g. "textures.emotes" or "model.ghost")
+        String strippedSpec = stripPngExtension(spec);
+        int lastDot = strippedSpec.lastIndexOf('.');
+        if (lastDot > 0 && lastDot < strippedSpec.length() - 1) {
+            String modelPrefix = strippedSpec.substring(0, lastDot);
+            String entryName = strippedSpec.substring(lastDot + 1);
+
+            if (activeModel != null && matchesModelPrefix(activeModel, safeRoot, modelPrefix)) {
+                byte[] found = findEmbeddedTextureBytes(activeModel, entryName);
+                if (found != null) return found;
+            }
+            if (safeRoot != null) {
+                Path bbmodelPath = safeRoot.resolve(modelPrefix.replace('.', java.io.File.separatorChar)
+                    .replace('/', java.io.File.separatorChar) + ".bbmodel").normalize();
+                if (bbmodelPath.startsWith(safeRoot) && Files.isRegularFile(bbmodelPath)) {
+                    BbModelDefinition secondary = loadCachedSecondaryBbModel(bbmodelPath);
+                    byte[] found = findEmbeddedTextureBytes(secondary, entryName);
+                    if (found != null) return found;
+                }
+            }
+        }
+
+        // 3. Direct embedded lookup in activeModel by texture name (e.g. "ghost" or "pink.png")
+        String directName = stripPngExtension(lastSegment(spec));
+        if (activeModel != null) {
+            byte[] found = findEmbeddedTextureBytes(activeModel, directName);
+            if (found != null) return found;
+        }
+
+        // 4. Fallback scan of top-level .bbmodel containers in avatarRoot (e.g. textures.bbmodel)
+        if (safeRoot != null && Files.isDirectory(safeRoot)) {
+            try (var stream = Files.list(safeRoot)) {
+                for (Path file : stream.toList()) {
+                    if (!Files.isRegularFile(file)) continue;
+                    String fn = file.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+                    if (!fn.endsWith(".bbmodel")) continue;
+                    if (activeModel != null && activeModel.sourceFile() != null
+                        && file.toAbsolutePath().normalize().equals(activeModel.sourceFile().toAbsolutePath().normalize())) {
+                        continue;
+                    }
+                    BbModelDefinition secondary = loadCachedSecondaryBbModel(file);
+                    byte[] found = findEmbeddedTextureBytes(secondary, directName);
+                    if (found != null) return found;
+                }
+            } catch (IOException ignored) {}
+        }
+        return null;
+    }
+
+    private static java.util.List<String> candidateDiskPaths(String spec) {
+        java.util.List<String> paths = new java.util.ArrayList<>(5);
+        if (spec.toLowerCase(java.util.Locale.ROOT).endsWith(".png")) {
+            paths.add(spec);
+            paths.add("textures/" + spec);
+        } else {
+            paths.add(spec + ".png");
+            paths.add("textures/" + spec + ".png");
+            if (spec.contains(".")) {
+                String slashPath = spec.replace('.', '/') + ".png";
+                paths.add(slashPath);
+            }
+        }
+        return paths;
+    }
+
+    private static boolean matchesModelPrefix(BbModelDefinition model, Path safeRoot, String prefix) {
+        if ("model".equalsIgnoreCase(prefix)) return true;
+        if (model.sourceFile() == null) return false;
+        String fileName = stripBbmodelExtension(model.sourceFile().getFileName().toString());
+        if (fileName.equalsIgnoreCase(prefix)) return true;
+        if (safeRoot != null && model.sourceFile().toAbsolutePath().normalize().startsWith(safeRoot)) {
+            String rel = safeRoot.relativize(model.sourceFile().toAbsolutePath().normalize()).toString().replace('\\', '/');
+            String dotted = stripBbmodelExtension(rel).replace('/', '.');
+            return dotted.equalsIgnoreCase(prefix) || stripBbmodelExtension(rel).equalsIgnoreCase(prefix);
+        }
+        return false;
+    }
+
+    private static byte[] findEmbeddedTextureBytes(BbModelDefinition model, String targetName) {
+        if (model == null || targetName == null || targetName.isBlank()) return null;
+        String normalized = stripPngExtension(targetName).toLowerCase(java.util.Locale.ROOT);
+        for (BbTextureDefinition tex : model.textures()) {
+            if (tex != null && tex.hasEmbeddedBytes() && matchesTextureName(tex, normalized)) {
+                return tex.embeddedBytes();
+            }
+        }
+        return null;
+    }
+
+    private static boolean matchesTextureName(BbTextureDefinition tex, String normalizedNoExt) {
+        if (tex == null || normalizedNoExt.isBlank()) return false;
+        if (tex.name() != null && stripPngExtension(lastSegment(tex.name())).equalsIgnoreCase(normalizedNoExt)) {
+            return true;
+        }
+        if (tex.relativePath() != null && stripPngExtension(lastSegment(tex.relativePath())).equalsIgnoreCase(normalizedNoExt)) {
+            return true;
+        }
+        return tex.id() != null && tex.id().equalsIgnoreCase(normalizedNoExt);
+    }
+
+    private static BbModelDefinition loadCachedSecondaryBbModel(Path path) {
+        Path normalized = path.toAbsolutePath().normalize();
+        try {
+            long modified = Files.getLastModifiedTime(normalized).toMillis();
+            CachedBbModel cached = SECONDARY_BBMODELS.get(normalized);
+            if (cached != null && cached.modifiedAtMillis == modified) {
+                return cached.model;
+            }
+            BbModelDefinition parsed = BbModelParser.parse(normalized, stripBbmodelExtension(normalized.getFileName().toString()));
+            SECONDARY_BBMODELS.put(normalized, new CachedBbModel(parsed, modified));
+            return parsed;
+        } catch (Exception error) {
+            ShyneCore.LOGGER.debug("[AvatarTexture] Could not parse secondary bbmodel {}: {}", normalized, error.getMessage());
+            return null;
+        }
+    }
+
+    private static String stripPngExtension(String value) {
+        if (value == null) return "";
+        String trimmed = value.trim();
+        return trimmed.toLowerCase(java.util.Locale.ROOT).endsWith(".png")
+            ? trimmed.substring(0, trimmed.length() - 4)
+            : trimmed;
+    }
+
+    private static String stripBbmodelExtension(String value) {
+        if (value == null) return "";
+        String trimmed = value.trim();
+        return trimmed.toLowerCase(java.util.Locale.ROOT).endsWith(".bbmodel")
+            ? trimmed.substring(0, trimmed.length() - 8)
+            : trimmed;
+    }
+
+    private static String lastSegment(String path) {
+        if (path == null) return "";
+        String normalized = path.replace('\\', '/');
+        int slash = normalized.lastIndexOf('/');
+        return slash >= 0 ? normalized.substring(slash + 1) : normalized;
+    }
+
+    private static Minecraft safeClient() {
+        try {
+            return Minecraft.getInstance();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
     private record CachedTexture(Identifier id, long modifiedAtMillis) {}
     private record SyncedTexture(Identifier id, String hash) {}
+    private record CachedBbModel(BbModelDefinition model, long modifiedAtMillis) {}
 }

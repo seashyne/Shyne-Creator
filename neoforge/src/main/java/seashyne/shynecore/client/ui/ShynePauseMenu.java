@@ -1,9 +1,6 @@
 package seashyne.shynecore.client.ui;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.client.event.ScreenEvent;
@@ -20,43 +17,17 @@ public final class ShynePauseMenu {
 
             int width = screen.width;
             int height = screen.height;
-            int buttonWidth = 74;
-            int gap = 4;
-            int groupWidth = buttonWidth * 4 + gap * 3;
-            int x = Math.max(6, width - groupWidth - 6);
+            Component label = Component.literal("✦ ").append(Component.translatable("screen.shyne_core.pause_button"));
+            int buttonWidth = Math.max(108, Math.min(156, minecraft.font.width(label.getString()) + 20));
+            int x = Math.max(6, width - buttonWidth - 8);
             int y = Math.max(4, height - 26);
 
-            Button avatars = Button.builder(
-                Component.literal("✦ ").withStyle(ChatFormatting.AQUA)
-                    .append(Component.translatable("screen.shyne_core.pause_avatar_button").withStyle(ChatFormatting.WHITE)),
+            ShyneButton studioBtn = ShyneButton.primary(
+                label,
                 ignored -> minecraft.gui.setScreen(new AvatarManagerScreen(screen))
-            ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.pause_avatar_button.tooltip")))
-                .bounds(x, y, buttonWidth, 20).build();
-            event.addListener(avatars);
-
-            Button powers = Button.builder(
-                Component.literal("✦ ").withStyle(ChatFormatting.AQUA)
-                    .append(Component.translatable("screen.shyne_core.pause_powers_button").withStyle(ChatFormatting.WHITE)),
-                ignored -> minecraft.gui.setScreen(new PowerDeckScreen(screen))
-            ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.pause_powers_button.tooltip")))
-                .bounds(x + buttonWidth + gap, y, buttonWidth, 20).build();
-            event.addListener(powers);
-
-            Button items = Button.builder(
-                Component.literal("✦ ").withStyle(ChatFormatting.AQUA)
-                    .append(Component.translatable("screen.shyne_core.pause_items_button").withStyle(ChatFormatting.WHITE)),
-                ignored -> minecraft.gui.setScreen(new ItemCatalogScreen(screen))
-            ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.pause_items_button.tooltip")))
-                .bounds(x + (buttonWidth + gap) * 2, y, buttonWidth, 20).build();
-            event.addListener(items);
-
-            Button settings = Button.builder(
-                Component.literal("✦ ").withStyle(ChatFormatting.AQUA)
-                    .append(Component.translatable("screen.shyne_core.pause_button").withStyle(ChatFormatting.WHITE)),
-                ignored -> minecraft.gui.setScreen(new ShyneSettingsScreen(screen))
-            ).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.pause_button.tooltip")))
-                .bounds(x + (buttonWidth + gap) * 3, y, buttonWidth, 20).build();
-            event.addListener(settings);
+            ).bounds(x, y, buttonWidth, 20)
+                .tooltipText(Component.translatable("screen.shyne_core.pause_studio.tooltip"));
+            event.addListener(studioBtn);
         });
     }
 }

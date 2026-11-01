@@ -1,3 +1,24 @@
+## Shyne Creator v2.19.0
+
+### Complete UX/UI Overhaul, Shyne Studio Hub & Figura Action Wheel 2.0
+
+- **Shyne Studio UI & Theme System**:
+  - Replaced bulky vanilla stone button widgets across all screens with sleek flat dark-obsidian / electric-cyan `ShyneButton` and `ShyneTheme`.
+  - Added unified `ShyneNavBar` top navigation across all core tools (`Avatars`, `Wheel`, `Powers`, `Items`, `Players`, `Cloud`, `Settings`).
+  - Simplified Game Pause Menu: consolidated 4 cramped bottom-right stone buttons into a single clean `✦ Shyne Studio` primary button.
+  - Interactive 3D avatar preview inspector: supports click-and-drag rotation & pitch aiming, mouse wheel zoom, and double-click reset.
+  - Live filter search in Avatar Library retains keyboard focus dynamically without rebuild resets.
+  - Fixed duplicate catalog entries from `.zip` imports and eliminated false-positive texture warnings for Figura avatars.
+- **Figura Action Wheel System 2.0**:
+  - Full end-to-end multi-page `action_wheel:newPage()` and `setPage()` support without closing the screen.
+  - Polar 8-wedge radial sector geometry with hold-G-release (≥210ms) and tap-G toggle UX.
+  - Custom textures (16×16 sprites, `.bbmodel` textures, and PNG files) dynamically loaded with texture coordinates and scaling.
+  - Custom segment color tinting, high-contrast readable white labels, right-click and center-click sub-menu back navigation, and mouse scroll action callbacks.
+  - Added `models:setPrimaryTexture(...)` support for in-game skin and wardrobe swapping.
+- **Permission Matrix & Localization**:
+  - Scrollable `AvatarPermissionScreen` with search filtering, permission badges (`STANDARD` / `SENSITIVE`), descriptions, and one-click presets (`Safe Only`, `Allow All`, `Deny All`).
+  - 100% complete Thai (`th_th.json`) and English (`en_us.json`) localizations for all permission and Studio keys.
+
 ## Shyne Creator v2.18.7
 
 ### Skull Replica Suppression in World, Orphaned Geometry Culling & First-Person Player Shadow

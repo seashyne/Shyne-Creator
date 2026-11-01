@@ -12,10 +12,10 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
+import seashyne.shynecore.client.render.SkillIconTextures;
 import seashyne.shynecore.client.state.ClientAnimationState;
 import seashyne.shynecore.client.state.ClientPowerConfig;
 import seashyne.shynecore.client.state.CustomDeckManager;
-import seashyne.shynecore.client.render.SkillIconTextures;
 import seashyne.shynecore.client.state.CustomDeckManager.ActionSlot;
 import seashyne.shynecore.client.state.CustomDeckManager.DeckPreset;
 import seashyne.shynecore.power.PowerState;
@@ -48,9 +48,9 @@ public class PowerDeckScreen extends Screen {
 
     private final Screen parent;
     private EditBox searchBox;
-    private Button addActionButton;
-    private Button replaceActionButton;
-    private Button removeActionButton;
+    private ShyneButton addActionButton;
+    private ShyneButton replaceActionButton;
+    private ShyneButton removeActionButton;
     private String selectedSkillId = "";
     private String selectedSlotId = "";
     private String listeningSlotId = null;   // slot waiting for keybind input
@@ -69,6 +69,19 @@ public class PowerDeckScreen extends Screen {
     protected void init() {
         CustomDeckManager.ensureLoaded();
         this.clearWidgets();
+
+        // Top Studio Navigation Bar
+        ShyneNavBar.addTabs(
+            this.minecraft,
+            this,
+            this.parent,
+            ShyneNavBar.Section.POWERS,
+            this.width - 14,
+            10,
+            this.width - 240,
+            this::addRenderableWidget
+        );
+
         int leftW = Math.max(200, this.width / 2 - 30);
         int clearWidth = 44;
         int searchW = Math.max(72, leftW - 12 - clearWidth);
@@ -77,9 +90,9 @@ public class PowerDeckScreen extends Screen {
         this.searchBox.setHint(Component.translatable("screen.shyne_core.power_deck.search"));
         this.searchBox.setResponder(s -> refreshCatalog());
         this.addRenderableWidget(this.searchBox);
-        this.addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.ui.clear"), ignored -> clearSearch())
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.ui.clear.tooltip")))
-            .bounds(18 + searchW, 48, clearWidth, 18).build());
+        this.addRenderableWidget(ShyneButton.ghost(Component.translatable("screen.shyne_core.ui.clear"), ignored -> clearSearch())
+            .tooltipText(Component.translatable("screen.shyne_core.ui.clear.tooltip"))
+            .bounds(18 + searchW, 48, clearWidth, 18));
 
         refreshCatalog();
 
@@ -92,28 +105,28 @@ public class PowerDeckScreen extends Screen {
         int replaceW = compactActions ? 24 : 106;
         int removeW = compactActions ? 24 : 76;
 
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.back"), btn -> closeToParent())
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.ui.back.tooltip")))
-            .bounds(14, actionY, 80, 20).build());
+        this.addRenderableWidget(ShyneButton.secondary(Component.translatable("gui.back"), btn -> closeToParent())
+            .tooltipText(Component.translatable("screen.shyne_core.ui.back.tooltip"))
+            .bounds(14, actionY, 80, 20));
 
-        addActionButton = Button.builder(Component.translatable(compactActions ? "screen.shyne_core.power_deck.add.short" : "screen.shyne_core.power_deck.add"), btn -> addSelectedAction())
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.power_deck.add.tooltip")))
-            .bounds(rightX, actionY, addW, 20).build();
+        addActionButton = ShyneButton.primary(Component.translatable(compactActions ? "screen.shyne_core.power_deck.add.short" : "screen.shyne_core.power_deck.add"), btn -> addSelectedAction())
+            .tooltipText(Component.translatable("screen.shyne_core.power_deck.add.tooltip"))
+            .bounds(rightX, actionY, addW, 20);
         this.addRenderableWidget(addActionButton);
 
-        replaceActionButton = Button.builder(Component.translatable(compactActions ? "screen.shyne_core.power_deck.replace.short" : "screen.shyne_core.power_deck.replace"), btn -> replaceSelectedAction())
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.power_deck.replace.tooltip")))
-            .bounds(rightX + addW + 4, actionY, replaceW, 20).build();
+        replaceActionButton = ShyneButton.secondary(Component.translatable(compactActions ? "screen.shyne_core.power_deck.replace.short" : "screen.shyne_core.power_deck.replace"), btn -> replaceSelectedAction())
+            .tooltipText(Component.translatable("screen.shyne_core.power_deck.replace.tooltip"))
+            .bounds(rightX + addW + 4, actionY, replaceW, 20);
         this.addRenderableWidget(replaceActionButton);
 
-        removeActionButton = Button.builder(Component.translatable(compactActions ? "screen.shyne_core.power_deck.remove.short" : "screen.shyne_core.power_deck.remove"), btn -> {
+        removeActionButton = ShyneButton.danger(Component.translatable(compactActions ? "screen.shyne_core.power_deck.remove.short" : "screen.shyne_core.power_deck.remove"), btn -> {
             if (!selectedSlotId.isBlank()) {
                 CustomDeckManager.removeSlot(CustomDeckManager.activeDeckIndex(), selectedSlotId);
                 selectedSlotId = "";
                 updateActionButtons();
                 playClick();
             }
-        }).tooltip(Tooltip.create(Component.translatable("screen.shyne_core.power_deck.remove.tooltip"))).bounds(rightX + addW + replaceW + 8, actionY, removeW, 20).build();
+        }).tooltipText(Component.translatable("screen.shyne_core.power_deck.remove.tooltip")).bounds(rightX + addW + replaceW + 8, actionY, removeW, 20);
         this.addRenderableWidget(removeActionButton);
         updateActionButtons();
     }
@@ -155,9 +168,9 @@ public class PowerDeckScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(0, 0, this.width, this.height, BG_DARK);
-        graphics.text(this.font, Component.literal("✦ ").append(Component.translatable("screen.shyne_core.power_deck.title")), 14, 10, ACCENT_CYAN, true);
-        graphics.text(this.font, Component.translatable("screen.shyne_core.power_deck.subtitle"), 14, 23, TEXT_MUTED, false);
+        graphics.fill(0, 0, this.width, this.height, ShyneTheme.BACKDROP);
+        graphics.text(this.font, Component.literal("✦ ").append(Component.translatable("screen.shyne_core.power_deck.title")), 14, 10, ShyneTheme.ACCENT, true);
+        graphics.text(this.font, Component.translatable("screen.shyne_core.power_deck.subtitle"), 14, 23, ShyneTheme.TEXT_MUTED, false);
 
         renderManaBar(graphics);
 
@@ -165,10 +178,15 @@ public class PowerDeckScreen extends Screen {
         int rightX = leftW + 24;
         int contentY = 76;
         int contentBottom = this.height - 38;
-        graphics.text(this.font, Component.translatable("screen.shyne_core.power_deck.available"), 14, 39, 0xFFF0F5FF, true);
+
+        // Sleek panel backgrounds
+        ShyneTheme.drawPanel(graphics, 10, 36, leftW + 6, this.height - 72);
+        ShyneTheme.drawPanel(graphics, rightX - 6, 36, this.width - rightX - 4, this.height - 72);
+
+        graphics.text(this.font, Component.translatable("screen.shyne_core.power_deck.available"), 14, 39, ShyneTheme.TEXT_TITLE, true);
         Component availableCount = Component.translatable("screen.shyne_core.power_deck.count", displayedSkills.size());
-        graphics.text(this.font, availableCount, leftW + 6 - this.font.width(availableCount), 39, TEXT_MUTED, false);
-        graphics.text(this.font, Component.translatable("screen.shyne_core.power_deck.deck"), rightX, 39, 0xFFF0F5FF, true);
+        graphics.text(this.font, availableCount, leftW + 6 - this.font.width(availableCount), 39, ShyneTheme.TEXT_MUTED, false);
+        graphics.text(this.font, Component.translatable("screen.shyne_core.power_deck.deck"), rightX, 39, ShyneTheme.TEXT_TITLE, true);
 
         renderCatalog(graphics, 14, contentY, leftW - 8, contentBottom, mouseX, mouseY);
         renderDeckTabs(graphics, rightX, 50, this.width - rightX - 16);
@@ -183,19 +201,18 @@ public class PowerDeckScreen extends Screen {
         if (state == null) return;
         double mana = state.mana();
         double maxMana = state.maxMana();
-        int barW = 140, barH = 12;
-        int barX = this.width - barW - 16, barY = 14;
-        graphics.fill(barX, barY, barX + barW, barY + barH, 0xFF141E30);
+        int barW = 120, barH = 12;
+        int barX = Math.max(200, (this.width / 2) - (barW / 2));
+        int barY = 12;
+        graphics.fill(barX, barY, barX + barW, barY + barH, ShyneTheme.CARD_BG);
         float ratio = maxMana > 0 ? (float) Math.min(1.0, mana / maxMana) : 1f;
-        graphics.fill(barX + 1, barY + 1, barX + (int) ((barW - 2) * ratio), barY + barH - 1, ACCENT_CYAN);
-        graphics.outline(barX, barY, barW, barH, 0xFF354E75);
+        graphics.fill(barX + 1, barY + 1, barX + (int) ((barW - 2) * ratio), barY + barH - 1, ShyneTheme.ACCENT);
+        graphics.outline(barX, barY, barW, barH, ShyneTheme.BORDER_SUBTLE);
         String txt = String.format(Locale.ROOT, "Mana: %.0f / %.0f", mana, maxMana);
         graphics.text(this.font, Component.literal(txt), barX + (barW - this.font.width(txt)) / 2, barY + 2, 0xFFFFFFFF, true);
     }
 
     private void renderCatalog(GuiGraphicsExtractor g, int x, int y, int w, int bottom, int mx, int my) {
-        g.fill(x, y, x + w, bottom, 0x880C1422);
-        g.outline(x, y, w, bottom - y, 0xFF243650);
         int cardH = 36, gap = 4;
         int visible = (bottom - y) / (cardH + gap);
         int start = Math.max(0, Math.min(catalogScroll, Math.max(0, displayedSkills.size() - visible)));
@@ -206,24 +223,28 @@ public class PowerDeckScreen extends Screen {
             boolean sel = skill.skillId().equals(selectedSkillId);
             boolean banned = ClientPowerConfig.isBanned(skill.skillId());
             boolean locked = !banned && !canAssign(skill);
-            int bg = sel ? CARD_SELECTED : (hover ? CARD_HOVER : CARD_BG);
-            g.fill(x + 2, cy, x + w - 2, cy + cardH, bg);
-            g.outline(x + 2, cy, w - 4, cardH, banned ? COLOR_BANNED : (locked ? COLOR_LOCKED : (sel ? ACCENT_CYAN : 0xFF2B3F5C)));
+            int bg = sel ? ShyneTheme.CARD_SELECTED : (hover ? ShyneTheme.CARD_HOVER : ShyneTheme.CARD_BG);
+            int border = banned ? ShyneTheme.DANGER : (locked ? ShyneTheme.WARNING : (sel ? ShyneTheme.ACCENT : ShyneTheme.BORDER_SUBTLE));
+            ShyneTheme.drawCard(g, x + 2, cy, w - 4, cardH, bg, border);
+
             int iconX = x + 6, iconY = cy + 6, iconSize = 24;
             g.fill(iconX, iconY, iconX + iconSize, iconY + iconSize, 0xFF0E1929);
-            g.outline(iconX, iconY, iconSize, iconSize, 0xFF2B4B6C);
+            g.outline(iconX, iconY, iconSize, iconSize, ShyneTheme.BORDER_SUBTLE);
             if (!SkillIconTextures.drawSkillCentered(g, skill.skillId(), iconX + 2, iconY + 2, iconSize - 4, iconSize - 4)) {
                 String initial = skill.displayName().isEmpty() ? "?" : skill.displayName().substring(0, 1);
-                g.text(this.font, Component.literal(initial), iconX + (iconSize - this.font.width(initial)) / 2, iconY + 8, ACCENT_CYAN, false);
+                g.text(this.font, Component.literal(initial), iconX + (iconSize - this.font.width(initial)) / 2, iconY + 8, ShyneTheme.ACCENT, false);
             }
-            int nameColor = banned ? COLOR_BANNED : (locked ? COLOR_LOCKED : (sel ? ACCENT_CYAN : 0xFFF0F5FF));
+            int nameColor = banned ? ShyneTheme.DANGER : (locked ? ShyneTheme.WARNING : (sel ? ShyneTheme.ACCENT : ShyneTheme.TEXT_TITLE));
             int textX = iconX + iconSize + 6;
             String displayName = this.font.plainSubstrByWidth(skill.displayName(), Math.max(8, w - (textX - x) - 74));
             g.text(this.font, Component.literal(displayName), textX, cy + 4, nameColor, false);
             String detail = skill.description() == null || skill.description().isBlank() ? "Ready to add" : skill.description();
-            g.text(this.font, Component.literal(this.font.plainSubstrByWidth(detail, Math.max(8, w - (textX - x) - 8))), textX, cy + 18, TEXT_MUTED, false);
-            if (banned) g.text(this.font, Component.literal("⛔ BANNED"), x + w - 74, cy + 4, COLOR_BANNED, true);
-            else if (locked) g.text(this.font, Component.literal("LOCKED"), x + w - 47, cy + 4, COLOR_LOCKED, true);
+            g.text(this.font, Component.literal(this.font.plainSubstrByWidth(detail, Math.max(8, w - (textX - x) - 8))), textX, cy + 18, ShyneTheme.TEXT_MUTED, false);
+            if (banned) g.text(this.font, Component.literal("⛔ BANNED"), x + w - 74, cy + 4, ShyneTheme.DANGER, true);
+            else if (locked) g.text(this.font, Component.literal("LOCKED"), x + w - 47, cy + 4, ShyneTheme.WARNING, true);
+        }
+        if (displayedSkills.size() > visible) {
+            ShyneTheme.drawScrollbar(g, x + w - 4, y + 4, 3, bottom - y - 8, start, displayedSkills.size(), visible);
         }
     }
 
@@ -243,21 +264,23 @@ public class PowerDeckScreen extends Screen {
         for (int i = 0; i < decks.size(); i++) {
             int tx = x + i * (tabW + 2);
             boolean active = i == CustomDeckManager.activeDeckIndex();
-            g.fill(tx, y, tx + tabW, y + 16, active ? CARD_SELECTED : CARD_BG);
-            g.outline(tx, y, tabW, 16, active ? ACCENT_CYAN : 0xFF2B3F5C);
+            g.fill(tx, y, tx + tabW, y + 16, active ? ShyneTheme.CARD_SELECTED : ShyneTheme.CARD_BG);
+            g.outline(tx, y, tabW, 16, active ? ShyneTheme.ACCENT : ShyneTheme.BORDER_SUBTLE);
             String name = decks.get(i).name();
             if (name.length() > 8) name = name.substring(0, 7) + "…";
             String clippedName = this.font.plainSubstrByWidth(name, Math.max(4, tabW - 8));
-            g.text(this.font, Component.literal(clippedName), tx + 4, y + 4, active ? ACCENT_CYAN : TEXT_MUTED, false);
+            g.text(this.font, Component.literal(clippedName), tx + 4, y + 4, active ? ShyneTheme.ACCENT : ShyneTheme.TEXT_MUTED, false);
         }
         // "+ New" tab
         int newX = x + decks.size() * (tabW + 2);
-        g.fill(newX, y, newX + 24, y + 16, BTN_ADD);
-        g.text(this.font, Component.literal("+"), newX + 9, y + 4, 0xFFFFFFFF, true);
+        g.fill(newX, y, newX + 24, y + 16, 0xFF143022);
+        g.outline(newX, y, 24, 16, ShyneTheme.SUCCESS);
+        g.text(this.font, Component.literal("+"), newX + 9, y + 4, ShyneTheme.SUCCESS, true);
         if (decks.size() > 1) {
             int removeX = newX + 28;
-            g.fill(removeX, y, removeX + 24, y + 16, BTN_DEL);
-            g.text(this.font, Component.literal("−"), removeX + 8, y + 4, 0xFFFFFFFF, true);
+            g.fill(removeX, y, removeX + 24, y + 16, 0xFF36151B);
+            g.outline(removeX, y, 24, 16, ShyneTheme.DANGER);
+            g.text(this.font, Component.literal("−"), removeX + 8, y + 4, ShyneTheme.DANGER, true);
         }
     }
 
@@ -281,15 +304,16 @@ public class PowerDeckScreen extends Screen {
             boolean hover = mx >= x && mx <= x + w && my >= sy && my <= sy + slotH;
             boolean sel = slot.id().equals(selectedSlotId);
             boolean listening = slot.id().equals(listeningSlotId);
-            // Background
-            int bg = sel ? CARD_SELECTED : (hover ? CARD_HOVER : CARD_BG);
-            g.fill(x, sy, x + w, sy + slotH, bg);
-            g.outline(x, sy, w, slotH, sel ? ACCENT_CYAN : 0xFF283B54);
+            // Background & Card
+            int bg = sel ? ShyneTheme.CARD_SELECTED : (hover ? ShyneTheme.CARD_HOVER : ShyneTheme.CARD_BG);
+            int border = sel ? ShyneTheme.ACCENT : ShyneTheme.BORDER_SUBTLE;
+            ShyneTheme.drawCard(g, x, sy, w, slotH, bg, border);
+
             // Key badge (clickable area for rebind)
             int badgeW = 32, badgeH = 20;
             int badgeX = x + 6, badgeY = sy + 9;
-            g.fill(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH, listening ? KEY_BADGE_LISTEN : KEY_BADGE_BG);
-            g.outline(badgeX, badgeY, badgeW, badgeH, listening ? 0xFFFFFFFF : ACCENT_CYAN);
+            g.fill(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH, listening ? 0xFF8C5808 : ShyneTheme.CARD_BG);
+            g.outline(badgeX, badgeY, badgeW, badgeH, listening ? 0xFFFBBF24 : ShyneTheme.ACCENT);
             String keyLabel = listening ? "…" : (slot.keyName().isBlank() ? "?" : slot.keyName());
             int labelW = this.font.width(keyLabel);
             g.text(this.font, Component.literal(keyLabel), badgeX + (badgeW - labelW) / 2, badgeY + 6, listening ? 0xFF000000 : 0xFFFFFFFF, false);
@@ -312,6 +336,9 @@ public class PowerDeckScreen extends Screen {
                     g.text(this.font, Component.literal(initial), iconX + (iconSize - this.font.width(initial)) / 2, iconY + 6, ACCENT_CYAN, false);
                 }
             }
+        }
+        if (slots.size() > visible) {
+            ShyneTheme.drawScrollbar(g, x + w - 4, y + 4, 3, bottom - y - 8, start, slots.size(), visible);
         }
         if (slots.isEmpty()) {
             g.text(this.font, Component.literal("Your action list is empty."), x + 8, y + 20, 0xFFF0F5FF, false);

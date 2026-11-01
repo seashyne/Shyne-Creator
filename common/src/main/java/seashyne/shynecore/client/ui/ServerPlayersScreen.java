@@ -2,8 +2,6 @@ package seashyne.shynecore.client.ui;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.network.chat.Component;
@@ -48,6 +46,18 @@ public final class ServerPlayersScreen extends Screen {
 
     @Override
     protected void init() {
+        // Top Studio Navigation Bar
+        ShyneNavBar.addTabs(
+            this.minecraft,
+            this,
+            this.parent,
+            ShyneNavBar.Section.PLAYERS,
+            this.width - 14,
+            10,
+            this.width - 240,
+            this::addRenderableWidget
+        );
+
         panelWidth = Math.max(1, Math.min(760, width - 16));
         panelHeight = Math.max(1, Math.min(360, height - 16));
         panelX = (width - panelWidth) / 2;
@@ -59,13 +69,13 @@ public final class ServerPlayersScreen extends Screen {
         totalPages = Math.max(1, (players.size() + pageSize - 1) / pageSize);
         page = Math.min(page, totalPages - 1);
 
-        addRenderableWidget(Button.builder(Component.translatable(
+        addRenderableWidget(ShyneButton.secondary(Component.translatable(
                 ShyneClientSettings.hideUnratedRemoteAvatars
                     ? "screen.shyne_core.players.unrated.active"
                     : "screen.shyne_core.players.unrated"
             ), ignored -> toggleUnrated())
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.players.unrated.tooltip")))
-            .bounds(panelX + panelWidth - 116, panelY + 11, 100, 20).build());
+            .tooltipText(Component.translatable("screen.shyne_core.players.unrated.tooltip"))
+            .bounds(panelX + panelWidth - 116, panelY + 11, 100, 20));
 
         int start = page * pageSize;
         int end = Math.min(players.size(), start + pageSize);
@@ -82,26 +92,26 @@ public final class ServerPlayersScreen extends Screen {
         int footerY = panelY + panelHeight - 28;
         int footerActionWidth = Math.max(68, Math.min(90, (panelWidth - 112) / 3));
         int footerActionsX = panelX + panelWidth - 16 - footerActionWidth * 3 - 8;
-        addRenderableWidget(Button.builder(Component.translatable(
+        addRenderableWidget(ShyneButton.secondary(Component.translatable(
                 ShyneClientSettings.hideAllRemoteAvatars ? "screen.shyne_core.players.hide_all.active" : "screen.shyne_core.players.hide_all"
             ), ignored -> toggleHideAll())
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.players.hide_all.tooltip")))
-            .bounds(footerActionsX, footerY, footerActionWidth, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.shyne_core.players.show_all"), ignored -> showAll())
-            .tooltip(Tooltip.create(Component.translatable("screen.shyne_core.players.show_all.tooltip")))
-            .bounds(footerActionsX + footerActionWidth + 4, footerY, footerActionWidth, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.back"), ignored -> onClose())
-            .bounds(footerActionsX + (footerActionWidth + 4) * 2, footerY, footerActionWidth, 20).build());
+            .tooltipText(Component.translatable("screen.shyne_core.players.hide_all.tooltip"))
+            .bounds(footerActionsX, footerY, footerActionWidth, 20));
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("screen.shyne_core.players.show_all"), ignored -> showAll())
+            .tooltipText(Component.translatable("screen.shyne_core.players.show_all.tooltip"))
+            .bounds(footerActionsX + footerActionWidth + 4, footerY, footerActionWidth, 20));
+        addRenderableWidget(ShyneButton.secondary(Component.translatable("gui.back"), ignored -> onClose())
+            .bounds(footerActionsX + (footerActionWidth + 4) * 2, footerY, footerActionWidth, 20));
     }
 
-    private Button policyButton(PlayerEntry entry, String policy, String translation, int x, int y, int buttonWidth) {
+    private ShyneButton policyButton(PlayerEntry entry, String policy, String translation, int x, int y, int buttonWidth) {
         boolean globalHidden = "hidden".equals(policy)
             && (ShyneClientSettings.hideAllRemoteAvatars || ShyneClientSettings.hideUnratedRemoteAvatars);
         boolean active = globalHidden || ShyneClientSettings.hasRemotePlayerPolicy(entry.id(), policy);
         Component label = Component.translatable(active ? translation + ".active" : translation);
-        Button button = Button.builder(label, ignored -> togglePolicy(entry.id(), policy))
-            .tooltip(Tooltip.create(Component.translatable(translation + ".tooltip", entry.name())))
-            .bounds(x, y, buttonWidth, 20).build();
+        ShyneButton button = ShyneButton.secondary(label, ignored -> togglePolicy(entry.id(), policy))
+            .tooltipText(Component.translatable(translation + ".tooltip", entry.name()))
+            .bounds(x, y, buttonWidth, 20);
         button.active = !globalHidden;
         return button;
     }
@@ -217,42 +227,30 @@ public final class ServerPlayersScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(0, 0, width, height, 0xA8030710);
-        graphics.fill(panelX + 3, panelY + 4, panelX + panelWidth + 3, panelY + panelHeight + 4, 0x66000000);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, SURFACE);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 2, ACCENT);
-        graphics.text(font, title, panelX + 16, panelY + 14, 0xFFF4F7FC, true);
-        graphics.text(font, Component.translatable("screen.shyne_core.players.subtitle", players.size()), panelX + 16, panelY + 31, TEXT_MUTED, false);
+        graphics.fill(0, 0, width, height, ShyneTheme.BACKDROP);
+        ShyneTheme.drawPanel(graphics, panelX, panelY, panelWidth, panelHeight);
+        graphics.text(font, Component.literal("✦ ").append(title), panelX + 16, panelY + 14, ShyneTheme.ACCENT, true);
+        graphics.text(font, Component.translatable("screen.shyne_core.players.subtitle", players.size()), panelX + 16, panelY + 31, ShyneTheme.TEXT_MUTED, false);
 
         int start = page * pageSize;
         int end = Math.min(players.size(), start + pageSize);
         for (int i = start; i < end; i++) renderPlayerRow(graphics, players.get(i), listTop + (i - start) * ROW_HEIGHT);
         if (players.isEmpty()) {
-            graphics.text(font, Component.translatable("screen.shyne_core.players.empty"), panelX + 20, listTop + 14, TEXT_MUTED, false);
+            graphics.text(font, Component.translatable("screen.shyne_core.players.empty"), panelX + 20, listTop + 14, ShyneTheme.TEXT_MUTED, false);
         }
         Component pageLabel = totalPages > 1
             ? Component.literal("Scroll ↕  " + (page + 1) + " / " + totalPages)
             : Component.translatable("screen.shyne_core.avatars.page", page + 1, totalPages);
-        graphics.text(font, pageLabel, panelX + 16, panelY + panelHeight - 22, TEXT_MUTED, false);
+        graphics.text(font, pageLabel, panelX + 16, panelY + panelHeight - 22, ShyneTheme.TEXT_MUTED, false);
 
         if (totalPages > 1) {
-            int trackX = panelX + panelWidth - 16 - 3;
-            int trackTop = listTop;
-            int trackBottom = panelY + panelHeight - 34;
-            int trackHeight = trackBottom - trackTop;
-            if (trackHeight > 10) {
-                graphics.fill(trackX, trackTop, trackX + 3, trackBottom, 0x33445A78);
-                int thumbHeight = Math.max(8, trackHeight / totalPages);
-                int thumbY = trackTop + (int) ((trackHeight - thumbHeight) * ((float) page / (totalPages - 1)));
-                graphics.fill(trackX, thumbY, trackX + 3, thumbY + thumbHeight, ACCENT);
-            }
+            ShyneTheme.drawScrollbar(graphics, panelX + panelWidth - 16 - 3, listTop, 3, panelHeight - 86, page, totalPages, 1);
         }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     private void renderPlayerRow(GuiGraphicsExtractor graphics, PlayerEntry entry, int y) {
-        graphics.fill(panelX + 16, y + 2, panelX + panelWidth - 16, y + ROW_HEIGHT - 2, SURFACE_RAISED);
-        graphics.outline(panelX + 16, y + 2, panelWidth - 32, ROW_HEIGHT - 4, BORDER);
+        ShyneTheme.drawCard(graphics, panelX + 16, y + 2, panelWidth - 32, ROW_HEIGHT - 4, ShyneTheme.CARD_BG, ShyneTheme.BORDER_SUBTLE);
         int actionWidth = Math.max(54, Math.min(72, (panelWidth - 270) / 3));
         int maxWidth = Math.max(40, panelWidth - 59 - actionWidth * 3);
         graphics.text(font, Component.literal(font.plainSubstrByWidth(entry.name(), maxWidth)), panelX + 27, y + 8, 0xFFF4F7FC, false);

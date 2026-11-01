@@ -9,6 +9,8 @@ import org.luaj.vm2.lib.VarArgFunction;
 import seashyne.shynecore.client.avatar.AvatarPermission;
 import seashyne.shynecore.client.avatar.AvatarState;
 import seashyne.shynecore.client.render.AvatarDynamicTextureRegistry;
+import seashyne.shynecore.client.render.BbModelTextures;
+import seashyne.shynecore.model.BbModelDefinition;
 
 /**
  * Connects Figura-style Lua texture calls to Shyne's GPU-backed runtime textures.
@@ -16,10 +18,16 @@ import seashyne.shynecore.client.render.AvatarDynamicTextureRegistry;
  */
 public final class AvatarDynamicTextureBridge {
     private final AvatarState state;
+    private final BbModelDefinition model;
     private final Object textureOwner = new Object();
 
     public AvatarDynamicTextureBridge(AvatarState state) {
+        this(state, null);
+    }
+
+    public AvatarDynamicTextureBridge(AvatarState state, BbModelDefinition model) {
         this.state = state;
+        this.model = model;
     }
 
     /**
@@ -59,9 +67,30 @@ public final class AvatarDynamicTextureBridge {
         });
         globals.set("_avatar_dynamic_texture_bind_model", new VarArgFunction() {
             @Override public Varargs invoke(Varargs args) {
-                return LuaValue.valueOf(visualPermissionAllowed() && AvatarDynamicTextureRegistry.bindModelTexture(
-                    textureOwner, state.avatarId(), state.modelId(), args.arg(1).optjstring("texture"), args.arg(2).optjstring("0")
-                ));
+                String textureName = args.arg(1).optjstring("");
+                String target = args.arg(2).optjstring("0");
+
+                if ("primary".equalsIgnoreCase(target)
+                    || "default".equalsIgnoreCase(target)
+                    || "none".equalsIgnoreCase(target)
+                    || textureName.isBlank()) {
+                    return LuaValue.valueOf(BbModelTextures.setPrimaryTextureOverride(model, state, target, ""));
+                }
+
+                if (AvatarDynamicTextureRegistry.hasTexture(textureOwner, state.avatarId(), textureName)) {
+                    if (!visualPermissionAllowed()) return LuaValue.FALSE;
+                    boolean bound = AvatarDynamicTextureRegistry.bindModelTexture(
+                        textureOwner, state.avatarId(), state.modelId(), textureName, target
+                    );
+                    if (bound) {
+                        state.setPrimaryTextureOverride(textureName);
+                    }
+                    return LuaValue.valueOf(bound);
+                }
+
+                // Packaged avatar textures (embedded in .bbmodel or .png inside the avatar root)
+                // do not create arbitrary pixel buffers and work out-of-the-box for skin switching.
+                return LuaValue.valueOf(BbModelTextures.setPrimaryTextureOverride(model, state, target, textureName));
             }
         });
     }

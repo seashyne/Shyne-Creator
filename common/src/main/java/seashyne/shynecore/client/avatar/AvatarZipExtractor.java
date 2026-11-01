@@ -23,7 +23,7 @@ public final class AvatarZipExtractor {
         if (!fileName.toLowerCase(Locale.ROOT).endsWith(".zip")) return null;
 
         String rawName = fileName.substring(0, fileName.length() - 4);
-        String safeName = rawName.replaceAll("[^a-zA-Z0-9_.-]", "_");
+        String safeName = rawName.replaceAll("[^a-zA-Z0-9_.-]+", "_");
         if (safeName.isBlank()) safeName = "unnamed_avatar";
 
         Path targetDir = cacheDir.resolve(safeName).toAbsolutePath().normalize();
