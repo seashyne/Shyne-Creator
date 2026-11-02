@@ -1,3 +1,18 @@
+## Shyne Creator v2.19.1
+
+### Shader Shadow Map Nametag Suppression, Action Wheel Submenu Titles & Starter Templates
+
+- **Shader Shadow Map Fix (Iris & BSL Shaders)**:
+  - Injected shadow pass detection (`ShadowRenderingState.areShadowsCurrentlyBeingRendered()`) into both overloads of `EntityRenderer.submitNameDisplay`.
+  - Canceled nametag and Essential badge geometry submission during shadow map rendering passes.
+  - Completely eliminated the floating circular "dot shadow" artifact cast on the ground above the player's head.
+- **Action Wheel Multi-Page Titles & Submenu Ergonomics**:
+  - Enhanced `_avatar_action_set_page` bridge to accept page title arguments, persisting `activeActionPageTitle` in `AvatarState`.
+  - Verified nested action wheel page navigation and callbacks across multi-tier submenus (`mainPage` -> `emotePage` -> `settingsPage`).
+- **Avatar Starter Templates & Showcase Avatars**:
+  - Updated `AvatarTemplateManager` with commented recipes for overhead nameplate visibility (`nameplate.ENTITY:setVisible`), positioning offset (`nameplate.ENTITY:setPos`), dynamic player shadow radius (`renderer:setShadowRadius`), and first-person rendering detection (`renderer:isFirstPerson()`).
+  - Added interactive Action Wheel toggles in `action-wheel-showcase-avatar` for toggling player nameplate and ground shadow radius.
+
 ## Shyne Creator v2.19.0
 
 ### Complete UX/UI Overhaul, Shyne Studio Hub & Figura Action Wheel 2.0

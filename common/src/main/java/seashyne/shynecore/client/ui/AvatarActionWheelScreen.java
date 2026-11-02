@@ -52,6 +52,7 @@ public class AvatarActionWheelScreen extends Screen {
     private int overflowSliceIndex;
     private String avatarName = "";
     private int hoveredSlot = -1;
+    private boolean hoveredCenterHub;
     private final AvatarAction[] slotActions = new AvatarAction[SLOTS_PER_PAGE];
     private String currentPageTitle = "";
     private int currentSliceCount = 1;
@@ -93,8 +94,10 @@ public class AvatarActionWheelScreen extends Screen {
         ).bounds(10, 8, 76, 18);
         addRenderableWidget(backPageBtn);
 
-        modeToggleBtn = ShyneButton.secondary(modeButtonLabel(), btn -> toggleMode())
-            .bounds(this.width - 114, 8, 104, 18)
+        Component modeLabel = modeButtonLabel();
+        int btnW = Math.max(92, this.font.width(modeLabel) + 18);
+        modeToggleBtn = ShyneButton.secondary(modeLabel, btn -> toggleMode())
+            .bounds(this.width - btnW - 10, 8, btnW, 18)
             .tooltipText(Component.translatable("screen.shyne_core.action_wheel.settings_hint"));
         addRenderableWidget(modeToggleBtn);
 
@@ -117,8 +120,12 @@ public class AvatarActionWheelScreen extends Screen {
         controlsMode = !controlsMode;
         overflowSliceIndex = 0;
         hoveredSlot = -1;
+        hoveredCenterHub = false;
         if (modeToggleBtn != null) {
-            modeToggleBtn.setMessage(modeButtonLabel());
+            Component modeLabel = modeButtonLabel();
+            int btnW = Math.max(92, this.font.width(modeLabel) + 18);
+            modeToggleBtn.setMessage(modeLabel);
+            modeToggleBtn.bounds(this.width - btnW - 10, 8, btnW, 18);
         }
         playUiScrollSound();
         refreshActiveSlots();
@@ -189,7 +196,10 @@ public class AvatarActionWheelScreen extends Screen {
         }
 
         if (modeToggleBtn != null) {
-            modeToggleBtn.setMessage(modeButtonLabel());
+            Component modeLabel = modeButtonLabel();
+            int btnW = Math.max(92, this.font.width(modeLabel) + 18);
+            modeToggleBtn.setMessage(modeLabel);
+            modeToggleBtn.bounds(this.width - btnW - 10, 8, btnW, 18);
             modeToggleBtn.activeState(true);
         }
     }
@@ -206,6 +216,11 @@ public class AvatarActionWheelScreen extends Screen {
     }
 
     private String formatPageTitle(String rawPage) {
+        AvatarState state = AvatarRuntime.active();
+        String explicitTitle = state != null ? state.activeActionPageTitle() : "";
+        if (!explicitTitle.isBlank()) {
+            return explicitTitle;
+        }
         if (rawPage == null || rawPage.isBlank() || "main".equalsIgnoreCase(rawPage)) {
             return Component.translatable("screen.shyne_core.palette.page.main").getString();
         }
@@ -284,16 +299,41 @@ public class AvatarActionWheelScreen extends Screen {
         // Avoid stealing hover when pointing at top bar buttons
         if (mouseY < 30 && (mouseX < 92 || mouseX > this.width - 120)) {
             hoveredSlot = -1;
+            hoveredCenterHub = false;
             return;
         }
+
+        // 1. Direct card rectangular hitbox check (guaranteed pixel-perfect click response)
+        int cardW = 72;
+        int cardH = 36;
+        for (int i = 0; i < SLOTS_PER_PAGE; i++) {
+            double angle = -Math.PI / 2.0 + (i * (2.0 * Math.PI / SLOTS_PER_PAGE));
+            int slotX = cx + (int) Math.round(Math.cos(angle) * radius);
+            int slotY = cy + (int) Math.round(Math.sin(angle) * radius);
+            int left = slotX - cardW / 2;
+            int top = slotY - cardH / 2;
+            if (mouseX >= left && mouseX < left + cardW && mouseY >= top && mouseY < top + cardH) {
+                hoveredSlot = i;
+                hoveredCenterHub = false;
+                return;
+            }
+        }
+
+        // 2. Center hub check (34px radius)
         double dx = mouseX - cx;
         double dy = mouseY - cy;
         double dist = Math.hypot(dx, dy);
-        if (dist < 32.0 || dist > radius + 56.0) {
+        hoveredCenterHub = (dist <= 34.0);
+        if (hoveredCenterHub) {
             hoveredSlot = -1;
             return;
         }
-        // True polar 8-wedge detection starting from top (-PI/2) clockwise
+
+        // 3. Fallback to radial polar 8-wedge detection
+        if (dist < 34.0 || dist > radius + 56.0) {
+            hoveredSlot = -1;
+            return;
+        }
         double angle = Math.atan2(dy, dx) + (Math.PI / 2.0) + (Math.PI / SLOTS_PER_PAGE);
         while (angle < 0) angle += Math.PI * 2.0;
         while (angle >= Math.PI * 2.0) angle -= Math.PI * 2.0;
@@ -304,6 +344,9 @@ public class AvatarActionWheelScreen extends Screen {
     private void drawCenterHub(GuiGraphicsExtractor graphics, int cx, int cy, int mouseX, int mouseY) {
         int hubRadius = 34;
         boolean anyHovered = hoveredSlot >= 0 && slotActions[hoveredSlot] != null;
+        if (hoveredCenterHub) {
+            graphics.fill(cx - hubRadius - 4, cy - hubRadius - 4, cx + hubRadius + 4, cy + hubRadius + 4, 0x443DD9E8);
+        }
         graphics.fill(cx - hubRadius - 2, cy - hubRadius - 2, cx + hubRadius + 2, cy + hubRadius + 2, 0x55000000);
         graphics.fill(cx - hubRadius, cy - hubRadius, cx + hubRadius, cy + hubRadius, ShyneTheme.PANEL_BG);
         graphics.outline(
@@ -311,7 +354,7 @@ public class AvatarActionWheelScreen extends Screen {
             cy - hubRadius,
             hubRadius * 2,
             hubRadius * 2,
-            anyHovered ? ShyneTheme.ACCENT_BRIGHT : ShyneTheme.BORDER_ACCENT
+            hoveredCenterHub ? ShyneTheme.ACCENT_BRIGHT : (anyHovered ? ShyneTheme.ACCENT : ShyneTheme.BORDER_ACCENT)
         );
 
         boolean showAvatar = ShyneClientSettings.actionWheelCenterAvatar
@@ -431,17 +474,25 @@ public class AvatarActionWheelScreen extends Screen {
 
     private void drawHeaderAndFooter(GuiGraphicsExtractor graphics, int cx, int cy, int radius) {
         AvatarAction selected = hoveredSlot >= 0 ? slotActions[hoveredSlot] : null;
-        String heading = selected == null
-            ? avatarName
-            : (selected.title().isBlank() ? selected.displayTitle() : selected.title());
-
+        String heading;
         StringBuilder detailBuilder = new StringBuilder();
-        if (selected == null) {
+
+        if (hoveredCenterHub) {
+            heading = !pageHistory.isEmpty()
+                ? Component.translatable("screen.shyne_core.action_wheel.center_back").getString()
+                : Component.translatable("screen.shyne_core.action_wheel.center_close").getString();
+            detailBuilder.append(avatarName);
+            if (!currentPageTitle.isBlank()) {
+                detailBuilder.append("  ·  ").append(currentPageTitle);
+            }
+        } else if (selected == null) {
+            heading = avatarName;
             detailBuilder.append(currentPageTitle);
             if (!pageHistory.isEmpty()) {
                 detailBuilder.append("  ·  ").append(Component.translatable("screen.shyne_core.action_wheel.right_click_back").getString());
             }
         } else {
+            heading = selected.title().isBlank() ? selected.displayTitle() : selected.title();
             if (selected.isToggle()) {
                 detailBuilder.append(selected.isToggled() ? "● ON" : "○ OFF");
             }
@@ -625,9 +676,7 @@ public class AvatarActionWheelScreen extends Screen {
 
         refreshActiveSlots();
 
-        if (action.closeOnUse()) {
-            onClose();
-        } else if (fromHoldRelease && !switchedPage && !action.isToggle()) {
+        if (!switchedPage && (action.closeOnUse() || (!action.isToggle() && fromHoldRelease))) {
             onClose();
         }
         return true;
@@ -691,14 +740,36 @@ public class AvatarActionWheelScreen extends Screen {
         int cy = this.height / 2 + 2;
         updateHoveredSlot(cx, cy, wheelRadius(), (int) event.x(), (int) event.y());
 
-        if (event.button() == 0 && hoveredSlot >= 0 && slotActions[hoveredSlot] != null) {
-            return executeSlotPrimary(hoveredSlot, false);
+        if (event.button() == 0) {
+            if (hoveredCenterHub) {
+                playUiClickSound();
+                if (!pageHistory.isEmpty()) {
+                    navigateBackPage();
+                } else {
+                    onClose();
+                }
+                return true;
+            }
+            if (hoveredSlot >= 0 && slotActions[hoveredSlot] != null) {
+                return executeSlotPrimary(hoveredSlot, false);
+            }
+            // Dismiss wheel when clicking outer backdrop
+            double dx = event.x() - cx;
+            double dy = event.y() - cy;
+            if (Math.hypot(dx, dy) > wheelRadius() + 56.0) {
+                onClose();
+                return true;
+            }
         }
         if (event.button() == 1) {
             if (hoveredSlot >= 0 && slotActions[hoveredSlot] != null && slotActions[hoveredSlot].hasSecondaryCallback()) {
                 return executeSlotSecondary(hoveredSlot);
             }
             if (!controlsMode && navigateBackPage()) {
+                return true;
+            }
+            if (hoveredCenterHub) {
+                onClose();
                 return true;
             }
         }
