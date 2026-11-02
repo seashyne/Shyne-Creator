@@ -192,6 +192,32 @@ act_levelup:onLeftClick(function()
   print("§a[Avatar] §f*Level Up sound played!*")
 end)
 
+-- Slot 5: Toggle Nameplate Visibility
+local act_nameplate = page2:newAction(5)
+act_nameplate:setTitle("Toggle Nameplate")
+act_nameplate:setItem("minecraft:name_tag")
+act_nameplate:setColor(0.3, 0.9, 0.9)
+act_nameplate:toggled(true)
+act_nameplate:onToggle(function(visible)
+  if nameplate.ENTITY then
+    nameplate.ENTITY:setVisible(visible)
+  end
+  print("§b[Avatar] §fNameplate: " .. (visible and "§aVisible" or "§cHidden"))
+end)
+
+-- Slot 6: Toggle Player Shadow (renderer:setShadowRadius)
+local act_shadow = page2:newAction(6)
+act_shadow:setTitle("Toggle Shadow")
+act_shadow:setItem("minecraft:black_concrete")
+act_shadow:setColor(0.4, 0.4, 0.5)
+act_shadow:toggled(true)
+act_shadow:onToggle(function(has_shadow)
+  if renderer.setShadowRadius then
+    renderer:setShadowRadius(has_shadow and 0.5 or 0)
+  end
+  print("§8[Avatar] §fPlayer Shadow: " .. (has_shadow and "§aNormal (0.5)" or "§cDisabled (0)"))
+end)
+
 -- ------------------------------------------------------------------------------
 -- 4. TICK EVENT (PARTICLES & LOGIC)
 -- ------------------------------------------------------------------------------

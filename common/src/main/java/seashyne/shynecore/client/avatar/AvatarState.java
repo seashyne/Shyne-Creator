@@ -68,6 +68,7 @@ public final class AvatarState {
     private final List<AvatarAction> actions = new ArrayList<>();
     private final List<String> actionPages = new ArrayList<>();
     private volatile String activeActionPage = "";
+    private volatile String activeActionPageTitle = "";
     private volatile String primaryTextureOverride = "";
     private final Map<String, AvatarEmoteDefinition> emotes = new ConcurrentHashMap<>();
     private final AvatarAnimationGraph animationGraph = new AvatarAnimationGraph();
@@ -467,12 +468,21 @@ public final class AvatarState {
         return activeActionPage;
     }
 
+    public String activeActionPageTitle() {
+        return activeActionPageTitle;
+    }
+
     public void setActiveActionPage(String page) {
+        setActiveActionPage(page, "");
+    }
+
+    public void setActiveActionPage(String page, String title) {
         String normalized = page == null ? "" : page.trim();
         if (!normalized.isEmpty()) {
             registerActionPage(normalized);
         }
         this.activeActionPage = normalized;
+        this.activeActionPageTitle = title == null ? "" : title.trim();
     }
 
     public String primaryTextureOverride() {

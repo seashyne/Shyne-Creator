@@ -133,10 +133,12 @@ public final class AvatarActionBridge {
             }
         });
 
-        globals.set("_avatar_action_set_page", new OneArgFunction() {
+        globals.set("_avatar_action_set_page", new VarArgFunction() {
             @Override
-            public LuaValue call(LuaValue arg) {
-                state.setActiveActionPage(arg.isnil() ? "" : arg.optjstring(""));
+            public Varargs invoke(Varargs args) {
+                String pageId = args.arg(1).isnil() ? "" : args.arg(1).optjstring("");
+                String pageTitle = args.arg(2).isnil() ? "" : args.arg(2).optjstring("");
+                state.setActiveActionPage(pageId, pageTitle);
                 return LuaValue.TRUE;
             }
         });

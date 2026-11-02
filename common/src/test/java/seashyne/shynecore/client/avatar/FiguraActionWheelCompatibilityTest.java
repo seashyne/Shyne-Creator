@@ -11,6 +11,8 @@ import org.luaj.vm2.Varargs;
 import org.luaj.vm2.lib.jse.JsePlatform;
 import seashyne.shynecore.client.avatar.bridge.AvatarActionBridge;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -248,5 +250,61 @@ final class FiguraActionWheelCompatibilityTest {
         setPageFn.call(LuaValue.NIL);
         assertTrue(getPageFn.call().isnil());
         assertEquals("", state.activeActionPage());
+    }
+
+    @Test
+    @DisplayName("Figura nested action wheel pages navigate and execute callbacks")
+    void nestedActionWheelNavigation() throws Exception {
+        AvatarState state = new AvatarState("test_avatar", "test_model", Path.of(""), false, Set.of(), Set.of());
+        Globals globals = JsePlatform.standardGlobals();
+        AvatarActionBridge.register(globals, state);
+
+        try (InputStream in = getClass().getResourceAsStream("/shyne_runtime/lua/avatar/63_figura_action_wheel.lua")) {
+            assertNotNull(in);
+            globals.load(new String(in.readAllBytes(), StandardCharsets.UTF_8), "63_figura_action_wheel.lua").call();
+        }
+
+        String luaScript = """
+            local mainPage = action_wheel:newPage()
+            local emotePage = action_wheel:newPage()
+            local skinsPage = action_wheel:newPage()
+            local dokiMPage = action_wheel:newPage()
+            local settingsPage = action_wheel:newPage()
+            action_wheel:setPage(mainPage)
+
+            mainPage:newAction():title("Emotes"):onLeftClick(function() action_wheel:setPage(emotePage) end)
+            mainPage:newAction():title("Skins"):onLeftClick(function() action_wheel:setPage(skinsPage) end)
+            mainPage:newAction():title("Settings"):onLeftClick(function() action_wheel:setPage(settingsPage) end)
+
+            emotePage:newAction():title("Return"):onLeftClick(function() action_wheel:setPage(mainPage) end)
+            emotePage:newAction():title("Laugh"):onLeftClick(function() _laugh_called = true end)
+        """;
+        globals.load(luaScript, "test_script.lua").call();
+
+        assertEquals("page_1", state.activeActionPage());
+        Map<String, List<AvatarAction>> byPage = state.actionsByPage();
+        assertTrue(byPage.containsKey("page_1"));
+        assertTrue(byPage.containsKey("page_2"));
+        assertEquals(3, byPage.get("page_1").size());
+        assertEquals(2, byPage.get("page_2").size());
+
+        // Click Emotes
+        AvatarAction emotesAction = byPage.get("page_1").get(0);
+        assertEquals("Emotes", emotesAction.title());
+        emotesAction.callback().run();
+
+        assertEquals("page_2", state.activeActionPage());
+
+        // Click Laugh on page 2
+        AvatarAction laughAction = byPage.get("page_2").get(1);
+        assertEquals("Laugh", laughAction.title());
+        laughAction.callback().run();
+        assertTrue(globals.get("_laugh_called").toboolean());
+
+        // Click Return on page 2
+        AvatarAction returnAction = byPage.get("page_2").get(0);
+        assertEquals("Return", returnAction.title());
+        returnAction.callback().run();
+        assertEquals("page_1", state.activeActionPage());
     }
 }

@@ -243,6 +243,22 @@ end
 action_methods.setToggled = action_methods.toggled
 function action_methods:isToggled() return self._toggled == true end
 
+function action_methods:closeOnUse(state)
+  if state == nil then
+    self._closeOnUse = true
+  else
+    self._closeOnUse = state and true or false
+  end
+  self:_update()
+  return self
+end
+action_methods.setCloseOnUse = action_methods.closeOnUse
+function action_methods:isCloseOnUse()
+  if self._closeOnUse ~= nil then return self._closeOnUse end
+  -- Figura default: toggle actions stay open, leaf action clicks close by default
+  return not self:_isToggleAction()
+end
+
 function action_methods:_isToggleAction()
   return rawget(self, "_onToggle") ~= nil
     or rawget(self, "_onUntoggle") ~= nil
@@ -253,6 +269,7 @@ function action_methods:_isToggleAction()
 end
 
 function action_methods:_triggerPrimary()
+  action_wheel._last_triggering_action = self
   if type(action_wheel.leftClick) == "function" then
     local ok, res = pcall(action_wheel.leftClick, self)
     if not ok and _shyne_report_error then _shyne_report_error("action_wheel_left_click", self.id or "action", tostring(res)) end
@@ -355,7 +372,7 @@ function action_methods:_update()
     self._desc or "",
     page_name,
     false,
-    false, -- Figura Action Wheel stays open on click so setPage() sub-menus and toggles work seamlessly
+    self:isCloseOnUse(), -- Closes leaf actions on use; sub-page setPage transitions never close
     function() self:_triggerPrimary() end,
     active_item,
     has_right and function() self:_triggerSecondary() end or nil,
@@ -549,8 +566,21 @@ function action_wheel:setPage(page)
     resolved = self:getPage(page)
   end
   self._current_page = resolved
+
+  local page_title = ""
+  if resolved then
+    if resolved.title and resolved.title ~= "" then
+      page_title = resolved.title
+    elseif resolved._inferred_title and resolved._inferred_title ~= "" then
+      page_title = resolved._inferred_title
+    elseif self._last_triggering_action and self._last_triggering_action._title and self._last_triggering_action._title ~= "" then
+      page_title = self._last_triggering_action._title
+      resolved._inferred_title = page_title
+    end
+  end
+
   if type(_avatar_action_set_page) == "function" then
-    _avatar_action_set_page(resolved and resolved.id or nil)
+    _avatar_action_set_page(resolved and resolved.id or nil, page_title)
   end
   return self
 end
@@ -569,8 +599,11 @@ function action_wheel:getPage(title)
   if title == nil then return nil end
   local key = tostring(title)
   if self._page_by_id[key] then return self._page_by_id[key] end
+  local lower_key = key:lower()
   for _, page in ipairs(self._pages) do
-    if page.title == key or page.id == key then return page end
+    if page.title == key or page.id == key or page.title:lower() == lower_key or page.id:lower() == lower_key then
+      return page
+    end
   end
   return nil
 end

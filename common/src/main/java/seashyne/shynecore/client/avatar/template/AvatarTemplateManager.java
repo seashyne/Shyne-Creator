@@ -124,11 +124,24 @@ public final class AvatarTemplateManager {
 
                 print("[Avatar] " .. AVATAR_ID .. " (" .. SHYNE_API_VERSION .. ") initialized!")
 
-                -- Nameplate 2.0 configuration
+                -- Nameplate 2.0 configuration (Text, Badge, Visibility, Position)
                 if nameplate.ENTITY then
                     nameplate.ENTITY:setText("§b✦ " .. "%s" .. " §7[Creator]§r")
                     nameplate.ENTITY:setBadge("✦", 0x41D7E5)
+                    -- nameplate.ENTITY:setVisible(true) -- Toggle overhead nameplate visibility
+                    -- nameplate.ENTITY:setPos(0, 0.2, 0) -- Adjust overhead position offset
                 end
+
+                -- Shadow radius control (0 to disable, or custom scale)
+                -- renderer:setShadowRadius(0.5)
+
+                -- Perspective-aware render loop (First-Person vs Third-Person)
+                events.RENDER:register(function(delta, context)
+                    -- local isFirstPerson = renderer:isFirstPerson()
+                    -- if models.model and models.model.fpModel then
+                    --     models.model.fpModel:setVisible(isFirstPerson)
+                    -- end
+                end)
 
                 -- Define typed synchronization ping
                 pings:define("wave", {"string", "number"}, function(greeting, intensity)
@@ -181,12 +194,15 @@ public final class AvatarTemplateManager {
             -- Shyne Avatar: Minimal Starter
             print("[Avatar] " .. AVATAR_ID .. " loaded.")
 
+            -- Entity shadow control: renderer:setShadowRadius(0.5) -- 0 to disable
+            -- Overhead nameplate: nameplate.ENTITY:setVisible(false)
+
             events.TICK:register(function()
                 -- Put your tick update logic here
             end)
 
             events.RENDER:register(function(delta, context)
-                -- Frame rendering hook
+                -- Frame rendering hook (check renderer:isFirstPerson() for perspective)
             end)
             """;
     }
